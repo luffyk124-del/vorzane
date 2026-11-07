@@ -36,6 +36,7 @@ Updated: 2026-11-07
 - Game rewards and all current game rules are calculated in the browser. RLS protects one player's row from another player; it does not make a player's own gold, inventory, XP, or battle result trustworthy.
 - The FPS frontend integration is incomplete: no FPS auth provider is wired into `AuthContext`, `/api/v1/game/state` does not match the backend's `/api/state`, and `/api/v1/game/command` is a stub returning 501.
 - Google OAuth requires provider credentials and allowed redirect URLs in Supabase; the code alone does not prove that the configured project accepts them.
+- Live Chromium inspection found the brand emblem requested at `/images/characters/brand-emblem.webp`, which 404s under the GitHub Pages project path. `src/game/art.ts` now applies the Expo base path to all character images; a unit test covers `/vorzane` and trailing-slash normalization.
 - The web entry bundle is about 1.1 MB before transfer compression in the current Expo export. Measure real compressed transfer and runtime before deciding on code splitting.
 - Playwright desktop/mobile tests mock Supabase auth and PostgREST endpoints so UI save flows can be exercised without production writes. They do not prove live credentials, RLS policy behavior, or cross-device persistence against the real project.
 
@@ -81,6 +82,7 @@ Updated: 2026-11-07
 - Wrapped Supabase sign-in, signup, guest, Google, guest-upgrade, and sign-out calls so rejected promises return visible Arabic errors instead of escaping from the UI action.
 - Extracted auth error translation into `src/lib/authErrors.ts` and tested invalid credentials, disabled anonymous auth, redirect allowlists, provider configuration, network failures, and timeouts.
 - `pnpm test`: 11 unit tests passed. `pnpm run test:browser`: 5 browser cases passed, including desktop/mobile signed-in flows, network-failure feedback, and stale-save conflict recovery. `pnpm run typecheck` passed, and the `/vorzane/` web export produced 15 routes.
+- After fixing the Pages image path, `pnpm test` passed 12 tests (including the asset-path test), `pnpm run test:browser` passed all 5 cases, typecheck passed, and the Pages build exported 15 routes.
 - Playwright tests intercept the Supabase project URL and use an in-memory save fixture. They make no production auth, database, or OAuth requests.
 
 ## Prioritized Roadmap
