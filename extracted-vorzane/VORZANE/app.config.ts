@@ -1,0 +1,37 @@
+export default {
+  name: "VORZANE",
+  slug: "vorzane",
+  version: "1.0.0",
+  orientation: "portrait",
+  scheme: "vorzane",
+  userInterfaceStyle: "dark",
+  icon: "./assets/images/icon.png",
+  splash: {
+    image: "./assets/images/splash-icon.png",
+    resizeMode: "contain",
+    backgroundColor: "#080C12",
+  },
+  ios: { supportsTablet: false },
+  android: {
+    package: "com.vorzane.rpg",
+    adaptiveIcon: {
+      foregroundImage: "./assets/images/android-icon-foreground.png",
+      backgroundImage: "./assets/images/android-icon-background.png",
+      monochromeImage: "./assets/images/android-icon-monochrome.png",
+      backgroundColor: "#080C12",
+    },
+  },
+  web: {
+    bundler: "metro",
+    output: "static",
+    favicon: "./assets/images/favicon.png",
+  },
+  plugins: [
+    "expo-router",
+    "expo-audio",
+    "expo-sharing",
+    ["expo-splash-screen", { image: "./assets/images/splash-icon.png", imageWidth: 160, resizeMode: "contain", backgroundColor: "#080C12" }],
+  ],
+  experiments: { typedRoutes: true },
+  logoUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663999581633/kQXDboTlSBXffYoO.png",
+};
