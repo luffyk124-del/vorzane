@@ -62,6 +62,8 @@ Updated: 2026-11-07
 - Added tests for spending points once, exhaustion, missing heroes, and the stat ceiling. The full suite now has 9 passing tests.
 - `pnpm run typecheck`: passed. `EXPO_PUBLIC_BASE_PATH=/vorzane pnpm run build`: passed; 15 static routes exported.
 - The live authenticated screen was not exercised because doing so would require creating or mutating a real Supabase player save. No database or auth configuration was changed.
+- GitHub Actions run `42416038573` completed with Build and Deploy both successful; the CI run included all 9 tests.
+- Live checks returned HTTP 200 for the home, login, quests, gear, expeditions, and settings routes. The deployed home JavaScript bundle returned HTTP 200 and contained the stat allocation UI text.
 
 ## Prioritized Roadmap
 
