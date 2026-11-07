@@ -108,7 +108,7 @@ jobs:
           path: extracted-vorzane/VORZANE/dist
 
   deploy:
-    if: github.event_name == 'workflow_dispatch' && inputs.approve_deploy
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.approve_deploy)
     needs: build
     runs-on: ubuntu-latest
     permissions:
