@@ -74,11 +74,11 @@ export function AppButton({ label, onPress, icon, variant = "primary", disabled 
     <Txt style={[styles.buttonText, small && { fontSize: 13 }, (variant === "primary" || variant === "jade") && { color: palette.ink }, variant === "danger" && { color: palette.red }]}>{label}</Txt>
   </View>;
   if (variant === "primary" || variant === "jade") {
-    return <Pressable onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [styles.button, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>
+    return <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [styles.button, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>
       <LinearGradient colors={background as [string, string, ...string[]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.buttonGradient, small && styles.buttonSmall]}>{content}</LinearGradient>
     </Pressable>;
   }
-  return <Pressable onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [styles.button, styles.buttonAlt, variant === "ghost" && styles.buttonGhost, variant === "danger" && styles.buttonDanger, small && styles.buttonSmall, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>{content}</Pressable>;
+  return <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [styles.button, styles.buttonAlt, variant === "ghost" && styles.buttonGhost, variant === "danger" && styles.buttonDanger, small && styles.buttonSmall, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>{content}</Pressable>;
 }
 
 export function Pill({ label, icon, tone = "gold", style }: { label: string; icon?: IconName; tone?: "gold" | "jade" | "muted" | "red"; style?: StyleProp<ViewStyle> }) {

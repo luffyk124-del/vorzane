@@ -13,7 +13,8 @@
     "preview": "node scripts/preview.mjs",
     "build": "expo export --platform web --output-dir dist",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/game/engine.test.mjs src/lib/offlineSaveMarker.test.mjs"
+    "test": "tsx --test src/game/engine.test.mjs src/lib/authErrors.test.mjs src/lib/offlineSaveMarker.test.mjs",
+    "test:browser": "node --test tests/browser.test.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/cinzel": "^0.4.2",
@@ -50,6 +51,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
+    "playwright": "^1.65.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   }

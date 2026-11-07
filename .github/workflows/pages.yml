@@ -40,6 +40,12 @@ jobs:
       - name: Test game systems
         working-directory: extracted-vorzane/VORZANE
         run: pnpm test
+      - name: Install Playwright Chromium
+        working-directory: extracted-vorzane/VORZANE
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Test desktop and mobile flows
+        working-directory: extracted-vorzane/VORZANE
+        run: pnpm run test:browser
       - name: Typecheck
         working-directory: extracted-vorzane/VORZANE
         run: pnpm run typecheck
