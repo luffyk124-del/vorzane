@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         working-directory: extracted-vorzane/VORZANE
         run: pnpm install --frozen-lockfile
+      - name: Test game systems
+        working-directory: extracted-vorzane/VORZANE
+        run: pnpm test
       - name: Typecheck
         working-directory: extracted-vorzane/VORZANE
         run: pnpm run typecheck

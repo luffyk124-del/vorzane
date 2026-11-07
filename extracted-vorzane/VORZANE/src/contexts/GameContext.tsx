@@ -4,11 +4,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { advanceExpeditions, dismissOfflineReport } from "../game/engine";
 import { createFreshState, LEGACY_CLAIM_KEY, LEGACY_SAVE_KEY, normalizeGameState, USER_SAVE_PREFIX, type GameState } from "../game/model";
 import { supabase } from "../lib/supabase";
+import { clearOfflineSavePending, getOfflineSavePendingToken, hasOfflineSavePending, markOfflineSavePending, type StorageLike } from "../lib/offlineSaveMarker";
 import { useAuth } from "./AuthContext";
 import { fpsEnabled, fpsGet, fpsCommand, type GameCommand } from "../lib/fpsApi";
 
 const LEGACY_DECLINE_PREFIX = "vorzane_legacy_save_declined_";
-const OFFLINE_DIRTY_PREFIX = "vorzane_offline_dirty_";
 type LoadStatus = "auth" | "loading" | "migration" | "conflict" | "ready" | "offline";
 type MigrationChoice =
   | { kind: "legacy"; state: GameState }
@@ -35,7 +35,13 @@ export type GameContextValue = {
 const GameContext = createContext<GameContextValue | null>(null);
 const cloneState = (value: GameState): GameState => JSON.parse(JSON.stringify(value)) as GameState;
 const userKey = (userId: string) => `${USER_SAVE_PREFIX}${userId}`;
-const offlineDirtyKey = (userId: string) => `${OFFLINE_DIRTY_PREFIX}${userId}`;
+
+function offlineMarkerStorage(): StorageLike {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    try { return window.localStorage; } catch { /* Fall back to AsyncStorage. */ }
+  }
+  return AsyncStorage;
+}
 
 function localGet(key: string): string | null {
   try {
@@ -97,17 +103,19 @@ export function GameProvider({ children }: PropsWithChildren) {
     await storeUserCache(userId, safeSnapshot);
     saveQueueRef.current = saveQueueRef.current.catch(() => false).then(async () => {
       if (activeUserRef.current !== userId) return false;
+      const markerToken = await getOfflineSavePendingToken(userId, offlineMarkerStorage());
       const { error } = await supabase.from("player_saves").upsert({
         user_id: userId,
         game_state: safeSnapshot,
         updated_at: new Date().toISOString(),
       }, { onConflict: "user_id" });
       if (error) throw error;
-      localRemove(offlineDirtyKey(userId));
+      await clearOfflineSavePending(userId, offlineMarkerStorage(), markerToken);
       setCloudError("");
       setSaveStatus("تم حفظ التقدم في السحابة");
       return true;
-    }).catch((caught: unknown) => {
+    }).catch(async (caught: unknown) => {
+      await markOfflineSavePending(userId, offlineMarkerStorage());
       const message = caught instanceof Error ? caught.message : "تعذر الاتصال بـSupabase.";
       setCloudError(message);
       setSaveStatus("تعذرت المزامنة؛ النسخة المحلية محفوظة");
@@ -134,7 +142,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
       const cached = await readUserCache(userId);
       if (generation !== generationRef.current) return;
-      const hasOfflineChanges = localGet(offlineDirtyKey(userId)) === "1" && cached !== null;
+      const hasOfflineChanges = cached !== null && await hasOfflineSavePending(userId, offlineMarkerStorage());
       const { data, error } = await supabase.from("player_saves").select("game_state, updated_at").eq("user_id", userId).maybeSingle();
       if (generation !== generationRef.current) return;
       if (error) throw error;
@@ -243,7 +251,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (!currentUserId) return;
     if (status === "offline" && activeUserRef.current === currentUserId) {
       void storeUserCache(currentUserId, state);
-      localSet(offlineDirtyKey(currentUserId), "1");
+      void markOfflineSavePending(currentUserId, offlineMarkerStorage());
       setSaveStatus("تقدم غير متصل محفوظ على هذا الجهاز فقط");
       return;
     }
@@ -252,6 +260,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       skipNextEffectRef.current = false;
       return;
     }
+    void markOfflineSavePending(currentUserId, offlineMarkerStorage());
     void storeUserCache(currentUserId, state);
     setSaveStatus("جارٍ مزامنة تقدمك...");
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -312,7 +321,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       setState(candidate);
       setMigration(null);
       setStatus("ready");
-      localRemove(offlineDirtyKey(userId));
       setSaveStatus(choice === "local" ? "حُفظ تقدم هذا الجهاز في حسابك" : "استُعيدت النسخة السحابية");
       return true;
     }
@@ -352,7 +360,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       return false;
     }
     try { await AsyncStorage.removeItem(userKey(userId)); } catch { /* Continue after cloud deletion. */ }
-    localRemove(offlineDirtyKey(userId));
+    await clearOfflineSavePending(userId, offlineMarkerStorage());
     if (localGet(LEGACY_CLAIM_KEY) === userId) {
       localRemove(LEGACY_CLAIM_KEY);
       localSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
