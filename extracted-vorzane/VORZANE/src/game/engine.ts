@@ -1,4 +1,4 @@
-import { CLASS_STATS, createFreshState, type ActiveExpedition, type ClassId, type EquipmentItem, type GameState, type OfflineReport } from "./model";
+import { CLASS_STATS, createFreshState, type ActiveExpedition, type ClassId, type EquipmentItem, type GameState, type OfflineReport, type StatKey } from "./model";
 import { EXPEDITIONS, findExpedition, PETS, QUESTS, STARTER_ITEMS } from "./catalog";
 import { createItemInstance, findEquipmentTemplate, getEquipmentSellPrice } from "./dungeonItems";
 import { addExperience } from "./stats";
@@ -15,6 +15,18 @@ export function createHeroState(name: string, className: ClassId): GameState {
   const stats = { ...CLASS_STATS[className] };
   state.hero = { name: name.trim().slice(0, 24), className, level: 1, exp: 0, statPoints: 0, stats, baseStats: { ...stats } };
   return state;
+}
+
+export function allocateStatPoint(state: GameState, key: StatKey): { state: GameState; error?: string } {
+  if (!state.hero) return { state, error: "أنشئ شخصية أولًا." };
+  if (state.hero.statPoints < 1) return { state, error: "لا توجد نقاط سمات متاحة." };
+  if (!Object.hasOwn(state.hero.stats, key)) return { state, error: "هذه السمة غير متاحة." };
+  if (state.hero.stats[key] >= 999_999) return { state, error: "بلغت السمة الحد الأقصى." };
+
+  const next = clone(state);
+  next.hero!.stats[key] += 1;
+  next.hero!.statPoints -= 1;
+  return { state: next };
 }
 
 export function beginOrQueueExpedition(state: GameState, planId: string, now = Date.now()): { state: GameState; queued: boolean; error?: string } {

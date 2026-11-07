@@ -4,8 +4,8 @@ import { useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, GradientCard, Icon, InputField, Meter, Pill, SectionTitle, StatCard, Txt } from "../../src/components/ui";
 import { CLASS_ICON, findExpedition, PETS, STARTER_ITEMS } from "../../src/game/catalog";
 import { BrandMark } from "../../src/components/BrandMark";
-import { combatStats, createBattleSequence, createHeroState, type BattleMode, type BattleResult, type BattleSequence } from "../../src/game/engine";
-import { CLASS_DESCRIPTIONS, CLASS_NAMES, type ClassId } from "../../src/game/model";
+import { allocateStatPoint, combatStats, createBattleSequence, createHeroState, type BattleMode, type BattleResult, type BattleSequence } from "../../src/game/engine";
+import { CLASS_DESCRIPTIONS, CLASS_NAMES, type ClassId, type StatKey } from "../../src/game/model";
 import { useGame } from "../../src/contexts/GameContext";
 import { palette } from "../../src/theme";
 import { CLASS_ART } from "../../src/game/art";
@@ -14,6 +14,8 @@ import { BattleArena } from "../../src/components/BattleArena";
 import { createItemInstance } from "../../src/game/dungeonItems";
 
 const CLASSES: ClassId[] = ["Warrior", "Mage", "Assassin", "Archer"];
+const STAT_LABELS: Record<StatKey, string> = { str: "القوة", def: "الدفاع", vit: "الحيوية", agi: "الرشاقة", luck: "الحظ" };
+const STAT_KEYS: StatKey[] = ["str", "def", "vit", "agi", "luck"];
 const formatTime = (milliseconds: number) => {
   const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
   const hours = Math.floor(seconds / 3600);
@@ -133,6 +135,28 @@ export default function CampScreen() {
       <StatCard label="الانتصارات" value={state.wins} icon="trophy" color={palette.jade} />
     </View>
 
+    {hero.statPoints > 0 ? <>
+      <SectionTitle title="تطوير السمات" icon="bar-chart-outline" action={<Pill label={`${hero.statPoints} نقطة متاحة`} tone="gold" />} />
+      <Card style={styles.statAllocation}>
+        {STAT_KEYS.map((key) => <View key={key} style={styles.statAllocationRow}>
+          <AppButton
+            label="+1"
+            icon="add-circle-outline"
+            variant="jade"
+            small
+            disabled={fpsMode || hero.stats[key] >= 999_999}
+            onPress={() => update((current) => allocateStatPoint(current, key).state)}
+            style={styles.allocateButton}
+          />
+          <View style={styles.statAllocationValue}>
+            <Txt style={styles.statAllocationNumber}>{hero.stats[key]}</Txt>
+            <Txt muted style={styles.statAllocationLabel}>{STAT_LABELS[key]}</Txt>
+          </View>
+        </View>)}
+        {fpsMode ? <Txt muted style={styles.statAllocationNote}>تخصيص السمات غير متاح عبر خادم اللعبة الحالي.</Txt> : null}
+      </Card>
+    </> : null}
+
     <SectionTitle title="زنزانتك ومعاركك" icon="flash-outline" action={<Pressable onPress={() => router.push("/quests")}><Txt style={styles.actionLink}>مهامك ←</Txt></Pressable>} />
     <Card style={styles.battleCard}>
       <Txt muted style={styles.battleIntro}>كل ضربة تظهر أمامك. واصل الزنزانة تلقائيًا؛ يتجدد دمك بين الأعداء وتزداد قوتهم تدريجيًا.</Txt>
@@ -190,6 +214,13 @@ const styles = StyleSheet.create({
   powerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
   saveLine: { fontSize: 10, maxWidth: "62%" },
   statsRow: { flexDirection: "row", gap: 8 },
+  statAllocation: { gap: 7 },
+  statAllocationRow: { minHeight: 45, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: palette.line, paddingVertical: 4 },
+  allocateButton: { width: 82 },
+  statAllocationValue: { flexDirection: "row", alignItems: "center", gap: 9 },
+  statAllocationNumber: { minWidth: 34, color: palette.gold, fontSize: 15, fontWeight: "900", textAlign: "center" },
+  statAllocationLabel: { fontSize: 13, fontWeight: "800" },
+  statAllocationNote: { fontSize: 11, lineHeight: 17, textAlign: "right" },
   battleCard: { gap: 11 },
   battleIntro: { fontSize: 13 },
   battleButtons: { flexDirection: "row", gap: 8 },

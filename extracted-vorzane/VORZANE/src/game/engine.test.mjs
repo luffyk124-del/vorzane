@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { advanceExpeditions, buyItem, canClaimQuest, claimQuest, createBattleSequence, createHeroState } from "./engine.ts";
+import { advanceExpeditions, allocateStatPoint, buyItem, canClaimQuest, claimQuest, createBattleSequence, createHeroState } from "./engine.ts";
 import { createFreshState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
@@ -22,6 +22,33 @@ test("shop rejects unknown items without changing the save", () => {
   assert.equal(result.state, state);
   assert.equal(state.gold, 500);
   assert.equal(state.inventory.length, 0);
+});
+
+test("level-up stat points can be spent exactly once per point", () => {
+  const state = createHeroState("اختبار", "Warrior");
+  state.hero.statPoints = 2;
+
+  const first = allocateStatPoint(state, "str");
+  const second = allocateStatPoint(first.state, "str");
+  const exhausted = allocateStatPoint(second.state, "str");
+
+  assert.equal(first.state.hero.stats.str, state.hero.stats.str + 1);
+  assert.equal(first.state.hero.statPoints, 1);
+  assert.equal(second.state.hero.stats.str, state.hero.stats.str + 2);
+  assert.equal(second.state.hero.statPoints, 0);
+  assert.ok(exhausted.error);
+  assert.equal(exhausted.state.hero.statPoints, 0);
+});
+
+test("stat allocation requires a hero and respects the stat ceiling", () => {
+  const fresh = createFreshState();
+  const hero = createHeroState("اختبار", "Warrior");
+  hero.hero.statPoints = 1;
+  hero.hero.stats.str = 999_999;
+
+  assert.ok(allocateStatPoint(fresh, "str").error);
+  assert.ok(allocateStatPoint(hero, "str").error);
+  assert.equal(hero.hero.statPoints, 1);
 });
 
 test("winning a dungeon battle advances the floor and grants catalog loot", () => {

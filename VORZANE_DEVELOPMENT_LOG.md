@@ -55,6 +55,14 @@ Updated: 2026-11-07
 - Local Expo Web preview returned HTTP 200 and rendered the VORZANE HTML shell. The browser launcher opened the page, but no Playwright/browser automation was available for DOM interaction, responsive screenshots, or console/network inspection.
 - No Supabase requests that write data, Prisma migrations, or database changes were performed. No environment files or secrets were read, deleted, or added. Live registration, OAuth, and save synchronization were not exercised.
 
+### 2026-11-07: Make level-up stat points usable
+
+- Added `allocateStatPoint` to the client game engine. It requires a hero and an available point, increments exactly one stat, decrements one point, and caps an individual stat at 999,999.
+- Added a camp-screen allocation panel for strength, defense, vitality, agility, and luck. The panel appears only while points are available, saves through the existing game-state path, and is explicitly disabled in FPS mode because the backend has no stat-allocation command.
+- Added tests for spending points once, exhaustion, missing heroes, and the stat ceiling. The full suite now has 9 passing tests.
+- `pnpm run typecheck`: passed. `EXPO_PUBLIC_BASE_PATH=/vorzane pnpm run build`: passed; 15 static routes exported.
+- The live authenticated screen was not exercised because doing so would require creating or mutating a real Supabase player save. No database or auth configuration was changed.
+
 ## Prioritized Roadmap
 
 ### P0: Protect player progress and establish QA
