@@ -32,6 +32,9 @@ export default {
     "expo-sharing",
     ["expo-splash-screen", { image: "./assets/images/splash-icon.png", imageWidth: 160, resizeMode: "contain", backgroundColor: "#080C12" }],
   ],
-  experiments: { typedRoutes: true },
+  experiments: {
+    typedRoutes: true,
+    baseUrl: process.env.EXPO_PUBLIC_BASE_PATH ?? "",
+  },
   logoUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663999581633/kQXDboTlSBXffYoO.png",
 };

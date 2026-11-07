@@ -1,0 +1,122 @@
+name: Build and deploy VORZANE to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pages.yml"
+      - "extracted-vorzane/VORZANE/**"
+  workflow_dispatch:
+    inputs:
+      approve_deploy:
+        description: Approve publishing the verified dist artifact to GitHub Pages
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: extracted-vorzane/VORZANE/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: extracted-vorzane/VORZANE
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        working-directory: extracted-vorzane/VORZANE
+        run: pnpm run typecheck
+      - name: Build web export
+        working-directory: extracted-vorzane/VORZANE
+        env:
+          EXPO_PUBLIC_BASE_PATH: /vorzane
+        run: pnpm run build
+      - name: Verify Pages export
+        working-directory: extracted-vorzane/VORZANE
+        env:
+          EXPO_PUBLIC_BASE_PATH: /vorzane
+        run: |
+          node --input-type=module <<'NODE'
+          import { readdir, readFile, stat } from 'node:fs/promises';
+          import path from 'node:path';
+
+          const output = path.resolve('dist');
+          const basePath = process.env.EXPO_PUBLIC_BASE_PATH;
+          const htmlFiles = [];
+          const walk = async (directory) => {
+            for (const entry of await readdir(directory, { withFileTypes: true })) {
+              const file = path.join(directory, entry.name);
+              if (entry.isDirectory()) await walk(file);
+              else if (entry.name.endsWith('.html')) htmlFiles.push(file);
+            }
+          };
+
+          await walk(output);
+          if (!htmlFiles.some((file) => file === path.join(output, 'index.html'))) {
+            throw new Error('Missing dist/index.html');
+          }
+
+          const problems = [];
+          for (const file of htmlFiles) {
+            const html = await readFile(file, 'utf8');
+            for (const [, url] of html.matchAll(/(?:src|href)=["']([^"']+)["']/g)) {
+              if (!url.startsWith('/') || url.startsWith('//')) continue;
+              if (!url.startsWith(`${basePath}/`)) {
+                problems.push(`${path.relative(output, file)} references ${url} outside ${basePath}/`);
+                continue;
+              }
+              const resourcePath = decodeURIComponent(url.slice(basePath.length + 1).split(/[?#]/, 1)[0]);
+              const resource = path.resolve(output, resourcePath);
+              if (!resource.startsWith(`${output}${path.sep}`)) {
+                problems.push(`${path.relative(output, file)} references a path outside dist`);
+                continue;
+              }
+              const candidates = [resource, `${resource}.html`, path.join(resource, 'index.html')];
+              let exists = false;
+              for (const candidate of candidates) {
+                try {
+                  if ((await stat(candidate)).isFile()) exists = true;
+                } catch {}
+              }
+              if (!exists) problems.push(`${path.relative(output, file)} references missing ${url}`);
+            }
+          }
+
+          if (problems.length) throw new Error(problems.join('\n'));
+          console.log(`Verified ${htmlFiles.length} static HTML files and root-relative links under ${basePath}/`);
+          NODE
+          if find dist -type f -name '.env*' -print -quit | grep -q .; then
+            echo 'Unexpected environment file found in dist' >&2
+            exit 1
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: extracted-vorzane/VORZANE/dist
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.approve_deploy
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
