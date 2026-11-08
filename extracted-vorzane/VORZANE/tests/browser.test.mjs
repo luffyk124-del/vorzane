@@ -289,6 +289,10 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   await page.getByPlaceholder("اسم اللاعب...").fill("صديق");
   await page.getByText("بحث", { exact: true }).click();
   await page.getByText("صديق تجريبي", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByRole("button", { name: "إضافة" }).click();
+  await page.getByText("تم إرسال طلب الصداقة.", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByText("تم الإرسال", { exact: true }).waitFor({ timeout: 10_000 });
+  assert.equal(await page.getByRole("button", { name: "إضافة" }).count(), 0, "sent request must not remain actionable as a new request");
 
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   assert.equal(hasHorizontalOverflow, false, "friends screen must not overflow horizontally on a 360px viewport");
