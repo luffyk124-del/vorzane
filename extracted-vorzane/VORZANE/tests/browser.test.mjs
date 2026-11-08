@@ -116,8 +116,9 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/rest/v1/player_profiles")) {
-      const rows = mockedPlayerProfile ? [mockedPlayerProfile] : [];
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(rows) });
+      // getMyProfile uses maybeSingle(), so the mock must return one object or null,
+      // not a list. An empty array is truthy and breaks the controlled name input.
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockedPlayerProfile) });
       return;
     }
     if (social && request.method() === "POST" && url.pathname.includes("/rest/v1/rpc/")) {
