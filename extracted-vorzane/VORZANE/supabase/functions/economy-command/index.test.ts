@@ -21,8 +21,15 @@ function fixture(options: {
   const state = options.state ?? createHeroState("Test", "Warrior");
   const calls: Record<string, unknown> = {};
   const builder = {
-    select(columns: string) { calls.columns = columns; return this; },
-    eq(column: string, value: string) { calls.filter = [column, value]; return this; },
+    select(columns: string) {
+      (calls.columnsByTable ??= {})[String(calls.table)] = columns;
+      return this;
+    },
+    eq(column: string, value: string) {
+      const filters = (calls.filters ??= {}) as Record<string, unknown[]>;
+      (filters[String(calls.table)] ??= []).push([column, value]);
+      return this;
+    },
     async maybeSingle() {
       if (calls.table === "player_command_receipts") {
         return { data: options.receipt ?? null, error: null };
@@ -37,7 +44,11 @@ function fixture(options: {
     auth: { async getUser() {
       return { data: { user: options.user === undefined ? { id: "user-a" } : options.user }, error: options.authError ?? null };
     } },
-    from(table: string) { calls.table = table; return builder; },
+    from(table: string) {
+      calls.table = table;
+      ((calls.tables ??= []) as string[]).push(table);
+      return builder;
+    },
     async rpc(name: string, args: Record<string, unknown>) {
       calls.rpc = name;
       calls.args = args;
@@ -109,8 +120,9 @@ Deno.test("buyItem uses canonical game rules and commits the caller's save", asy
   const response = await handler(commandRequest({ type: "buyItem", itemId: "sword1" }));
   const body = await readJson(response);
   assert(response.status === 200, "expected 200");
-  assert(calls.table === "player_saves", "expected player save read");
-  assert(JSON.stringify(calls.filter) === JSON.stringify(["user_id", "user-a"]), "save read must be scoped to caller");
+  assert((calls.tables as string[]).includes("player_saves"), "expected player save read");
+  const filters = calls.filters as Record<string, unknown[]>;
+  assert(JSON.stringify(filters.player_saves) === JSON.stringify([["user_id", "user-a"]]), "save read must be scoped to caller");
   assert(calls.rpc === "commit_player_command", "expected atomic command commit");
   assert((calls.keys as string[]).includes("test-service-role-key"), "privileged RPC must use the server-only service role");
   const args = calls.args as Record<string, unknown>;
