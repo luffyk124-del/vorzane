@@ -205,8 +205,8 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await signInWithMock(page);
       await page.getByText("2 نقطة متاحة", { exact: true }).waitFor();
       await page.getByRole("button", { name: "فتح القائمة" }).click();
-      await page.getByRole("button", { name: "الملف الشخصي" }).waitFor();
-      await page.getByRole("button", { name: "الملف الشخصي" }).click();
+      await page.getByRole("button", { name: "الملف الشخصي", exact: true }).waitFor();
+      await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
       await page.getByText("هويتك في العالم", { exact: true }).waitFor({ timeout: 10_000 });
       await page.getByRole("button", { name: "رجوع" }).click();
       await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
@@ -306,7 +306,7 @@ test("character appearance choices persist in the cloud save and restore after r
 
   await signInWithMock(page);
   await page.getByRole("button", { name: "فتح القائمة" }).click();
-  await page.getByRole("button", { name: "الملف الشخصي" }).click();
+  await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
   await page.getByText("مظهر الشخصية", { exact: true }).waitFor({ timeout: 10_000 });
 
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).click();
@@ -324,7 +324,7 @@ test("character appearance choices persist in the cloud save and restore after r
 
   await page.reload();
   await page.getByRole("button", { name: "فتح القائمة" }).click();
-  await page.getByRole("button", { name: "الملف الشخصي" }).click();
+  await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).waitFor();
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
   await page.getByRole("radio", { name: "درجة اللون 3" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
