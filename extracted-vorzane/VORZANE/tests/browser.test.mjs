@@ -210,7 +210,7 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await page.getByRole("button", { name: "فتح القائمة" }).click();
       await page.getByRole("button", { name: "الملف الشخصي", exact: true }).waitFor();
       await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
-      await page.getByText("هويتك في العالم", { exact: true }).waitFor({ timeout: 10_000 });
+      await page.waitForURL("**/profile", { timeout: 10_000 });\n      await page.getByText("الملف الشخصي", { exact: true }).last().waitFor({ timeout: 10_000 });
       await page.getByRole("button", { name: "رجوع" }).click();
       await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
 
@@ -319,7 +319,7 @@ test("character appearance choices persist in the cloud save and restore after r
   await signInWithMock(page);
   await page.getByRole("button", { name: "فتح القائمة" }).click();
   await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
-  await page.getByText("مظهر الشخصية", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.waitForURL("**/profile", { timeout: 10_000 });\n  await page.getByText("مظهر الشخصية", { exact: true }).waitFor({ timeout: 10_000 });
 
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).click();
   const characterPreview = page.getByTestId("fantasy-character-preview");
