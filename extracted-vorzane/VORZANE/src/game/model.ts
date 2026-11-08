@@ -48,7 +48,7 @@ export type OfflineReport = {
   failure?: string;
 };
 
-export type CharacterStyle = { gender: "male" | "female"; appearance: 0 | 1 | 2 | 3 };
+export type CharacterStyle = { gender: "male" | "female"; appearance: 0 | 1 | 2 | 3; hairstyle: "short" | "long" | "braids" | "fringe"; face: "classic" | "noble" | "weathered"; outfit: "adventurer" | "royal" | "shadow"; body: "balanced" | "sturdy" | "agile" };
 export type MissionSnapshot = { wins: number; expeditions: number; level: number };
 export type MissionPeriod = { key: string; baseline: MissionSnapshot; claimed: Record<string, boolean> };
 export type MissionPeriods = { daily: MissionPeriod; weekly: MissionPeriod; season: MissionPeriod };
@@ -118,7 +118,7 @@ function missionWeekKey(date = new Date()) {
 export function createFreshState(): GameState {
   return {
     hero: null,
-    characterStyle: { gender: "male", appearance: 0 },
+    characterStyle: { gender: "male", appearance: 0, hairstyle: "short", face: "classic", outfit: "adventurer", body: "balanced" },
     missionPeriods: {
       daily: { key: new Date().toISOString().slice(0, 10), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
       weekly: { key: missionWeekKey(), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
@@ -259,6 +259,10 @@ export function normalizeGameState(value: unknown): GameState | null {
     characterStyle: {
       gender: source.characterStyle?.gender === "female" ? "female" : "male",
       appearance: ([0, 1, 2, 3].includes(Number(source.characterStyle?.appearance)) ? Number(source.characterStyle?.appearance) : 0) as 0 | 1 | 2 | 3,
+      hairstyle: (["short", "long", "braids", "fringe"].includes(String(source.characterStyle?.hairstyle)) ? source.characterStyle?.hairstyle : fresh.characterStyle.hairstyle) as CharacterStyle["hairstyle"],
+      face: (["classic", "noble", "weathered"].includes(String(source.characterStyle?.face)) ? source.characterStyle?.face : fresh.characterStyle.face) as CharacterStyle["face"],
+      outfit: (["adventurer", "royal", "shadow"].includes(String(source.characterStyle?.outfit)) ? source.characterStyle?.outfit : fresh.characterStyle.outfit) as CharacterStyle["outfit"],
+      body: (["balanced", "sturdy", "agile"].includes(String(source.characterStyle?.body)) ? source.characterStyle?.body : fresh.characterStyle.body) as CharacterStyle["body"],
     },
     missionPeriods: normalizeMissionPeriods(source.missionPeriods, finite(source.wins, 0), finite(source.expeditionsCompleted, 0), hero?.level ?? 1),
     profileAvatarId: ["brand", "Warrior", "Mage", "Assassin", "Archer"].includes(String(source.profileAvatarId)) ? source.profileAvatarId as ClassId | "brand" : "brand",
