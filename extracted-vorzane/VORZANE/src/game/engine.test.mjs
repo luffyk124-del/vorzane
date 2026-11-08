@@ -91,7 +91,7 @@ test("stat allocation requires a hero and respects the stat ceiling", () => {
 
 test("winning a dungeon battle advances the floor and grants catalog loot", () => {
   const state = createHeroState("اختبار", "Warrior");
-  const battle = createBattleSequence(state, "dungeon", () => 0.99);
+  const battle = createBattleSequence(state, "dungeon", () => 0.01);
 
   assert.ok(battle);
   assert.equal(battle.result.won, true);
@@ -101,6 +101,16 @@ test("winning a dungeon battle advances the floor and grants catalog loot", () =
   assert.equal(battle.result.state.inventory.length, 1);
   assert.ok(battle.result.gold > 0);
   assert.ok(battle.result.xp > 0);
+});
+
+test("dungeon victories can yield no item when the random drop roll fails", () => {
+  const state = createHeroState("اختبار", "Warrior");
+  const battle = createBattleSequence(state, "dungeon", () => 0.99);
+
+  assert.ok(battle);
+  assert.equal(battle.result.won, true);
+  assert.equal(battle.result.dropped, null);
+  assert.equal(battle.result.state.inventory.length, 0);
 });
 
 test("completed expedition pays its reward once and clears the active slot", () => {
