@@ -1,4 +1,4 @@
-import { CLASS_STATS, createFreshState, type ActiveExpedition, type ClassId, type EquipmentItem, type GameState, type OfflineReport, type StatKey } from "./model";
+import { CLASS_STATS, createFreshState, type ActiveExpedition, type ClassId, type EquipmentItem, type GameState, type OfflineReport, type StatKey, type MissionPeriod, type MissionPeriods } from "./model";
 import { EXPEDITIONS, findExpedition, PETS, QUESTS, STARTER_ITEMS } from "./catalog";
 import { DUNGEON_ITEMS, createItemInstance, findEquipmentTemplate, getEquipmentSellPrice } from "./dungeonItems";
 import { addExperience } from "./stats";
@@ -246,4 +246,73 @@ export function claimExpeditionTask(state: GameState, taskId: string): GameState
     quests: { ...state.quests, [taskId]: true },
     claimedQuestRewards: { ...state.claimedQuestRewards, [`task:${taskId}`]: true },
   };
+}
+
+export type MissionScope = "daily" | "weekly" | "season";
+export type RecurringMission = { id: string; scope: MissionScope; title: string; description: string; metric: "wins" | "expeditions" | "levels"; target: number; rewardGold: number; icon: string };
+
+export const RECURRING_MISSIONS: RecurringMission[] = [
+  { id: "daily-wins", scope: "daily", title: "حارس اليوم", description: "اربح معركتين اليوم", metric: "wins", target: 2, rewardGold: 120, icon: "trophy" },
+  { id: "daily-expedition", scope: "daily", title: "خطوة نحو المجهول", description: "أكمل رحلة استكشافية اليوم", metric: "expeditions", target: 1, rewardGold: 100, icon: "compass" },
+  { id: "weekly-wins", scope: "weekly", title: "بطل الأسبوع", description: "اربح 10 معارك هذا الأسبوع", metric: "wins", target: 10, rewardGold: 600, icon: "medal" },
+  { id: "weekly-expeditions", scope: "weekly", title: "مستكشف الأسبوع", description: "أكمل 4 رحلات هذا الأسبوع", metric: "expeditions", target: 4, rewardGold: 700, icon: "map" },
+  { id: "weekly-levels", scope: "weekly", title: "صعود ثابت", description: "ارفع مستواك درجتين هذا الأسبوع", metric: "levels", target: 2, rewardGold: 800, icon: "trending-up" },
+  { id: "season-wins", scope: "season", title: "أسطورة الموسم", description: "اربح 40 معركة خلال الموسم", metric: "wins", target: 40, rewardGold: 3000, icon: "star" },
+  { id: "season-expeditions", scope: "season", title: "رحّالة الموسم", description: "أكمل 12 رحلة خلال الموسم", metric: "expeditions", target: 12, rewardGold: 2500, icon: "compass" },
+  { id: "season-levels", scope: "season", title: "قمة التطور", description: "ارفع مستواك خمسة مستويات خلال الموسم", metric: "levels", target: 5, rewardGold: 4000, icon: "trending-up" },
+];
+
+function missionPeriodKey(scope: MissionScope, now: number) {
+  const date = new Date(now);
+  const day = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  if (scope === "daily") return day.toISOString().slice(0, 10);
+  if (scope === "season") return day.toISOString().slice(0, 7);
+  day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+  return day.toISOString().slice(0, 10);
+}
+
+function missionSnapshot(state: GameState) {
+  return { wins: state.wins, expeditions: state.expeditionsCompleted, level: state.hero?.level ?? 1 };
+}
+
+export function ensureMissionPeriods(state: GameState, now = Date.now()): GameState {
+  const current = missionSnapshot(state);
+  const periods = { ...state.missionPeriods } as MissionPeriods;
+  let changed = false;
+  for (const scope of ["daily", "weekly", "season"] as const) {
+    const key = missionPeriodKey(scope, now);
+    if (periods[scope]?.key !== key) {
+      periods[scope] = { key, baseline: current, claimed: {} };
+      changed = true;
+    }
+  }
+  return changed ? { ...state, missionPeriods: periods } : state;
+}
+
+export function getRecurringMissions(state: GameState, scope: MissionScope, now = Date.now()) {
+  const ready = ensureMissionPeriods(state, now);
+  const period: MissionPeriod = ready.missionPeriods[scope];
+  return RECURRING_MISSIONS.filter((mission) => mission.scope === scope).map((mission) => {
+    const baseline = period.baseline;
+    const raw = mission.metric === "wins"
+      ? ready.wins - baseline.wins
+      : mission.metric === "expeditions"
+        ? ready.expeditionsCompleted - baseline.expeditions
+        : (ready.hero?.level ?? 1) - baseline.level;
+    const progress = Math.max(0, Math.min(mission.target, raw));
+    const claimed = period.claimed[mission.id] === true;
+    return { ...mission, progress, claimed, available: progress >= mission.target && !claimed };
+  });
+}
+
+export function claimRecurringMission(state: GameState, scope: MissionScope, missionId: string, now = Date.now()): GameState {
+  const ready = ensureMissionPeriods(state, now);
+  const mission = RECURRING_MISSIONS.find((item) => item.scope === scope && item.id === missionId);
+  if (!mission) return state;
+  const current = getRecurringMissions(ready, scope, now).find((item) => item.id === missionId);
+  if (!current?.available) return ready;
+  const periods = { ...ready.missionPeriods };
+  const period = periods[scope];
+  periods[scope] = { ...period, claimed: { ...period.claimed, [missionId]: true } };
+  return { ...ready, missionPeriods: periods, gold: Math.min(1_000_000_000, ready.gold + mission.rewardGold) };
 }
