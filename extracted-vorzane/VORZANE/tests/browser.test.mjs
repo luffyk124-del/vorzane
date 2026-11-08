@@ -291,6 +291,8 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   await signInWithMock(page);
   await page.getByRole("button", { name: "فتح القائمة" }).click();
   await page.getByRole("button", { name: "الأصدقاء", exact: true }).click();
+  await page.waitForTimeout(700);
+  console.log("FRIENDS_ROUTE_DEBUG", page.url(), (await page.locator("body").innerText()).slice(0, 1600), "PAGE_ERRORS", pageErrors, "HTML", (await page.locator("body").innerHTML()).slice(0, 2600));
   await page.getByTestId("page-title").getByText("الأصدقاء", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByPlaceholder("اسم اللاعب...").waitFor({ timeout: 15_000 });
   const createProfileButton = page.getByRole("button", { name: "إنشاء ملف اللاعب" });
