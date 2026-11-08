@@ -111,7 +111,7 @@ export default function GearScreen() {
           <View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt><Txt muted style={styles.itemBonus}>{shown.slot} • {Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>يتطلب {required}</Txt></View>
           <Icon name={(shown.icon ?? "ellipse") as never} color={rarityColor[shown.rarity]} size={20} />
         </Card>;
-      }) : <Card style={styles.empty}><Icon name="file-tray-outline" color={palette.dim} size={22} /><Txt muted>حقيبتك فارغة. اكسب عتادًا من الزنزانة أو ابدأ بمتجر الحدود.</Txt></Card>}
+      }) : <Card style={styles.empty}><Icon name="file-tray-outline" color={palette.dim} size={22} /><Txt muted>حقيبتك فارغة. اختر أول قطعة من متجر العالم.</Txt></Card>}
     </> : null}
 
     {tab === "shop" ? <>
@@ -126,7 +126,7 @@ export default function GearScreen() {
         const canAfford = state.gold >= item.price;
         return <Card key={item.id} style={styles.itemRow}>
           <AppButton label={canAfford ? `شراء ${item.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => purchaseItem(item.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التجهيز من المستوى {item.requiredLevel ?? 1}</Txt></View>
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التجهيز: مستوى {item.requiredLevel ?? 1}{(item.requiredDungeonFloor ?? 1) > 1 ? ` • طابق ${item.requiredDungeonFloor}` : ""}</Txt></View>
           <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
         </Card>;
       })}
@@ -148,7 +148,7 @@ export default function GearScreen() {
 
     {tab === "market" ? <>
       <SectionTitle title={`سوق اللاعب (${marketItems.length})`} icon="cash-outline" action={<Pill label="50% من السعر المرجعي" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>أسعار مرجعية واضحة</Txt><Txt muted style={styles.shopCopy}>يعرض السوق القطع الموجودة في حقيبتك أو المجهزة فقط. تُحسب قيمة البيع كنصف سعر الكتالوج، وتبقى غنائم الزنزانة خارج متجر الشراء.</Txt><Txt style={styles.poolNote}>كتالوج الزنزانة: {DUNGEON_ITEM_POOL_SIZE} قطعة • لا تُشترى من المتجر.</Txt></Card>
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>أسعار مرجعية واضحة</Txt><Txt muted style={styles.shopCopy}>يعرض السوق القطع الموجودة في حقيبتك أو المجهزة فقط. تُحسب قيمة البيع كنصف سعر الكتالوج، وتبقى غنائم الزنزانة خارج متجر الشراء.</Txt><Txt style={styles.poolNote}>كتالوج الزنزانة: {DUNGEON_ITEM_POOL_SIZE} قطعة • متاحة للشراء.</Txt></Card>
       {marketItems.length ? marketItems.map(({ item, equipped }) => {
         const shown = findEquipmentTemplate(item) ?? item;
         const sellPrice = getEquipmentSellPrice(item);
