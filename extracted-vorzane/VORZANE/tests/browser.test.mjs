@@ -287,7 +287,7 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   const page = await browserContext.newPage();
   const pageErrors = [];
   const { unexpectedRequests } = await installSupabaseMock(page, { social: true });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("pageerror", (error) => pageErrors.push(error.stack ?? error.message));
 
   await signInWithMock(page);
   await page.getByRole("button", { name: "فتح القائمة" }).click();
