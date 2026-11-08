@@ -149,7 +149,7 @@ export function equipItem(state: GameState, itemId: string): GameState {
 
 export function unequipItem(state: GameState, slot: string): GameState {
   const item = state.equipped[slot];
-  if (!item) return state;
+  if (!item || state.inventory.length >= 500) return state;
   const equipped = { ...state.equipped };
   delete equipped[slot];
   return { ...state, equipped, inventory: [...state.inventory, item] };
