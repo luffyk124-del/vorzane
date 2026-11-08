@@ -283,7 +283,7 @@ test("friends profile and player search remain usable on a narrow mobile viewpor
   await page.getByText("تم حفظ ملفك الشخصي.", { exact: true }).waitFor({ timeout: 10_000 });
 
   await page.getByPlaceholder("اسم اللاعب...").fill("صديق");
-  await page.getByRole("button", { name: "بحث" }).click();
+  await page.getByText("بحث", { exact: true }).click();
   await page.getByText("صديق تجريبي", { exact: true }).waitFor({ timeout: 10_000 });
 
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
