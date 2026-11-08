@@ -40,7 +40,7 @@ function StyleChoiceGroup({ title, value, options, onChange, helperText }: { tit
 
 export default function ProfileScreen() {
   const { user } = useAuth();
-  const { state, update } = useGame();
+  const { state, update, executeEconomyCommand, serverEconomyCommandsEnabled } = useGame();
   const hairstyleOptions = (state.characterStyle.gender === "female"
     ? ["short", "long", "braids"]
     : ["short", "long", "fringe"]).map((id) => ({
@@ -52,6 +52,14 @@ export default function ProfileScreen() {
   const [isSearchable, setIsSearchable] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const changeCharacterStyle = (updater: (current: CharacterStyle) => CharacterStyle) => {
+    if (serverEconomyCommandsEnabled) {
+      const next = updater(state.characterStyle);
+      void executeEconomyCommand({ type: "updateCharacterStyle", style: next });
+      return;
+    }
+    update((current) => ({ ...current, characterStyle: updater(current.characterStyle) }));
+  };
 
   useEffect(() => {
     let active = true;
@@ -105,7 +113,7 @@ export default function ProfileScreen() {
       <View style={styles.avatarGrid}>
         {([{ id: "male", label: "ذكر" }, { id: "female", label: "أنثى" }] as const).map((option) => {
           const selected = state.characterStyle.gender === option.id;
-          return <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={`تفضيل الشخصية: ${option.label}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, gender: option.id, hairstyle: option.id === "female" ? (current.characterStyle.hairstyle === "fringe" ? "braids" : current.characterStyle.hairstyle) : (current.characterStyle.hairstyle === "braids" ? "short" : current.characterStyle.hairstyle) } }))} style={[styles.avatarOption, selected && styles.avatarSelected]}>
+          return <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={`تفضيل الشخصية: ${option.label}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => changeCharacterStyle((current) => ({ ...current, gender: option.id, hairstyle: option.id === "female" ? (current.hairstyle === "fringe" ? "braids" : current.hairstyle) : (current.hairstyle === "braids" ? "short" : current.hairstyle) }))} style={[styles.avatarOption, selected && styles.avatarSelected]}>
             <Icon name={option.id === "male" ? "male" : "female"} size={21} color={selected ? palette.gold : palette.jade} />
             <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>{option.label}</Txt>
           </Pressable>;
@@ -123,13 +131,13 @@ export default function ProfileScreen() {
       <View style={styles.avatarGrid}>
         {["#F2C7A5", "#D59A70", "#A66D4C", "#684331"].map((color, index) => {
           const selected = state.characterStyle.appearance === index;
-          return <Pressable key={color} accessibilityRole="radio" accessibilityLabel={`درجة اللون ${index + 1}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, appearance: index as 0 | 1 | 2 | 3 } }))} style={[styles.appearanceChoice, selected && styles.avatarSelected]}>
+          return <Pressable key={color} accessibilityRole="radio" accessibilityLabel={`درجة اللون ${index + 1}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => changeCharacterStyle((current) => ({ ...current, appearance: index as 0 | 1 | 2 | 3 }))} style={[styles.appearanceChoice, selected && styles.avatarSelected]}>
             <View style={[styles.appearanceSwatch, { backgroundColor: color }]} />
             <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>درجة اللون {index + 1}</Txt>
           </Pressable>;
         })}
       </View>
-      <StyleChoiceGroup title="تسريحة الشعر" value={state.characterStyle.hairstyle} options={hairstyleOptions} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, hairstyle: value as CharacterStyle["hairstyle"] } }))} />
+      <StyleChoiceGroup title="تسريحة الشعر" value={state.characterStyle.hairstyle} options={hairstyleOptions} onChange={(value) => changeCharacterStyle((current) => ({ ...current, hairstyle: value as CharacterStyle["hairstyle"] }))} />
       <StyleChoiceGroup title="لون الشعر" value={state.characterStyle.hairColor ?? "obsidian"} options={[
         { id: "obsidian", label: "أسود فحمي", color: "#171B24" },
         { id: "silver", label: "فضي", color: "#AEB8C8" },
@@ -137,10 +145,10 @@ export default function ProfileScreen() {
         { id: "gold", label: "ذهبي", color: "#B8893F" },
         { id: "violet", label: "بنفسجي", color: "#503A78" },
         { id: "chestnut", label: "كستنائي", color: "#70432F" },
-      ]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, hairColor: value as CharacterHairColor } }))} />
-      <StyleChoiceGroup title="ملامح الوجه" value={state.characterStyle.face} options={[{ id: "classic", label: "كلاسيكي" }, { id: "noble", label: "نبيل" }, { id: "weathered", label: "مغامر" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, face: value as CharacterStyle["face"] } }))} />
-      <StyleChoiceGroup title="الملابس" value={state.characterStyle.outfit} options={[{ id: "adventurer", label: "مغامر" }, { id: "royal", label: "ملكي" }, { id: "shadow", label: "داكن" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, outfit: value as CharacterStyle["outfit"] } }))} />
-      <StyleChoiceGroup title="بنية الجسم" value={state.characterStyle.body} options={[{ id: "balanced", label: "متوازن" }, { id: "sturdy", label: "متين" }, { id: "agile", label: "رشيق" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, body: value as CharacterStyle["body"] } }))} />
+      ]} onChange={(value) => changeCharacterStyle((current) => ({ ...current, hairColor: value as CharacterHairColor }))} />
+      <StyleChoiceGroup title="ملامح الوجه" value={state.characterStyle.face} options={[{ id: "classic", label: "كلاسيكي" }, { id: "noble", label: "نبيل" }, { id: "weathered", label: "مغامر" }]} onChange={(value) => changeCharacterStyle((current) => ({ ...current, face: value as CharacterStyle["face"] }))} />
+      <StyleChoiceGroup title="الملابس" value={state.characterStyle.outfit} options={[{ id: "adventurer", label: "مغامر" }, { id: "royal", label: "ملكي" }, { id: "shadow", label: "داكن" }]} onChange={(value) => changeCharacterStyle((current) => ({ ...current, outfit: value as CharacterStyle["outfit"] }))} />
+      <StyleChoiceGroup title="بنية الجسم" value={state.characterStyle.body} options={[{ id: "balanced", label: "متوازن" }, { id: "sturdy", label: "متين" }, { id: "agile", label: "رشيق" }]} onChange={(value) => changeCharacterStyle((current) => ({ ...current, body: value as CharacterStyle["body"] }))} />
     </Card>
 
     <SectionTitle title="اسم اللاعب" icon="person-outline" />
