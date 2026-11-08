@@ -48,8 +48,11 @@ export type OfflineReport = {
   failure?: string;
 };
 
+export type CharacterStyle = { gender: "male" | "female"; appearance: 0 | 1 | 2 | 3 };
+
 export type GameState = {
   hero: Hero | null;
+  characterStyle: CharacterStyle;
   profileAvatarId: ClassId | "brand";
   gold: number;
   gems: number;
@@ -105,6 +108,7 @@ export const SLOT_NAMES = ["سلاح", "درع", "خوذة", "قفازات", "ح
 export function createFreshState(): GameState {
   return {
     hero: null,
+    characterStyle: { gender: "male", appearance: 0 },
     profileAvatarId: "brand",
     gold: 500,
     gems: 50,
@@ -202,6 +206,10 @@ export function normalizeGameState(value: unknown): GameState | null {
     ...fresh,
     ...source,
     hero,
+    characterStyle: {
+      gender: source.characterStyle?.gender === "female" ? "female" : "male",
+      appearance: ([0, 1, 2, 3].includes(Number(source.characterStyle?.appearance)) ? Number(source.characterStyle?.appearance) : 0) as 0 | 1 | 2 | 3,
+    },
     profileAvatarId: ["brand", "Warrior", "Mage", "Assassin", "Archer"].includes(String(source.profileAvatarId)) ? source.profileAvatarId as ClassId | "brand" : "brand",
     gold: finite(source.gold, fresh.gold, 0, 1_000_000_000),
     gems: finite(source.gems, fresh.gems, 0, 1_000_000_000),
