@@ -22,7 +22,7 @@ function isAvatarId(value: string): value is ClassId | "brand" {
 
 export default function ProfileScreen() {
   const { user } = useAuth();
-  const { state } = useGame();
+  const { state, update } = useGame();
   const [displayName, setDisplayName] = useState("");
   const [avatarId, setAvatarId] = useState<ClassId | "brand">("brand");
   const [isSearchable, setIsSearchable] = useState(true);
@@ -74,6 +74,29 @@ export default function ProfileScreen() {
       </View>
     </Card>
 
+    <SectionTitle title="مظهر الشخصية" icon="color-palette-outline" />
+    <Card style={styles.panel}>
+      <Txt muted style={styles.hint}>يمكنك تغيير المظهر في أي وقت دون التأثير على مستواك أو تقدمك.</Txt>
+      <View style={styles.avatarGrid}>
+        {([{ id: "male", label: "ذكر" }, { id: "female", label: "أنثى" }] as const).map((option) => {
+          const selected = state.characterStyle.gender === option.id;
+          return <Pressable key={option.id} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, gender: option.id } }))} style={[styles.avatarOption, selected && styles.avatarSelected]}>
+            <Icon name={option.id === "male" ? "male" : "female"} size={21} color={selected ? palette.gold : palette.jade} />
+            <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>{option.label}</Txt>
+          </Pressable>;
+        })}
+      </View>
+      <View style={styles.avatarGrid}>
+        {["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"].map((color, index) => {
+          const selected = state.characterStyle.appearance === index;
+          return <Pressable key={color} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, appearance: index as 0 | 1 | 2 | 3 } }))} style={[styles.appearanceChoice, selected && styles.avatarSelected]}>
+            <View style={[styles.appearanceSwatch, { backgroundColor: color }]} />
+            <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>مظهر {index + 1}</Txt>
+          </Pressable>;
+        })}
+      </View>
+    </Card>
+
     <SectionTitle title="اسم اللاعب" icon="person-outline" />
     <Card style={styles.panel}>
       <TextInput value={displayName} onChangeText={setDisplayName} maxLength={24} placeholder="اكتب اسمك داخل VORZANE" placeholderTextColor={palette.muted} style={styles.input} />
@@ -114,6 +137,8 @@ const styles = StyleSheet.create({
   input: { minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 12, color: palette.text, textAlign: "right", backgroundColor: "#0B171D" },
   hint: { fontSize: 10 },
   avatarGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" },
+  appearanceChoice: { flex: 1, minWidth: 65, minHeight: 68, alignItems: "center", justifyContent: "center", gap: 6, padding: 8, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.midnight },
+  appearanceSwatch: { width: 22, height: 22, borderRadius: 11 },
   avatarOption: { width: "30%", minWidth: 88, alignItems: "center", justifyContent: "center", gap: 7, padding: 10, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.midnight },
   avatarSelected: { borderColor: palette.jade, backgroundColor: "rgba(100,217,197,0.09)" },
   avatarLabel: { color: palette.muted, fontSize: 10, fontWeight: "800", textAlign: "center" },
