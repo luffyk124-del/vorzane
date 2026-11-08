@@ -189,3 +189,35 @@ export function setPet(state: GameState, petId: string | null): GameState {
   if (!state.hero || !pet || !state.pets.includes(petId) || state.hero.level < pet.requiredLevel) return state;
   return { ...state, activePet: petId };
 }
+
+
+export const EXPLORATION_ACHIEVEMENTS = [
+  { id: "explorer_first", title: "أول خطوة", description: "أكمل رحلة استكشافية واحدة", metric: "expeditions", target: 1, rewardGold: 75, icon: "compass" },
+  { id: "explorer_five", title: "دليل الدروب", description: "أكمل خمس رحلات استكشافية", metric: "expeditions", target: 5, rewardGold: 200, icon: "map" },
+  { id: "explorer_twenty", title: "عين المستكشف", description: "أكمل عشرين رحلة استكشافية", metric: "expeditions", target: 20, rewardGold: 500, icon: "telescope" },
+  { id: "level_five", title: "خطوة ثابتة", description: "بلغ المستوى الخامس", metric: "level", target: 5, rewardGold: 150, icon: "trending-up" },
+] as const;
+
+export function getExplorationAchievementProgress(state: GameState, achievementId: string): number {
+  const achievement = EXPLORATION_ACHIEVEMENTS.find((item) => item.id === achievementId);
+  if (!achievement) return 0;
+  return achievement.metric === "expeditions" ? state.expeditionsCompleted : (state.hero?.level ?? 1);
+}
+
+export function canClaimExplorationAchievement(state: GameState, achievementId: string): boolean {
+  const achievement = EXPLORATION_ACHIEVEMENTS.find((item) => item.id === achievementId);
+  if (!achievement || state.claimedQuestRewards[`achievement:${achievementId}`]) return false;
+  return getExplorationAchievementProgress(state, achievementId) >= achievement.target;
+}
+
+export function claimExplorationAchievement(state: GameState, achievementId: string): GameState {
+  if (!canClaimExplorationAchievement(state, achievementId)) return state;
+  const achievement = EXPLORATION_ACHIEVEMENTS.find((item) => item.id === achievementId);
+  if (!achievement) return state;
+  return {
+    ...state,
+    gold: Math.min(1_000_000_000, state.gold + achievement.rewardGold),
+    achievements: { ...state.achievements, [achievementId]: true },
+    claimedQuestRewards: { ...state.claimedQuestRewards, [`achievement:${achievementId}`]: true },
+  };
+}
