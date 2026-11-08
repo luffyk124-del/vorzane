@@ -1,12 +1,12 @@
-import { CLASS_STATS, createFreshState, type ActiveExpedition, type ClassId, type EquipmentItem, type GameState, type OfflineReport, type StatKey, type MissionPeriod, type MissionPeriods } from "./model";
-import { EXPEDITIONS, findExpedition, PETS, QUESTS, STARTER_ITEMS } from "./catalog";
-import { DUNGEON_ITEMS, createItemInstance, findEquipmentTemplate, getEquipmentSellPrice } from "./dungeonItems";
-import { addExperience } from "./stats";
+import { CLASS_STATS, createFreshState, type ActiveExpedition, type ClassId, type EquipmentItem, type GameState, type OfflineReport, type StatKey, type MissionPeriod, type MissionPeriods } from "./model.ts";
+import { EXPEDITIONS, findExpedition, PETS, QUESTS, STARTER_ITEMS } from "./catalog.ts";
+import { DUNGEON_ITEMS, createItemInstance, findEquipmentTemplate, getEquipmentSellPrice } from "./dungeonItems.ts";
+import { addExperience } from "./stats.ts";
 
-export { addExperience, combatStats, totalStats } from "./stats";
-export { createBattleSequence, resolveBattle } from "./battle";
-export type { BattleResult, BattleSequence, BattleTurn } from "./battle";
-export type { BattleMode } from "./model";
+export { addExperience, combatStats, totalStats } from "./stats.ts";
+export { createBattleSequence, resolveBattle } from "./battle.ts";
+export type { BattleResult, BattleSequence, BattleTurn } from "./battle.ts";
+export type { BattleMode } from "./model.ts";
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
