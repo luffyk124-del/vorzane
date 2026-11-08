@@ -16,7 +16,7 @@ const timeLabel = (ms: number) => {
 };
 
 export default function ExpeditionsScreen() {
-  const { state, update, clearReport } = useGame();
+  const { state, update, clearReport, executeEconomyCommand, serverEconomyCommandsEnabled } = useGame();
   const [now, setNow] = useState(Date.now());
   const [notice, setNotice] = useState("");
   useEffect(() => {
@@ -24,7 +24,14 @@ export default function ExpeditionsScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  const begin = (planId: string) => {
+  const begin = async (planId: string) => {
+    if (serverEconomyCommandsEnabled) {
+      const result = await executeEconomyCommand({ type: "beginExpedition", planId });
+      if (!result.success) { setNotice(result.error ?? "تعذر بدء الرحلة."); return; }
+      const plan = findExpedition(planId);
+      setNotice(`انطلق بطلك في «${plan?.name}».`);
+      return;
+    }
     const result = beginOrQueueExpedition(state, planId, now);
     if (result.error) { setNotice(result.error); return; }
     update(() => result.state);
@@ -79,7 +86,7 @@ export default function ExpeditionsScreen() {
           <Txt muted style={styles.description}>{plan.description}</Txt>
           <View style={styles.planMeta}><Pill label={durationLabel(plan.durationSeconds)} icon="time-outline" tone="muted" /><Txt style={styles.reward}>{plan.rewardGold} ذهب • {plan.rewardXP} خبرة</Txt></View>
           <Pill label={`المستوى المطلوب ${plan.requiredLevel}`} icon={levelLocked ? "lock-closed-outline" : "checkmark-circle-outline"} tone={levelLocked ? "red" : "muted"} />
-          <AppButton label={levelLocked ? `يتطلب المستوى ${plan.requiredLevel}` : queued ? "الصف ممتلئ" : active ? "أضف إلى الصف" : "ابدأ الرحلة"} icon={levelLocked ? "lock-closed-outline" : active ? "add-circle-outline" : "navigate"} onPress={() => begin(plan.id)} disabled={queued || levelLocked} variant={levelLocked ? "secondary" : active ? "secondary" : "jade"} small />
+          <AppButton label={levelLocked ? `يتطلب المستوى ${plan.requiredLevel}` : queued ? "الصف ممتلئ" : active ? "أضف إلى الصف" : "ابدأ الرحلة"} icon={levelLocked ? "lock-closed-outline" : active ? "add-circle-outline" : "navigate"} onPress={() => void begin(plan.id)} disabled={queued || levelLocked} variant={levelLocked ? "secondary" : active ? "secondary" : "jade"} small />
         </Card>;
       })}
     </View>
