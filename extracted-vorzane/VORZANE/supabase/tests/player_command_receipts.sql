@@ -17,7 +17,7 @@ insert into public.player_saves (user_id, game_state)
 values ('00000000-0000-0000-0000-00000000000a', '{"gold":10,"inventory":[]}')
 on conflict (user_id) do update set game_state = excluded.game_state, updated_at = clock_timestamp();
 
-do $test$ begin
+do $main$test$ begin
   begin
     perform public.commit_player_command(
       '00000000-0000-0000-0000-00000000000a',
@@ -110,6 +110,6 @@ begin
     null;
   end;
 end
-$;
+$main$;
 
 rollback;
