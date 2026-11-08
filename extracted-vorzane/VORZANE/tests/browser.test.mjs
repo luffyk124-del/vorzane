@@ -75,7 +75,14 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
   const writes = store.writes;
   const unexpectedRequests = [];
   const session = mockSession();
-  let mockedPlayerProfile = null;
+  // The friends/search browser scenario starts with an existing searchable profile.
+  let mockedPlayerProfile = social ? {
+    user_id: playerId,
+    display_name: "لاعب تجريبي",
+    avatar_id: "brand",
+    is_searchable: true,
+    created_at: new Date().toISOString(),
+  } : null;
   await page.route(`${supabaseUrl}/**`, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
