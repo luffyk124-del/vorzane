@@ -1,20 +1,31 @@
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, StatCard, Txt } from "../../src/components/ui";
 import { DUNGEON_ITEM_POOL_SIZE, PETS, RARITY_LABELS, SHOP_ITEMS } from "../../src/game/catalog";
 import { buyItem, buyPet, combatStats, equipItem, sellItem, setPet, unequipItem } from "../../src/game/engine";
 import { findEquipmentTemplate, getEquipmentSellPrice } from "../../src/game/dungeonItems";
-import { SLOT_NAMES } from "../../src/game/model";
+import { SLOT_NAMES, type Rarity } from "../../src/game/model";
 import { rarityColor, palette } from "../../src/theme";
 import { useGame } from "../../src/contexts/GameContext";
 
 type Tab = "equipment" | "shop" | "market" | "companions";
+type ShopSort = "recommended" | "price-asc" | "price-desc";
+const SHOP_RARITY_FILTERS: { value: Rarity | "all"; label: string }[] = [
+  { value: "all", label: "كل الندرات" }, { value: "common", label: "عادي" }, { value: "uncommon", label: "غير شائع" },
+  { value: "rare", label: "نادر" }, { value: "epic", label: "ملحمي" },
+];
+const SHOP_SLOT_FILTERS = ["all", ...Array.from(new Set(SHOP_ITEMS.map((item) => item.slot)))];
 const slotIcons: Record<string, string> = { "سلاح": "flash", "درع": "shield", "خوذة": "skull", "قفازات": "hand-left", "حذاء": "footsteps", "قلادة": "diamond", "خاتم أول": "ellipse", "خاتم ثانٍ": "ellipse" };
 
 export default function GearScreen() {
   const { state, update, fpsMode, command } = useGame();
   const [tab, setTab] = useState<Tab>("equipment");
   const [notice, setNotice] = useState("");
+  const [shopQuery, setShopQuery] = useState("");
+  const [shopRarity, setShopRarity] = useState<Rarity | "all">("all");
+  const [shopSlot, setShopSlot] = useState("all");
+  const [shopSort, setShopSort] = useState<ShopSort>("recommended");
+  const [shopLimit, setShopLimit] = useState(30);
   const stats = combatStats(state);
   const heroLevel = state.hero?.level ?? 0;
   const equippedCount = useMemo(() => Object.values(state.equipped).filter(Boolean).length, [state.equipped]);
@@ -22,6 +33,17 @@ export default function GearScreen() {
     ...state.inventory.map((item) => ({ item, equipped: false })),
     ...Object.entries(state.equipped).flatMap(([slot, item]) => item ? [{ item, equipped: true, slot }] : []),
   ], [state.inventory, state.equipped]);
+  const filteredShopItems = useMemo(() => {
+    const query = shopQuery.trim().toLocaleLowerCase("ar");
+    const result = SHOP_ITEMS.filter((item) => {
+      const matchesQuery = !query || `${item.name} ${item.slot}`.toLocaleLowerCase("ar").includes(query);
+      return matchesQuery && (shopRarity === "all" || item.rarity === shopRarity) && (shopSlot === "all" || item.slot === shopSlot);
+    });
+    if (shopSort === "price-asc") result.sort((a, b) => a.price - b.price);
+    if (shopSort === "price-desc") result.sort((a, b) => b.price - a.price);
+    return result;
+  }, [shopQuery, shopRarity, shopSlot, shopSort]);
+  useEffect(() => { setShopLimit(30); }, [shopQuery, shopRarity, shopSlot, shopSort]);
   const message = (text: string) => { setNotice(text); setTimeout(() => setNotice(""), 2400); };
 
   const purchaseItem = (id: string) => {
@@ -101,15 +123,27 @@ export default function GearScreen() {
 
     {tab === "shop" ? <>
       <SectionTitle title="متجر الحدود" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("ar-EG")} ذهب`} icon="cash-outline" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>اختر من 199 قطعة، منها 192 قطعة جديدة، موزعة على ثمانية أماكن تجهيز وأربع درجات ندرة. العتاد الأسطوري والخرافي يبقى حكرًا على الزنزانات.</Txt></Card>
-      {SHOP_ITEMS.map((item) => {
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>199 قطعة: 7 قطع بداية و192 قطعة جديدة. ابحث وصفِّ حسب الندرة ومكان التجهيز والسعر. العتاد الأسطوري والخرافي حكر على الزنزانات.</Txt>
+        <TextInput value={shopQuery} onChangeText={setShopQuery} placeholder="ابحث عن اسم القطعة أو نوعها..." placeholderTextColor={palette.muted} style={styles.shopSearch} accessibilityLabel="البحث في المتجر" />
+        <Txt muted style={styles.filterLabel}>الندرة</Txt>
+        <View style={styles.filterRow}>{SHOP_RARITY_FILTERS.map((filter) => <Pressable key={filter.value} onPress={() => setShopRarity(filter.value)} style={[styles.filterChip, shopRarity === filter.value && styles.filterChipActive]}><Txt style={[styles.filterChipText, shopRarity === filter.value && styles.filterChipTextActive]}>{filter.label}</Txt></Pressable>)}</View>
+        <Txt muted style={styles.filterLabel}>مكان التجهيز</Txt>
+        <View style={styles.filterRow}>{SHOP_SLOT_FILTERS.map((slot) => <Pressable key={slot} onPress={() => setShopSlot(slot)} style={[styles.filterChip, shopSlot === slot && styles.filterChipActive]}><Txt style={[styles.filterChipText, shopSlot === slot && styles.filterChipTextActive]}>{slot === "all" ? "الكل" : slot}</Txt></Pressable>)}</View>
+        <Txt muted style={styles.filterLabel}>الترتيب</Txt>
+        <View style={styles.filterRow}>
+          {([{ value: "recommended", label: "المقترح" }, { value: "price-asc", label: "الأقل سعرًا" }, { value: "price-desc", label: "الأعلى سعرًا" }] as const).map((sort) => <Pressable key={sort.value} onPress={() => setShopSort(sort.value)} style={[styles.filterChip, shopSort === sort.value && styles.filterChipActive]}><Txt style={[styles.filterChipText, shopSort === sort.value && styles.filterChipTextActive]}>{sort.label}</Txt></Pressable>)}
+        </View>
+        <Txt style={styles.poolNote}>يعرض {Math.min(shopLimit, filteredShopItems.length)} من {filteredShopItems.length} قطعة مطابقة</Txt>
+      </Card>
+      {filteredShopItems.length ? filteredShopItems.slice(0, shopLimit).map((item) => {
         const locked = !state.hero || heroLevel < (item.requiredLevel ?? 1);
         return <Card key={item.id} style={styles.itemRow}>
         <AppButton label={locked ? `يتطلب المستوى ${item.requiredLevel ?? 1}` : `${item.price} ذهب`} onPress={() => purchaseItem(item.id)} variant={locked ? "secondary" : "jade"} small icon={locked ? "lock-closed-outline" : "cart-outline"} disabled={locked} />
         <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>يفتح من المستوى {item.requiredLevel ?? 1}</Txt></View>
         <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
       </Card>;
-      })}
+      }) : <Card style={styles.empty}><Txt muted>لا توجد عناصر تطابق البحث والفلاتر الحالية.</Txt></Card>}
+      {filteredShopItems.length > shopLimit ? <AppButton label="عرض 30 قطعة إضافية" onPress={() => setShopLimit((limit) => limit + 30)} variant="secondary" /> : null}
     </> : null}
 
     {tab === "market" ? <>
@@ -164,6 +198,13 @@ const styles = StyleSheet.create({
   shopIntro: { gap: 6, backgroundColor: "#13242C" },
   shopTitle: { fontSize: 16, fontWeight: "900" },
   shopCopy: { fontSize: 12, lineHeight: 19 },
+  shopSearch: { minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 12, color: palette.text, textAlign: "right", backgroundColor: "#0B171D", marginTop: 7 },
+  filterLabel: { fontSize: 10, fontWeight: "800", marginTop: 7, textAlign: "right" },
+  filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  filterChip: { borderRadius: 999, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: "#0B171D" },
+  filterChipActive: { backgroundColor: palette.gold, borderColor: palette.gold },
+  filterChipText: { fontSize: 10, color: palette.muted, fontWeight: "700" },
+  filterChipTextActive: { color: palette.ink },
   poolNote: { fontSize: 11, color: palette.gold, fontWeight: "800" },
   itemTitleLine: { flexDirection: "row", alignItems: "center", gap: 7 },
   petCard: { padding: 13, flexDirection: "row", alignItems: "center", gap: 10 },
