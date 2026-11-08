@@ -1,4 +1,4 @@
-import { createElement, useEffect, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 
 const MODEL_URL = "https://raw.githubusercontent.com/luffyk124-del/vorzane/main/assets/models/characters/vorzane-characters.glb";
@@ -6,7 +6,9 @@ const MODEL_VIEWER_SCRIPT = "https://cdn.jsdelivr.net/npm/@google/model-viewer/d
 
 export function CharacterModelViewer() {
   const [ready, setReady] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  const modelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
@@ -38,12 +40,32 @@ export function CharacterModelViewer() {
     };
   }, []);
 
+  useEffect(() => {
+    const model = modelRef.current;
+    if (!ready || !model) return;
+    const onModelLoad = () => {
+      setLoaded(true);
+      setFailed(false);
+    };
+    const onModelError = () => {
+      setLoaded(false);
+      setFailed(true);
+    };
+    model.addEventListener("load", onModelLoad);
+    model.addEventListener("error", onModelError);
+    return () => {
+      model.removeEventListener("load", onModelLoad);
+      model.removeEventListener("error", onModelError);
+    };
+  }, [ready]);
+
   if (Platform.OS !== "web") {
     return <View style={styles.fallback}><Text style={styles.fallbackText}>معاينة المجسم ثلاثي الأبعاد متاحة في نسخة الويب حالياً.</Text></View>;
   }
 
   return <View style={styles.frame}>
     {createElement("model-viewer" as any, {
+      ref: modelRef,
       src: MODEL_URL,
       alt: "مجسما شخصيتي VORZANE، الذكر والأنثى",
       "camera-controls": true,
@@ -51,6 +73,8 @@ export function CharacterModelViewer() {
       "rotation-per-second": "12deg",
       "shadow-intensity": "0.8",
       exposure: "1",
+      loading: "eager",
+      reveal: "auto",
       "interaction-prompt": "none",
       style: {
         display: "block",
@@ -60,8 +84,9 @@ export function CharacterModelViewer() {
         borderRadius: "16px",
       },
     })}
-    {!ready && !failed ? <Text style={styles.status}>جارٍ تحميل المجسم ثلاثي الأبعاد…</Text> : null}
-    {failed ? <Text style={styles.status}>تعذر تحميل عارض المجسم. تحقق من اتصال الإنترنت ثم أعد فتح الصفحة.</Text> : null}
+    {!ready && !failed ? <Text style={styles.status}>جارٍ تشغيل عارض المجسم…</Text> : null}
+    {ready && !loaded && !failed ? <Text style={styles.status}>جارٍ تحميل ملف الشخصية ثلاثي الأبعاد…</Text> : null}
+    {failed ? <Text style={styles.status}>تعذر تحميل العارض أو ملف المجسم. تحقق من اتصال الإنترنت ثم أعد فتح الصفحة.</Text> : null}
   </View>;
 }
 
