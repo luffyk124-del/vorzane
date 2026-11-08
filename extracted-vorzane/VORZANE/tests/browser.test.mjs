@@ -107,7 +107,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify([{ game_state: store.state, updated_at: new Date().toISOString() }]),
+        body: JSON.stringify(store.state ? [{ game_state: store.state, updated_at: new Date().toISOString() }] : []),
       });
       return;
     }
@@ -255,6 +255,30 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await browserContext.close();
     });
   }
+});
+
+test("new hero creator renders character controls only once", async () => {
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  const pageErrors = [];
+  const consoleErrors = [];
+  const { unexpectedRequests } = await installSupabaseMock(page, { store: { state: null, writes: [] } });
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+
+  await page.goto(`${appUrl}/login`);
+  await page.getByPlaceholder("name@example.com").fill("new-player@example.test");
+  await page.getByPlaceholder("8 أحرف على الأقل").fill("local-test-password");
+  await page.getByRole("button", { name: "متابعة بالبريد" }).click();
+  await page.getByText("اختر من يسير في الظل", { exact: true }).waitFor({ timeout: 15_000 });
+
+  assert.equal(await page.getByText("اختيار الشخصية", { exact: true }).count(), 1);
+  assert.equal(await page.getByText("معاينة شخصيتك", { exact: true }).count(), 1);
+  assert.equal(await page.getByText("المظهر", { exact: true }).count(), 1);
+  assert.deepEqual(unexpectedRequests, []);
+  assert.deepEqual(pageErrors, []);
+  assert.deepEqual(consoleErrors, []);
+  await browserContext.close();
 });
 
 test("offline progress conflict resolves and restores in a clean second context", async () => {
