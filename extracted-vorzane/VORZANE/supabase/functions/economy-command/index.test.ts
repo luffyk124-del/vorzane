@@ -18,7 +18,7 @@ function fixture(options: {
   commitError?: { code?: string } | null;
 } = {}) {
   const state = options.state ?? createHeroState("Test", "Warrior");
-  const calls: Record<string, unknown> = {};
+  const calls: Record<string, unknown> = { keys: [] as string[] };
   const builder = {
     select(columns: string) { calls.columns = columns; return this; },
     eq(column: string, value: string) { calls.filter = [column, value]; return this; },
@@ -45,13 +45,14 @@ function fixture(options: {
   };
   const factory = ((url: string, key: string, config: unknown) => {
     calls.url = url;
-    calls.key = key;
+    (calls.keys as string[]).push(key);
     calls.config = config;
     return fakeClient;
   }) as unknown as Parameters<typeof createEconomyCommandHandler>[0];
   const handler = createEconomyCommandHandler(factory, (name) => ({
     SUPABASE_URL: "https://test.supabase.co",
     SUPABASE_ANON_KEY: "test-anon-key",
+    SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
   }[name]));
   return { handler, calls, state };
 }
@@ -107,6 +108,7 @@ Deno.test("buyItem uses canonical game rules and commits the caller's save", asy
   assert(calls.table === "player_saves", "expected player save read");
   assert(JSON.stringify(calls.filter) === JSON.stringify(["user_id", "user-a"]), "save read must be scoped to caller");
   assert(calls.rpc === "commit_player_command", "expected atomic command commit");
+  assert((calls.keys as string[]).includes("test-service-role-key"), "privileged RPC must use the server-only service role");
   const args = calls.args as Record<string, unknown>;
   const saved = args.p_game_state as ReturnType<typeof createHeroState>;
   assert(saved.gold === 900, "canonical purchase price must be deducted");
