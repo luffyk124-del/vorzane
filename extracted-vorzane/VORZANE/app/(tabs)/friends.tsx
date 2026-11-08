@@ -65,6 +65,17 @@ export default function FriendsScreen() {
     }
   };
 
+  const sendRequest = async (playerId: string) => {
+    await run(async () => {
+      await sendFriendRequest(playerId);
+      if (mountedRef.current) {
+        setResults((current) => current.map((player) =>
+          player.user_id === playerId ? { ...player, friend_state: "outgoing" } : player
+        ));
+      }
+    }, "تم إرسال طلب الصداقة.");
+  };
+
   const doSearch = async () => {
     if (query.trim().length < 3) {
       setNotice("اكتب ثلاثة أحرف على الأقل للبحث.");
@@ -113,7 +124,7 @@ export default function FriendsScreen() {
         <AppButton label="بحث" onPress={doSearch} loading={busy} disabled={busy || query.trim().length < 3} icon="search-outline" />
       </Card>
       {results.map((player) => <Card key={player.user_id} style={styles.playerRow}>
-        {player.friend_state === "none" ? <AppButton label="إضافة" onPress={() => run(async () => { await sendFriendRequest(player.user_id); }, "تم إرسال طلب الصداقة.")} small disabled={busy} /> : <Pill label={player.friend_state === "friends" ? "صديق" : player.friend_state === "incoming" ? "طلب وارد" : "تم الإرسال"} tone={player.friend_state === "friends" ? "jade" : "muted"} />}
+        {player.friend_state === "none" ? <AppButton label="إضافة" onPress={() => sendRequest(player.user_id)} small disabled={busy} /> : <Pill label={player.friend_state === "friends" ? "صديق" : player.friend_state === "incoming" ? "طلب وارد" : "تم الإرسال"} tone={player.friend_state === "friends" ? "jade" : "muted"} />}
         <View style={styles.playerInfo}><Txt style={styles.playerName}>{player.display_name}</Txt><Txt muted style={styles.playerMeta}>ملف لاعب VORZANE</Txt></View>
         <Icon name="person-outline" color={palette.jade} size={22} />
       </Card>)}
