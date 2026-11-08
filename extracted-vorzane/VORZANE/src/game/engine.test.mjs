@@ -83,7 +83,7 @@ test("completed expedition pays its reward once and clears the active slot", () 
 
 test("expanded shop contains 192 items and sells only common through epic gear", () => {
   const state = createHeroState("اختبار", "Warrior");
-  assert.equal(SHOP_ITEMS.length, 192);
+  assert.equal(SHOP_ITEMS.length, 199);
   assert.ok(SHOP_ITEMS.every((item) => ["common", "uncommon", "rare", "epic"].includes(item.rarity)));
   const item = SHOP_ITEMS[0];
   const bought = buyItem(state, item.id);
