@@ -97,6 +97,14 @@ jobs:
       - name: Test desktop and mobile flows
         working-directory: extracted-vorzane/VORZANE
         run: pnpm run test:browser
+      - name: Upload 2D character mobile preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vorzane-2d-character-mobile-preview
+          path: /tmp/vorzane-profile-2d-mobile.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Typecheck
         working-directory: extracted-vorzane/VORZANE
         run: pnpm run typecheck
@@ -168,6 +176,21 @@ jobs:
 
           if (problems.length) throw new Error(problems.join('\n'));
           console.log(`Verified ${htmlFiles.length} static HTML files and root-relative links under ${basePath}/`);
+
+          const characterModels = [
+            'vorzane-male-short.glb',
+            'vorzane-male-fringe.glb',
+            'vorzane-female-short.glb',
+            'vorzane-female-braids.glb',
+          ];
+          for (const model of characterModels) {
+            const modelPath = path.join(output, 'models', 'characters', model);
+            const bytes = await readFile(modelPath);
+            if (bytes.length < 20 || bytes.toString('ascii', 0, 4) !== 'glTF' || bytes.readUInt32LE(8) !== bytes.length) {
+              throw new Error(`Missing or invalid generated character model: ${model}`);
+            }
+          }
+          console.log(`Verified ${characterModels.length} generated character model variants.`);
           NODE
           if find dist -type f -name '.env*' -print -quit | grep -q .; then
             echo 'Unexpected environment file found in dist' >&2
