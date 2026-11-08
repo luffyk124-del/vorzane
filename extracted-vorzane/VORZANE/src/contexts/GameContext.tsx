@@ -6,7 +6,6 @@ import { createFreshState, LEGACY_CLAIM_KEY, LEGACY_SAVE_KEY, normalizeGameState
 import { supabase } from "../lib/supabase";
 import { clearOfflineSavePending, getOfflineSavePendingToken, hasOfflineSavePending, markOfflineSavePending, type StorageLike } from "../lib/offlineSaveMarker";
 import { useAuth } from "./AuthContext";
-import { fpsEnabled, fpsGet, fpsCommand, type GameCommand } from "../lib/fpsApi";
 
 const LEGACY_DECLINE_PREFIX = "vorzane_legacy_save_declined_";
 type LoadStatus = "auth" | "loading" | "migration" | "conflict" | "ready" | "offline";
@@ -27,8 +26,6 @@ export type GameContextValue = {
   resolveMigration: (choice: Resolution) => Promise<boolean>;
   resetPlayerSave: () => Promise<boolean>;
   clearReport: (id: string) => void;
-  fpsMode: boolean;
-  command: (command: GameCommand) => Promise<boolean>;
   reloadCloud: () => Promise<void>;
 };
 
@@ -80,7 +77,6 @@ async function storeUserCache(userId: string, state: GameState) {
 
 export function GameProvider({ children }: PropsWithChildren) {
   const { user, loading: authLoading } = useAuth();
-  const fpsMode = fpsEnabled;
   const [state, setState] = useState<GameState>(() => createFreshState());
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [saveStatus, setSaveStatus] = useState("جارٍ التحقق من الحساب...");
@@ -132,14 +128,6 @@ export function GameProvider({ children }: PropsWithChildren) {
     setMigration(null);
     setSaveStatus("جارٍ تحميل تقدم اللاعب...");
     try {
-      if (fpsMode) {
-        const result = await fpsGet<{ state: GameState; updatedAt: string }>("/api/v1/game/state");
-        if (generation !== generationRef.current) return;
-        const loaded = normalizeGameState(result.state);
-        if (!loaded) throw new Error("حالة الحفظ الواردة غير صالحة.");
-        stateRef.current = loaded; setState(loaded); await storeUserCache(userId, loaded);
-        setStatus("ready"); setSaveStatus("تم تحميل تقدمك"); return;
-      }
       const cached = await readUserCache(userId);
       if (generation !== generationRef.current) return;
       const hasOfflineChanges = cached !== null && await hasOfflineSavePending(userId, offlineMarkerStorage());
@@ -225,7 +213,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       setSaveStatus(cached ? "وضع محلي مؤقت — سيُعاد الاتصال لاحقًا" : "تعذر الاتصال — التقدم الجديد محلي فقط");
       setStatus("offline");
     }
-  }, [persistSnapshot, fpsMode]);
+  }, [persistSnapshot]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -275,33 +263,19 @@ export function GameProvider({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
-    if (fpsMode || (status !== "ready" && status !== "offline") || !state.activeExpedition) return;
+    if ((status !== "ready" && status !== "offline") || !state.activeExpedition) return;
     const result = advanceExpeditions(state, clock);
     if (result.reports.length) setState(result.state);
-  }, [clock, state.activeExpedition, status, fpsMode]);
+  }, [clock, state.activeExpedition, status]);
 
-  const update = useCallback((updater: (current: GameState) => GameState) => { if (!fpsMode) setState((current) => updater(current)); }, [fpsMode]);
-  const command = useCallback(async (intent: GameCommand) => {
-    if (!fpsMode || !currentUserId || status !== "ready") return false;
-    try {
-      const response = await fpsCommand(intent);
-      const next = normalizeGameState(response.state);
-      if (!next) throw new Error("حالة الحفظ الواردة غير صالحة.");
-      stateRef.current = next; setState(next); await storeUserCache(currentUserId, next);
-      setSaveStatus(response.message || "تم حفظ التغيير"); setCloudError(""); return true;
-    } catch (caught) {
-      setCloudError(caught instanceof Error ? caught.message : "تعذر حفظ التغيير الآن. حاول مجددًا.");
-      setSaveStatus("غير متصل — الحفظ المؤقت للعرض فقط؛ لم يُرسل أي تغيير"); return false;
-    }
-  }, [fpsMode, currentUserId, status]);
+  const update = useCallback((updater: (current: GameState) => GameState) => { setState((current) => updater(current)); }, []);
 
   const flushNow = useCallback(async () => {
-    if (fpsMode) return status === "ready";
     if (!currentUserId || syncReadyRef.current !== currentUserId) return false;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = null;
     return persistSnapshot(stateRef.current, currentUserId);
-  }, [currentUserId, persistSnapshot, fpsMode, status]);
+  }, [currentUserId, persistSnapshot]);
 
   const resolveMigration = useCallback(async (choice: Resolution) => {
     if (!currentUserId || !migration) return false;
@@ -346,7 +320,6 @@ export function GameProvider({ children }: PropsWithChildren) {
   }, [currentUserId, migration, persistSnapshot, status]);
 
   const resetPlayerSave = useCallback(async () => {
-    if (fpsMode) { const ok = await command({ type: "resetSave" }); if (ok && currentUserId) { try { await AsyncStorage.removeItem(userKey(currentUserId)); } catch { /* Best effort. */ } } return ok; }
     const userId = currentUserId;
     if (!userId || status !== "ready" || syncReadyRef.current !== userId) return false;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -373,16 +346,16 @@ export function GameProvider({ children }: PropsWithChildren) {
     setCloudError("");
     setSaveStatus("حُذف حفظ هذا الحساب فقط؛ سيُنشأ حفظ جديد عند أول تقدم");
     return true;
-  }, [currentUserId, status, fpsMode, command]);
+  }, [currentUserId, status]);
 
-  const clearReport = useCallback((id: string) => { if (fpsMode) void command({ type: "dismissReport", id }); else update((current) => dismissOfflineReport(current, id)); }, [update, fpsMode, command]);
+  const clearReport = useCallback((id: string) => { update((current) => dismissOfflineReport(current, id)); }, [update]);
   const reloadCloud = useCallback(async () => {
     if (!currentUserId) return;
     const generation = ++generationRef.current;
     await loadForUser(currentUserId, generation);
   }, [currentUserId, loadForUser]);
 
-  const value = useMemo<GameContextValue>(() => ({ state, status, saveStatus, cloudError, migration, update, fpsMode, command, flushNow, resolveMigration, resetPlayerSave, clearReport, reloadCloud }), [state, status, saveStatus, cloudError, migration, update, fpsMode, command, flushNow, resolveMigration, resetPlayerSave, clearReport, reloadCloud]);
+  const value = useMemo<GameContextValue>(() => ({ state, status, saveStatus, cloudError, migration, update, flushNow, resolveMigration, resetPlayerSave, clearReport, reloadCloud }), [state, status, saveStatus, cloudError, migration, update, flushNow, resolveMigration, resetPlayerSave, clearReport, reloadCloud]);
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 
