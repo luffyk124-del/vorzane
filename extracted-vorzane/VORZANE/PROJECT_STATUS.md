@@ -32,9 +32,10 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Fixed duplicated hero-creator UI on the new-player screen: the character preview, character choice, and appearance controls now render once. Added a mobile browser regression test for a fresh account. PR #12 merged as `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a`; game-system, desktop/mobile browser, TypeScript, Edge Function, web export, and isolated social DB checks passed.
 - Merged PR #13: prevented unequipping gear when the 500-item inventory limit is reached; added engine regression coverage and disabled the UI action while full. Merge commit: `43a65774f81ac88b6ba941cf962ef0e39cd43c26`.
 - Merged PR #15 (`a36ae7cad7f46feb17242f170fcc7227c72a8128`): added the additive player command receipt SQL migration, atomic idempotent `commit_player_command` RPC, and authenticated `economy-command` Edge Function for buy/sell/equip/unequip. The TypeScript fixture typing error was fixed in commit `2b02b5a9d28783b0570d2fd24d70d9632a1a3a90`; all PR checks passed before merge, including game tests, desktop/mobile browser tests, TypeScript, Edge Function checks/tests, web export, and isolated social DB tests.
-- Started PR #16 (`feat/wire-server-economy-commands`): added a gated GameContext client flow and routed gear economy actions through it when enabled. The feature flag is intentionally `false`; this code is not active in production. PR #16 remains draft pending CI and end-to-end review.
+- PR #16 (`feat/wire-server-economy-commands`) now has passing CI run `42533861358`: game systems, desktop/mobile browser flows, TypeScript, Supabase Edge Function typecheck/tests, web export, and isolated DB tests all passed. The feature gate remains `false`; no production deployment occurred.
+- Continued PR #16 with server-backed pet purchase and activation commands (`buyPet`, `setPet`) using the existing canonical engine and atomic receipt RPC. Added Edge Function tests for canonical pet pricing, ownership, and level eligibility. These changes are pending a fresh CI run.
 - GitHub Pages deployment succeeded for the PR #15 merge commit `a36ae7cad7f46feb17242f170fcc7227c72a8128` in workflow `42531072074` (build, browser tests, export verification, and deploy all succeeded).
-- PR #16 CI exposed a test-mock mismatch: the new save path requests the returned `updated_at` row, while the browser-test Supabase mock responded with HTTP 204 and no representation. Updated the mock to return the expected representation in commit `d0e508479ffe0b836d3fa7851c2907ba748298e7`; PR #16 CI must be rerun and pass before review/merge.
+- PR #16 CI initially exposed a browser-test mock mismatch: the save path requests the returned `updated_at` row, while the mock returned HTTP 204. Commit `d0e508479ffe0b836d3fa7851c2907ba748298e7` corrected the mock; follow-up CI run `42533861358` passed all required jobs.
 
 ## Current links
 
@@ -46,7 +47,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 
 - GitHub Pages deployment for PR #13's merge commit was verified successful (workflow run `42527315821`).
 - Main deployment for PR #15 merge commit `a36ae7cad7f46feb17242f170fcc7227c72a8128` is verified successful (workflow `42531072074`).
-- Finish CI verification and review for draft PR #16 (gated economy command integration in GameContext and gear UI).
+- Complete end-to-end review and fresh CI verification for the expanded draft PR #16, including pet commands and command retry/conflict behavior.
 - Keep the server economy feature flag disabled until the additive receipt migration and Edge Function are separately reviewed and explicitly approved for production deployment.
 - Integrate server-backed commands for all remaining save mutations before considering any client-write privilege revocation. The existing client upsert path remains active and must not be mistaken for server-authoritative security.
 - Continue reviewing and improving existing gameplay and application flows.
@@ -78,7 +79,8 @@ This file records the actual state of the VORZANE project. Update it after each 
 | 2026-11-08 | `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a` | PR #12 merged: duplicate new-hero creator controls removed; fresh-account mobile browser regression test, game tests, TypeScript, Edge Function checks/tests, web export, and social DB tests passed. |
 | 2026-11-08 | `a36ae7cad7f46feb17242f170fcc7227c72a8128` | PR #15 merged after all PR checks passed. Main-branch browser tests, build/export verification, isolated social DB tests, and GitHub Pages deployment also passed in workflow `42531072074`. |
 | 2026-11-08 | `c3bb54cf1b4b5734d933d12f0fd0233cb98fbcc7` | PR #16 draft: gated client command path added; feature flag remains off; CI and end-to-end review pending. |
-| 2026-11-09 | `d0e508479ffe0b836d3fa7851c2907ba748298e7` | Updated the browser-test Supabase mock to return `updated_at` for representation-returning save upserts. Awaiting fresh PR CI verification. |
+| 2026-11-09 | `d0e508479ffe0b836d3fa7851c2907ba748298e7` | Updated the browser-test Supabase mock to return `updated_at`; PR #16 CI run `42533861358` passed all required jobs. |
+| 2026-11-09 | Pending | Added server-backed `buyPet` and `setPet` commands plus canonical-rule tests to PR #16; fresh CI pending. |
 
 ## Update policy
 
