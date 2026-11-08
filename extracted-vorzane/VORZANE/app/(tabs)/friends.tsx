@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { useAuth } from "../../src/contexts/AuthContext";
 import {
@@ -41,27 +41,34 @@ export default function FriendsScreen() {
 
   const refresh = async () => {
     if (!user) return;
-    try {
-      const [profile, friendRows, requestRows] = await Promise.all([
-        getMyProfile(user.id),
-        listMyFriends(),
-        listIncomingFriendRequests(),
-      ]);
-      if (profile) {
-        setDisplayName(profile.display_name);
-        setAvatarId(profile.avatar_id);
-        setIsSearchable(profile.is_searchable);
-      }
-      setFriends(friendRows);
-      setIncoming(requestRows);
-      setConfigured(true);
-    } catch (error) {
-      setConfigured(false);
-      setNotice(error instanceof Error ? error.message : "تعذر تحميل الخدمات الاجتماعية.");
+    const [profile, friendRows, requestRows] = await Promise.all([
+      getMyProfile(user.id),
+      listMyFriends(),
+      listIncomingFriendRequests(),
+    ]);
+    if (profile) {
+      setDisplayName(profile.display_name);
+      setAvatarId(profile.avatar_id);
+      setIsSearchable(profile.is_searchable);
     }
+    setFriends(friendRows);
+    setIncoming(requestRows);
+    setConfigured(true);
   };
 
-  useEffect(() => { void refresh(); }, [user?.id]);
+  useEffect(() => {
+    let active = true;
+    if (user?.id) {
+      void refresh().catch((error) => {
+        if (!active) return;
+        setConfigured(false);
+        setNotice(error instanceof Error ? error.message : "تعذر تحميل الخدمات الاجتماعية.");
+      });
+    }
+    return () => { active = false; };
+  }, [user?.id]);
+
+  useEffect(() => { setResults([]); }, [query]);
 
   const run = async (action: () => Promise<void>, success: string) => {
     setBusy(true);
@@ -110,7 +117,7 @@ export default function FriendsScreen() {
             <Txt style={[styles.avatarText, avatarId === avatar.id && styles.avatarTextSelected]}>{avatar.label}</Txt>
           </Pressable>)}
         </View>
-        <Pressable style={styles.privacyRow} onPress={() => setIsSearchable((value) => !value)}>
+        <Pressable style={styles.privacyRow} accessibilityRole="button" accessibilityLabel="تغيير ظهور الملف في البحث" onPress={() => setIsSearchable((value) => !value)}>
           <Pill label={isSearchable ? "ظاهر في البحث" : "مخفي من البحث"} tone={isSearchable ? "jade" : "muted"} />
           <Txt>السماح للاعبين بالعثور على ملفي</Txt>
         </Pressable>
@@ -132,7 +139,10 @@ export default function FriendsScreen() {
 
       <SectionTitle title={`أصدقائي (${friends.length})`} icon="people-outline" />
       {friends.length ? friends.map((friend) => <Card key={friend.user_id} style={styles.playerRow}>
-        <AppButton label="إزالة" onPress={() => run(() => removeFriend(friend.user_id), "تمت إزالة الصديق من قائمتك.")} variant="secondary" small disabled={busy} />
+        <AppButton label="إزالة" onPress={() => Alert.alert("إزالة صديق", `هل تريد إزالة ${friend.display_name} من قائمة أصدقائك؟`, [
+          { text: "إلغاء", style: "cancel" },
+          { text: "إزالة", style: "destructive", onPress: () => run(() => removeFriend(friend.user_id), "تمت إزالة الصديق من قائمتك.") },
+        ])} variant="secondary" small disabled={busy} />
         <View style={styles.playerInfo}><Txt style={styles.playerName}>{friend.display_name}</Txt><Txt muted style={styles.playerMeta}>منذ {new Date(friend.friends_since).toLocaleDateString("ar")}</Txt></View>
         <Icon name="person-circle-outline" color={palette.jade} size={22} />
       </Card>) : <Card style={styles.empty}><Txt muted>قائمة الأصدقاء فارغة. ابحث عن لاعبين لإرسال طلبات صداقة.</Txt></Card>}
@@ -158,11 +168,11 @@ const styles = StyleSheet.create({
   input: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 12, color: palette.text, textAlign: "right", backgroundColor: "#0B171D" },
   fieldLabel: { fontSize: 11, fontWeight: "800", textAlign: "right" },
   avatarRow: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  avatarOption: { minWidth: 82, flexGrow: 1, alignItems: "center", justifyContent: "center", gap: 5, borderWidth: 1, borderColor: palette.line, borderRadius: 12, padding: 9 },
+  avatarOption: { minWidth: 82, minHeight: 48, flexGrow: 1, alignItems: "center", justifyContent: "center", gap: 5, borderWidth: 1, borderColor: palette.line, borderRadius: 12, padding: 9 },
   avatarSelected: { backgroundColor: palette.gold, borderColor: palette.gold },
   avatarText: { fontSize: 10, color: palette.muted, fontWeight: "800" },
   avatarTextSelected: { color: palette.ink },
-  privacyRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingVertical: 5 },
+  privacyRow: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingVertical: 5 },
   playerRow: { padding: 12, flexDirection: "row", alignItems: "center", gap: 10 },
   playerInfo: { flex: 1, alignItems: "flex-end" },
   playerName: { fontSize: 14, fontWeight: "900" },
