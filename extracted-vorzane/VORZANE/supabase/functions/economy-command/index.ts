@@ -95,6 +95,9 @@ export function createEconomyCommandHandler(
 
     if (readError) return json({ error: "Could not load save" }, 500);
     if (!save) return json({ error: "Player save not found" }, 404);
+    if (body.expectedUpdatedAt !== save.updated_at) {
+      return json({ error: "Save changed; reload and retry", updatedAt: save.updated_at }, 409);
+    }
 
     const state = normalizeGameState(save.game_state);
     if (!state || !state.hero) return json({ error: "Player state is invalid" }, 409);
@@ -130,7 +133,7 @@ export function createEconomyCommandHandler(
     const { data: commit, error: commitError } = await adminClient.rpc("commit_player_command", {
       p_user_id: userData.user.id,
       p_command_id: body.commandId,
-      p_expected_updated_at: body.expectedUpdatedAt,
+      p_expected_updated_at: save.updated_at,
       p_game_state: next,
       p_result: result,
     });
