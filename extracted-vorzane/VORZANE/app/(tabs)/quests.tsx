@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, Meter, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { QUESTS } from "../../src/game/catalog";
-import { canClaimQuest, claimQuest, createBattleSequence, getQuestProgress, EXPLORATION_ACHIEVEMENTS, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, type BattleResult, type BattleSequence, type BattleMode } from "../../src/game/engine";
+import { canClaimQuest, claimQuest, createBattleSequence, getQuestProgress, EXPLORATION_ACHIEVEMENTS, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, EXPEDITION_TASKS, canClaimExpeditionTask, claimExpeditionTask, type BattleResult, type BattleSequence, type BattleMode } from "../../src/game/engine";
 import { BattleArena } from "../../src/components/BattleArena";
 import { useGame } from "../../src/contexts/GameContext";
 import { palette } from "../../src/theme";
@@ -82,6 +82,36 @@ export default function QuestsScreen() {
         </Card>;
       })}
     </View>
+    <SectionTitle title="مهام الاستكشاف" icon="map-outline" action={<Pill label="مكافآت ذهبية" tone="gold" />} />
+    {EXPEDITION_TASKS.map((task) => {
+      const progress = Math.min(state.expeditionsCompleted, task.target);
+      const claimed = !!state.claimedQuestRewards[`task:${task.id}`];
+      const available = canClaimExpeditionTask(state, task.id);
+      return <Card key={task.id} style={styles.questCard}>
+        <AppButton
+          label={claimed ? "استُلمت" : available ? `استلم ${task.rewardGold}` : "غير مكتملة"}
+          icon={claimed ? "checkmark" : "gift-outline"}
+          onPress={() => update((current) => claimExpeditionTask(current, task.id))}
+          variant={available ? "jade" : "secondary"}
+          small
+          disabled={!available || claimed || fpsMode}
+        />
+        <View style={styles.questBody}>
+          <View style={styles.questHeading}>
+            <Pill label="استكشاف" tone="jade" />
+            <Pill label={`+${task.rewardGold} ذهب`} tone="gold" />
+          </View>
+          <Txt style={styles.questTitle}>{task.title}</Txt>
+          <Txt muted style={styles.questCopy}>{task.description}</Txt>
+          <View style={styles.questProgress}>
+            <Txt muted style={styles.progressLabel}>{progress} / {task.target}</Txt>
+            <Meter value={progress} max={task.target} color={claimed ? palette.dim : palette.jade} height={6} />
+          </View>
+        </View>
+        <View style={styles.questIcon}><Icon name={task.icon as never} color={claimed ? palette.dim : palette.gold} size={20} /></View>
+      </Card>;
+    })}
+
     <SectionTitle title="إنجازات الاستكشاف" icon="compass-outline" action={<Pill label="مكافآت ذهبية" tone="gold" />} />
     {EXPLORATION_ACHIEVEMENTS.map((achievement) => {
       const progress = Math.min(getExplorationAchievementProgress(state, achievement.id), achievement.target);
