@@ -189,3 +189,59 @@ export function setPet(state: GameState, petId: string | null): GameState {
   if (!state.hero || !pet || !state.pets.includes(petId) || state.hero.level < pet.requiredLevel) return state;
   return { ...state, activePet: petId };
 }
+
+
+export const EXPLORATION_ACHIEVEMENTS = [
+  { id: "explorer_first", title: "أول خطوة", description: "أكمل رحلة استكشافية واحدة", metric: "expeditions", target: 1, rewardGold: 75, icon: "compass" },
+  { id: "explorer_five", title: "دليل الدروب", description: "أكمل خمس رحلات استكشافية", metric: "expeditions", target: 5, rewardGold: 200, icon: "map" },
+  { id: "explorer_twenty", title: "عين المستكشف", description: "أكمل عشرين رحلة استكشافية", metric: "expeditions", target: 20, rewardGold: 500, icon: "telescope" },
+  { id: "level_five", title: "خطوة ثابتة", description: "بلغ المستوى الخامس", metric: "level", target: 5, rewardGold: 150, icon: "trending-up" },
+] as const;
+
+export function getExplorationAchievementProgress(state: GameState, achievementId: string): number {
+  const achievement = EXPLORATION_ACHIEVEMENTS.find((item) => item.id === achievementId);
+  if (!achievement) return 0;
+  return achievement.metric === "expeditions" ? state.expeditionsCompleted : (state.hero?.level ?? 1);
+}
+
+export function canClaimExplorationAchievement(state: GameState, achievementId: string): boolean {
+  const achievement = EXPLORATION_ACHIEVEMENTS.find((item) => item.id === achievementId);
+  if (!achievement || state.claimedQuestRewards[`achievement:${achievementId}`]) return false;
+  return getExplorationAchievementProgress(state, achievementId) >= achievement.target;
+}
+
+export function claimExplorationAchievement(state: GameState, achievementId: string): GameState {
+  if (!canClaimExplorationAchievement(state, achievementId)) return state;
+  const achievement = EXPLORATION_ACHIEVEMENTS.find((item) => item.id === achievementId);
+  if (!achievement) return state;
+  return {
+    ...state,
+    gold: Math.min(1_000_000_000, state.gold + achievement.rewardGold),
+    achievements: { ...state.achievements, [achievementId]: true },
+    claimedQuestRewards: { ...state.claimedQuestRewards, [`achievement:${achievementId}`]: true },
+  };
+}
+
+
+export const EXPEDITION_TASKS = [
+  { id: "expedition_task_one", title: "رحلة البداية", description: "أكمل رحلة استكشافية واحدة", target: 1, rewardGold: 50, icon: "map" },
+  { id: "expedition_task_three", title: "خطوات بعيدة", description: "أكمل ثلاث رحلات استكشافية", target: 3, rewardGold: 125, icon: "footprints" },
+  { id: "expedition_task_ten", title: "المسافر الدؤوب", description: "أكمل عشر رحلات استكشافية", target: 10, rewardGold: 300, icon: "compass" },
+] as const;
+
+export function canClaimExpeditionTask(state: GameState, taskId: string): boolean {
+  const task = EXPEDITION_TASKS.find((item) => item.id === taskId);
+  return !!task && !state.claimedQuestRewards[`task:${taskId}`] && state.expeditionsCompleted >= task.target;
+}
+
+export function claimExpeditionTask(state: GameState, taskId: string): GameState {
+  if (!canClaimExpeditionTask(state, taskId)) return state;
+  const task = EXPEDITION_TASKS.find((item) => item.id === taskId);
+  if (!task) return state;
+  return {
+    ...state,
+    gold: Math.min(1_000_000_000, state.gold + task.rewardGold),
+    quests: { ...state.quests, [taskId]: true },
+    claimedQuestRewards: { ...state.claimedQuestRewards, [`task:${taskId}`]: true },
+  };
+}

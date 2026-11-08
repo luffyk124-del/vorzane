@@ -10,6 +10,7 @@ const tabIcons: Record<string, IconName> = {
   expeditions: "compass-outline",
   gear: "shield-outline",
   quests: "trophy-outline",
+  friends: "people-outline",
   settings: "settings-outline",
 };
 
@@ -33,6 +34,7 @@ export default function TabLayout() {
     <Tabs.Screen name="expeditions" options={{ title: "الرحلات" }} />
     <Tabs.Screen name="gear" options={{ title: "العتاد" }} />
     <Tabs.Screen name="quests" options={{ title: "السجل" }} />
+    <Tabs.Screen name="friends" options={{ title: "الأصدقاء" }} />
     <Tabs.Screen name="settings" options={{ title: "الإعدادات" }} />
   </Tabs>;
 }

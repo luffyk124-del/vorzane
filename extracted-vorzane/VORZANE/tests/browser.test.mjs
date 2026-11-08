@@ -71,7 +71,7 @@ function mockSession() {
   };
 }
 
-async function installSupabaseMock(page, { failAuth = false, failSave = () => false, store = { state: saveFixture(), writes: [] } } = {}) {
+async function installSupabaseMock(page, { failAuth = false, failSave = () => false, social = false, store = { state: saveFixture(), writes: [] } } = {}) {
   const writes = store.writes;
   const unexpectedRequests = [];
   const session = mockSession();
@@ -112,6 +112,29 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       writes.push(saved);
       store.state = saved.game_state;
       await route.fulfill({ status: 204, body: "" });
+      return;
+    }
+    if (social && request.method() === "GET" && url.pathname.endsWith("/rest/v1/player_profiles")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([]) });
+      return;
+    }
+    if (social && request.method() === "POST" && url.pathname.includes("/rest/v1/rpc/")) {
+      const rpc = url.pathname.split("/").at(-1);
+      const args = request.postDataJSON() ?? {};
+      const responses = {
+        upsert_my_profile: { user_id: playerId, display_name: args.p_display_name, avatar_id: args.p_avatar_id, is_searchable: true, created_at: new Date().toISOString() },
+        set_my_profile_searchable: null,
+        list_my_friends: [],
+        list_incoming_friend_requests: [],
+        search_players: [{ user_id: "e2e-player-0002", display_name: "صديق تجريبي", avatar_id: "brand", friend_state: "none" }],
+        send_friend_request: "e2e-request-0001",
+      };
+      if (!(rpc in responses)) {
+        await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ message: "Unknown social RPC" }) });
+        return;
+      }
+      const value = responses[rpc];
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(value) });
       return;
     }
 
@@ -242,5 +265,30 @@ test("guest sign-in displays an Arabic message when the network fails", async ()
   await page.getByRole("button", { name: "ابدأ كضيف" }).click();
   await page.getByText("تعذر الاتصال بخدمة الحسابات. تحقق من الاتصال وحاول مجددًا.", { exact: true }).waitFor({ timeout: 10_000 });
 
+  await browserContext.close();
+});
+
+test("friends profile and player search remain usable on a narrow mobile viewport", async () => {
+  const browserContext = await browser.newContext({ viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  const pageErrors = [];
+  const { unexpectedRequests } = await installSupabaseMock(page, { social: true });
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await signInWithMock(page);
+  await page.goto(`${appUrl}/friends`);
+  await page.getByText("الأصدقاء والملف", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByPlaceholder("اكتب اسمك داخل VORZANE").fill("لاعب اختبار");
+  await page.getByRole("button", { name: "حفظ الملف الشخصي" }).click();
+  await page.getByText("تم حفظ ملفك الشخصي.", { exact: true }).waitFor({ timeout: 10_000 });
+
+  await page.getByPlaceholder("اسم اللاعب...").fill("صديق");
+  await page.getByText("بحث", { exact: true }).click();
+  await page.getByText("صديق تجريبي", { exact: true }).waitFor({ timeout: 10_000 });
+
+  const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  assert.equal(hasHorizontalOverflow, false, "friends screen must not overflow horizontally on a 360px viewport");
+  assert.deepEqual(unexpectedRequests, []);
+  assert.deepEqual(pageErrors, []);
   await browserContext.close();
 });

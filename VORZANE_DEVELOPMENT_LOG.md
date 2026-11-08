@@ -85,6 +85,18 @@ Updated: 2026-11-07
 - After fixing the Pages image path, `pnpm test` passed 12 tests (including the asset-path test), `pnpm run test:browser` passed all 5 cases, typecheck passed, and the Pages build exported 15 routes.
 - Playwright tests intercept the Supabase project URL and use an in-memory save fixture. They make no production auth, database, or OAuth requests.
 
+
+### 2026-11-08: Additive social data foundation and player screen
+
+- Added an additive Supabase migration defining searchable player profiles and friend-request relationships. Existing `player_saves`, auth users, and player data are not modified by this migration.
+- Added RLS policies that limit profile reads to searchable profiles or the owner, and friend-request reads to the two participants. Writes are routed through authenticated RPC functions rather than direct client table writes.
+- Added RPCs for profile creation/update, profile search (minimum three-character query, maximum 20 results), privacy visibility, sending/responding to/removing friend relationships, listing friends, and listing incoming requests.
+- Added server-side anti-spam quotas for friend requests: at most 20 pending requests and 40 total requests per rolling day, serialized per sender profile.
+- Added typed client wrappers in `src/lib/social.ts` and an Arabic friends/profile screen, then added it to the app tab navigation.
+- **Status:** social UI and client integration are implemented in source. The migration and SQL integration tests have now passed in an isolated PostgreSQL 16 CI database (workflow run `42432270531`). This verifies the migration and tested database behavior in that disposable environment only; it does not verify the configured Supabase project or production auth/RLS settings.
+- **Not implemented yet:** online presence/last-seen, push or realtime notifications, public player statistics, profile privacy controls beyond search visibility, and account moderation.
+- No production database changes, migrations, player-save writes, or auth-user changes were performed.
+
 ## Prioritized Roadmap
 
 ### P0: Protect player progress and establish QA
@@ -118,3 +130,40 @@ Updated: 2026-11-07
 - This log includes interactive local desktop/mobile checks against a mocked Supabase service. It is not proof of live Supabase configuration, production RLS behavior, OAuth, or real cross-device persistence.
 - The existing Manus deployment and Supabase project were not changed. Database migrations were not run.
 - Work is ongoing; the roadmap is not a claim that the RPG is complete.
+### 2026-11-08: Add isolated PostgreSQL social integration coverage
+
+- Added a dedicated GitHub Actions job using a disposable PostgreSQL 16 service. It creates a minimal local `auth.users` table and `auth.uid()` shim, then applies the social migration and runs SQL integration checks.
+- The integration checks cover private-profile visibility, searchable-profile lookup, rejection of wildcard search input, requester/recipient authorization, accepting a friend request, listing the relationship for both participants, and removing the relationship.
+- This is an isolated CI database only. It does not connect to the configured Supabase project, and it does not change production data or player saves.
+- GitHub Actions run `42432270531` completed successfully: isolated PostgreSQL migration/integration job, unit tests, desktop/mobile browser tests, TypeScript check, web export, and Pages artifact validation all passed. The deploy job was skipped because this was a pull request.
+
+
+## 2026-11-08: Verification follow-up
+
+- Confirmed workflow run `42432270531`: `social-db` and `build` jobs succeeded; `deploy` was skipped as intended for pull requests.
+- The earlier run `42431556804` validated build/browser/typecheck/export only and did not include the later `social-db` job. Do not conflate the two runs.
+- The social migration remains unapplied to the configured Supabase project. No production data, auth users, credentials, or player saves were changed.
+- The PR remains a draft. GitHub Pages production deployment remains unchanged.
+
+
+## 2026-11-08: Friends mobile UX and exploration achievements
+
+- Improved the friends screen's refresh error propagation so a failed refresh cannot be reported as a successful action.
+- Added cleanup for the initial profile load, clearing stale player-search results when the query changes, a confirmation prompt before removing a friend, and clearer accessibility labels / minimum touch target sizing for mobile controls.
+- Added a narrow 360px mobile browser test for the friends profile-save and player-search flow using mocked Supabase responses; no production API calls are made by this test.
+- Added a non-combat exploration achievement track using existing save fields only: completed expeditions and player level.
+- Added one-time gold rewards for exploration milestones. Claims are recorded in the existing claimed-reward map; no new database columns or migration are required.
+- Added unit tests for threshold unlocks, one-time claims, reward amounts, and immutability of the original state.
+- The social database integration job passed in workflow run `42433056348`, including the literal player-search handling for underscore characters.
+- That run also passed browser tests, TypeScript, and began the web export, but it was triggered before the latest mobile UX and achievement commits. The latest commits still require a fresh full CI run before these additions can be called verified.
+- No production database changes, merge, or deployment were performed.
+
+
+## 2026-11-08: Expedition task milestones
+
+- Added three non-combat expedition milestones (1, 3, and 10 completed expeditions) with one-time gold rewards.
+- Task progress is derived from the existing `expeditionsCompleted` save field; claims are stored in the existing `claimedQuestRewards` and `quests` maps.
+- No schema changes, new database columns, or production migrations are required for these tasks.
+- Added unit coverage for threshold gating, reward amount, duplicate-claim prevention, and original-state immutability.
+- Added an Arabic RTL task section with progress meters and claim controls to the existing quests screen.
+- Latest task/UI/test commits are awaiting a fresh complete CI run; not yet considered verified.
