@@ -2,7 +2,7 @@
 
 > Last updated: 2026-11-08
 > Main branch: `main`
-> Latest verified application commit: `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a`
+> Latest verified application commit: `43a65774f81ac88b6ba941cf962ef0e39cd43c26`
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
 
@@ -29,7 +29,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Added a mobile browser regression test that signs into an empty account and asserts the new-hero creator controls each render exactly once.
 - Merged PR #12 after all CI checks passed (game-system tests, desktop/mobile browser flows, TypeScript, Supabase Edge Function checks/tests, web export, and isolated social DB tests). Merge commit: `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a`.
 - Fixed duplicated hero-creator UI on the new-player screen: the character preview, character choice, and appearance controls now render once. Added a mobile browser regression test for a fresh account. PR #12 merged as `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a`; game-system, desktop/mobile browser, TypeScript, Edge Function, web export, and isolated social DB checks passed.
-- Verified desktop/mobile browser flows, TypeScript checks, web build, and isolated social database tests on the latest recorded main commit.
+- Merged PR #13: prevented unequipping gear when the 500-item inventory limit is reached; added engine regression coverage and disabled the UI action while full. Merge commit: `43a65774f81ac88b6ba941cf962ef0e39cd43c26`.
 - GitHub Pages deployment succeeded for commit `3ddb226a59f78356038180575e7641e02648a981`.
 
 ## Current links
@@ -40,7 +40,8 @@ This file records the actual state of the VORZANE project. Update it after each 
 
 ## Remaining work
 
-- Confirm the post-merge GitHub Pages deployment for PR #12's merge commit.
+- Confirm the GitHub Pages deployment triggered by PR #13's merge commit.
+- Complete the additive, isolated-CI-tested command receipt / optimistic-concurrency database primitive on the feature branch; server-side economy command validation and client cutover remain separate work.
 - Continue reviewing and improving existing gameplay and application flows.
 - Verify each change with relevant automated tests before merging.
 - Review authentication, authorization, player data ownership, and server-side validation in the existing architecture.
