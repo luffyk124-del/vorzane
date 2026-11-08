@@ -1,6 +1,6 @@
 import { CLASS_STATS, createFreshState, type ActiveExpedition, type ClassId, type EquipmentItem, type GameState, type OfflineReport, type StatKey } from "./model";
 import { EXPEDITIONS, findExpedition, PETS, QUESTS, STARTER_ITEMS } from "./catalog";
-import { createItemInstance, findEquipmentTemplate, getEquipmentSellPrice } from "./dungeonItems";
+import { DUNGEON_ITEMS, createItemInstance, findEquipmentTemplate, getEquipmentSellPrice } from "./dungeonItems";
 import { addExperience } from "./stats";
 
 export { addExperience, combatStats, totalStats } from "./stats";
@@ -126,7 +126,7 @@ export function claimQuest(state: GameState, questId: string): GameState {
 }
 
 export function buyItem(state: GameState, itemId: string): { state: GameState; error?: string } {
-  const item = STARTER_ITEMS.find((candidate) => candidate.id === itemId);
+  const item = STARTER_ITEMS.find((candidate) => candidate.id === itemId) ?? DUNGEON_ITEMS.find((candidate) => candidate.id === itemId);
   if (!item) return { state, error: "هذا العنصر غير متاح للشراء؛ عتاد الزنزانة يُكتسب من القتال فقط." };
   if (!state.hero) return { state, error: "أنشئ شخصية أولًا." };
   if (state.inventory.length >= 500) return { state, error: "حقيبتك ممتلئة؛ بع بعض القطع أولًا." };
