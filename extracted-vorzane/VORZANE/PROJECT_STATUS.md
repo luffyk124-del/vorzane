@@ -2,7 +2,7 @@
 
 > Last updated: 2026-11-08
 > Main branch: `main`
-> Latest verified application commit before this status log: `3ddb226a59f78356038180575e7641e02648a981`
+> Latest verified application commit: `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a`
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
 
@@ -25,6 +25,9 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Merged PR #10 (server-authority design for progression, rewards, and combat outcomes) in commit `3d6598a9ffd4fc011410adb0e2958f493191cc09`.
 - Merged PR #11 (authenticated, read-only game-state Edge Function) in commit `a507b530f77f806c9330324aa113c9d25d3ae902`; its dedicated Deno checks and tests passed.
 - Fixed the character page import issue and friends-page database mock behavior in browser tests.
+- Fixed duplicated character creator controls on the new-hero screen: removed the duplicate preview, gender selector, and appearance options.
+- Added a mobile browser regression test that signs into an empty account and asserts the new-hero creator controls each render exactly once.
+- Merged PR #12 after all CI checks passed (game-system tests, desktop/mobile browser flows, TypeScript, Supabase Edge Function checks/tests, web export, and isolated social DB tests). Merge commit: `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a`.
 - Fixed duplicated hero-creator UI on the new-player screen: the character preview, character choice, and appearance controls now render once. Added a mobile browser regression test for a fresh account. PR #12 merged as `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a`; game-system, desktop/mobile browser, TypeScript, Edge Function, web export, and isolated social DB checks passed.
 - Verified desktop/mobile browser flows, TypeScript checks, web build, and isolated social database tests on the latest recorded main commit.
 - GitHub Pages deployment succeeded for commit `3ddb226a59f78356038180575e7641e02648a981`.
@@ -37,6 +40,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 
 ## Remaining work
 
+- Confirm the post-merge GitHub Pages deployment for PR #12's merge commit.
 - Continue reviewing and improving existing gameplay and application flows.
 - Verify each change with relevant automated tests before merging.
 - Review authentication, authorization, player data ownership, and server-side validation in the existing architecture.
