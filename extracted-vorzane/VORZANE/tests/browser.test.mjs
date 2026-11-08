@@ -119,7 +119,12 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       const saved = request.postDataJSON();
       writes.push(saved);
       store.state = saved.game_state;
-      await route.fulfill({ status: 204, body: "" });
+      // Match PostgREST upsert(...).select("updated_at").single() used by GameContext.
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ updated_at: saved.updated_at }),
+      });
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/rest/v1/player_profiles")) {
