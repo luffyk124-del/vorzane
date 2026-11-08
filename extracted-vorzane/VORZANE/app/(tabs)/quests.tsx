@@ -14,7 +14,7 @@ const achievementRows = [
 ];
 
 export default function QuestsScreen() {
-  const { state, update, fpsMode, command } = useGame();
+  const { state, update } = useGame();
   const [sequence, setSequence] = useState<BattleSequence | null>(null);
   useEffect(() => { update((current) => ensureMissionPeriods(current)); }, [update]);
   const recurringGroups: { scope: MissionScope; title: string; subtitle: string; icon: string; missions: ReturnType<typeof getRecurringMissions> }[] = [
@@ -29,11 +29,10 @@ export default function QuestsScreen() {
     claimed: !!state.claimedQuestRewards[quest.id],
   }));
   const startBattle = (mode: BattleMode) => {
-    if (fpsMode) { void command({ type: "startBattle", mode }); return; }
     const battle = createBattleSequence(state, mode);
     if (battle) setSequence(battle);
   };
-  const settleBattle = useCallback((result: BattleResult) => { if (!fpsMode) update(() => result.state); }, [update, fpsMode]);
+  const settleBattle = useCallback((result: BattleResult) => { update(() => result.state); }, [update]);
 
   return <AppScreen>
     <PageTitle eyebrow="مسارك في الظلال" title="المهام والإنجازات" subtitle="زنزانة لا تنتهي، خصوم متبدلون، وأهداف تمنح تقدمك معنى." trailing={<Pill label={`${state.wins} انتصار`} icon="trophy" tone="gold" />} />
@@ -75,7 +74,7 @@ export default function QuestsScreen() {
           onPress={() => update((current) => claimRecurringMission(current, group.scope, mission.id))}
           variant={mission.available ? "jade" : "secondary"}
           small
-          disabled={!mission.available || mission.claimed || fpsMode}
+          disabled={!mission.available || mission.claimed}
         />
         <View style={styles.questBody}>
           <View style={styles.questHeading}><Pill label={group.scope === "daily" ? "يومي" : group.scope === "weekly" ? "أسبوعي" : "موسمي"} tone={group.scope === "season" ? "gold" : "jade"} /><Pill label={"+" + mission.rewardGold + " ذهب"} tone="gold" /></View>
@@ -86,13 +85,12 @@ export default function QuestsScreen() {
         <View style={styles.questIcon}><Icon name={mission.icon as never} color={mission.claimed ? palette.dim : palette.gold} size={20} /></View>
       </Card>)}
     </View>)}
-    {fpsMode ? <Txt muted style={styles.recurringNote}>المهام المتجددة متاحة عند استخدام الحفظ السحابي الحالي.</Txt> : null}
 
     <SectionTitle title="مهام اللاعب" icon="list-circle-outline" action={<Pill label={`${quests.filter((quest) => quest.available).length} جاهزة`} tone="jade" />} />
     {quests.map((quest) => {
       const tone = quest.category === "الزنزانة" || quest.category === "البرج" ? "gold" : quest.category === "الرحلات" ? "jade" : quest.category === "قتال" ? "red" : "muted";
       return <Card key={quest.id} style={styles.questCard}>
-        <AppButton label={quest.claimed ? "استُلمت" : quest.available ? `استلم ${quest.rewardGold}` : "غير مكتملة"} icon={quest.claimed ? "checkmark" : "gift-outline"} onPress={() => quest.available && (fpsMode ? void command({ type: "claimQuest", questId: quest.id }) : update((current) => claimQuest(current, quest.id)))} variant={quest.available ? "jade" : "secondary"} small disabled={!quest.available || quest.claimed} />
+        <AppButton label={quest.claimed ? "استُلمت" : quest.available ? `استلم ${quest.rewardGold}` : "غير مكتملة"} icon={quest.claimed ? "checkmark" : "gift-outline"} onPress={() => quest.available && update((current) => claimQuest(current, quest.id))} variant={quest.available ? "jade" : "secondary"} small disabled={!quest.available || quest.claimed} />
         <View style={styles.questBody}>
           <View style={styles.questHeading}><Pill label={quest.category} tone={tone} /><Pill label={`+${quest.rewardGold} ذهب`} tone="gold" /></View>
           <Txt style={styles.questTitle}>{quest.title}</Txt>
@@ -126,7 +124,7 @@ export default function QuestsScreen() {
           onPress={() => update((current) => claimExpeditionTask(current, task.id))}
           variant={available ? "jade" : "secondary"}
           small
-          disabled={!available || claimed || fpsMode}
+          disabled={!available || claimed}
         />
         <View style={styles.questBody}>
           <View style={styles.questHeading}>
@@ -153,10 +151,10 @@ export default function QuestsScreen() {
         <AppButton
           label={claimed ? "استُلمت" : available ? `استلم ${achievement.rewardGold}` : "غير مكتمل"}
           icon={claimed ? "checkmark" : "gift-outline"}
-          onPress={() => !fpsMode && update((current) => claimExplorationAchievement(current, achievement.id))}
+          onPress={() => update((current) => claimExplorationAchievement(current, achievement.id))}
           variant={available ? "jade" : "secondary"}
           small
-          disabled={!available || claimed || fpsMode}
+          disabled={!available || claimed}
         />
         <View style={styles.questBody}>
           <View style={styles.questHeading}>
