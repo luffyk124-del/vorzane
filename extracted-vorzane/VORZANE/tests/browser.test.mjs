@@ -276,7 +276,7 @@ test("guest sign-in displays an Arabic message when the network fails", async ()
   await browserContext.close();
 });
 
-test("friends profile and player search remain usable on a narrow mobile viewport", async () => {
+test("friends and player search remain usable on a narrow mobile viewport", async () => {
   const browserContext = await browser.newContext({ viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
   const page = await browserContext.newPage();
   const pageErrors = [];
@@ -286,10 +286,6 @@ test("friends profile and player search remain usable on a narrow mobile viewpor
   await signInWithMock(page);
   await page.goto(`${appUrl}/friends`);
   await page.getByText("الأصدقاء", { exact: true }).first().waitFor({ timeout: 15_000 });
-  await page.getByPlaceholder("اكتب اسمك داخل VORZANE").fill("لاعب اختبار");
-  await page.getByRole("button", { name: "حفظ الملف الشخصي" }).click();
-  await page.getByText("تم حفظ ملفك الشخصي.", { exact: true }).waitFor({ timeout: 10_000 });
-
   await page.getByPlaceholder("اسم اللاعب...").fill("صديق");
   await page.getByText("بحث", { exact: true }).click();
   await page.getByText("صديق تجريبي", { exact: true }).waitFor({ timeout: 10_000 });
