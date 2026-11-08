@@ -37,3 +37,10 @@ Each slice needs tests: rejected invalid command, rejected command for another u
 
 - Multiplayer, clans, trading between players, realtime events. These need a separate spec.
 - Any change to the production database. Every migration goes to a test project first.
+
+
+## Economy command commit primitive (implementation in progress)
+
+The additive migration `20261108230000_create_player_command_receipts.sql` introduces a per-player command receipt table and a transaction-safe `commit_player_command` function. It serializes commits by locking the caller's save row, returns the original receipt for a repeated command ID, and rejects stale `updated_at` versions. The matching SQL integration test covers first commit, replay, stale-version rejection, and cross-account isolation.
+
+This primitive is only the persistence/idempotency layer. It does not calculate shop rules, validate item catalog data, or make the current client save path trustworthy. The economy Edge Function and staged client integration must be implemented and tested before any client-write privilege is revoked. The migration is added to isolated CI only; it has not been applied to the production Supabase project.
