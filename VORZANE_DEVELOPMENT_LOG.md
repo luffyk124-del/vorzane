@@ -130,3 +130,9 @@ Updated: 2026-11-07
 - This log includes interactive local desktop/mobile checks against a mocked Supabase service. It is not proof of live Supabase configuration, production RLS behavior, OAuth, or real cross-device persistence.
 - The existing Manus deployment and Supabase project were not changed. Database migrations were not run.
 - Work is ongoing; the roadmap is not a claim that the RPG is complete.
+### 2026-11-08: Add isolated PostgreSQL social integration coverage
+
+- Added a dedicated GitHub Actions job using a disposable PostgreSQL 16 service. It creates a minimal local `auth.users` table and `auth.uid()` shim, then applies the social migration and runs SQL integration checks.
+- The integration checks cover private-profile visibility, searchable-profile lookup, rejection of wildcard search input, requester/recipient authorization, accepting a friend request, listing the relationship for both participants, and removing the relationship.
+- This is an isolated CI database only. It does not connect to the configured Supabase project, and it does not change production data or player saves.
+- The latest PR workflow run is pending; the SQL integration result must be confirmed before describing the social database layer as tested.
