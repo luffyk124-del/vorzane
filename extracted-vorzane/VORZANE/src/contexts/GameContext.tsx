@@ -440,7 +440,10 @@ export function GameProvider({ children }: PropsWithChildren) {
     return true;
   }, [currentUserId, status]);
 
-  const clearReport = useCallback((id: string) => { update((current) => dismissOfflineReport(current, id)); }, [update]);
+  const clearReport = useCallback((id: string) => {
+    if (SERVER_ECONOMY_COMMANDS_ENABLED) { void executeEconomyCommand({ type: "dismissReport", id }); return; }
+    update((current) => dismissOfflineReport(current, id));
+  }, [executeEconomyCommand, update]);
   const reloadCloud = useCallback(async () => {
     if (!currentUserId) return;
     const generation = ++generationRef.current;
