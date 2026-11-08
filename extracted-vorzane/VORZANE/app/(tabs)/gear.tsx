@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, StatCard, Txt } from "../../src/components/ui";
-import { DUNGEON_ITEM_POOL_SIZE, PETS, RARITY_LABELS, STARTER_ITEMS } from "../../src/game/catalog";
+import { DUNGEON_ITEM_POOL_SIZE, PETS, RARITY_LABELS, SHOP_ITEMS } from "../../src/game/catalog";
 import { buyItem, buyPet, combatStats, equipItem, sellItem, setPet, unequipItem } from "../../src/game/engine";
 import { findEquipmentTemplate, getEquipmentSellPrice } from "../../src/game/dungeonItems";
 import { SLOT_NAMES } from "../../src/game/model";
@@ -101,8 +101,8 @@ export default function GearScreen() {
 
     {tab === "shop" ? <>
       <SectionTitle title="متجر الحدود" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("ar-EG")} ذهب`} icon="cash-outline" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>عتاد البداية</Txt><Txt muted style={styles.shopCopy}>متجر محدود بقطع البداية فقط؛ القطع النادرة المولدة لا تُشترى وتُكتسب من الزنزانة.</Txt></Card>
-      {STARTER_ITEMS.map((item) => {
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>عتاد البداية</Txt><Txt muted style={styles.shopCopy}>اختر من 192 قطعة موزعة على ثمانية أماكن تجهيز وأربع درجات ندرة. العتاد الأسطوري والخرافي يبقى حكرًا على الزنزانات.</Txt></Card>
+      {SHOP_ITEMS.map((item) => {
         const locked = !state.hero || heroLevel < (item.requiredLevel ?? 1);
         return <Card key={item.id} style={styles.itemRow}>
         <AppButton label={locked ? `يتطلب المستوى ${item.requiredLevel ?? 1}` : `${item.price} ذهب`} onPress={() => purchaseItem(item.id)} variant={locked ? "secondary" : "jade"} small icon={locked ? "lock-closed-outline" : "cart-outline"} disabled={locked} />
