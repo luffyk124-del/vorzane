@@ -129,7 +129,7 @@ export function buyItem(state: GameState, itemId: string): { state: GameState; e
   const item = STARTER_ITEMS.find((candidate) => candidate.id === itemId);
   if (!item) return { state, error: "هذا العنصر غير متاح للشراء؛ عتاد الزنزانة يُكتسب من القتال فقط." };
   if (!state.hero) return { state, error: "أنشئ شخصية أولًا." };
-  if (state.hero.level < (item.requiredLevel ?? 1)) return { state, error: `يتطلب هذا العتاد المستوى ${item.requiredLevel ?? 1}.` };
+  if (state.inventory.length >= 500) return { state, error: "حقيبتك ممتلئة؛ بع بعض القطع أولًا." };
   if (state.gold < item.price) return { state, error: "الذهب غير كافٍ." };
   return { state: { ...state, gold: state.gold - item.price, inventory: [...state.inventory, createItemInstance(item)] } };
 }
@@ -178,9 +178,10 @@ export function buyPet(state: GameState, petId: string): { state: GameState; err
   if (!pet) return { state, error: "الرفيق غير متاح." };
   if (!state.hero) return { state, error: "أنشئ شخصية أولًا." };
   if (state.pets.includes(petId)) return { state, error: "هذا الرفيق لديك بالفعل." };
-  if (state.hero.level < pet.requiredLevel) return { state, error: `يتطلب هذا الرفيق المستوى ${pet.requiredLevel}.` };
+  if (state.pets.length >= 100) return { state, error: "وصلت إلى الحد الأقصى لعدد الرفقاء." };
   if (state.gold < pet.price) return { state, error: "الذهب غير كافٍ." };
-  return { state: { ...state, gold: state.gold - pet.price, pets: [...state.pets, petId], activePet: state.activePet ?? petId } };
+  const canActivate = state.hero.level >= pet.requiredLevel;
+  return { state: { ...state, gold: state.gold - pet.price, pets: [...state.pets, petId], activePet: state.activePet ?? (canActivate ? petId : null) } };
 }
 
 export function setPet(state: GameState, petId: string | null): GameState {
