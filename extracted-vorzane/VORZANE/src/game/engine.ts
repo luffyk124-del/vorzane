@@ -127,7 +127,8 @@ export function claimQuest(state: GameState, questId: string): GameState {
 
 export function buyItem(state: GameState, itemId: string): { state: GameState; error?: string } {
   const item = STARTER_ITEMS.find((candidate) => candidate.id === itemId) ?? DUNGEON_ITEMS.find((candidate) => candidate.id === itemId);
-  if (!item) return { state, error: "هذا العنصر غير متاح للشراء؛ عتاد الزنزانة يُكتسب من القتال فقط." };
+  if (!item) return { state, error: "هذا العنصر غير متاح للشراء." };
+  if (item.slot === "سلاح") return { state, error: "هذا النوع من العناصر غير متاح للشراء." };
   if (!state.hero) return { state, error: "أنشئ شخصية أولًا." };
   if (state.inventory.length >= 500) return { state, error: "حقيبتك ممتلئة؛ بع بعض القطع أولًا." };
   if (state.gold < item.price) return { state, error: "الذهب غير كافٍ." };
