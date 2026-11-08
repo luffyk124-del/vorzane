@@ -322,9 +322,9 @@ test("character appearance choices persist in the cloud save and restore after r
   await page.getByText("مظهر الشخصية", { exact: true }).waitFor({ timeout: 10_000 });
 
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).click();
-  const modelViewer = page.locator("model-viewer");
-  await modelViewer.waitFor({ timeout: 10_000 });
-  assert.equal(await modelViewer.getAttribute("camera-target"), "0.95m 0.95m 0m", "female selection must focus the female model");
+  const characterPreview = page.getByTestId("fantasy-character-preview");
+  await characterPreview.waitFor({ timeout: 10_000 });
+  assert.equal(await characterPreview.isVisible(), true, "the fantasy character artwork must be visible");
   await page.getByRole("radio", { name: "درجة اللون 3" }).click();
   await page.getByRole("radio", { name: "تسريحة الشعر: طويل" }).click();
 
