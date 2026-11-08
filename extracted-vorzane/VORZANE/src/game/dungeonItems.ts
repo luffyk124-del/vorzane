@@ -103,7 +103,7 @@ export function createItemInstance(template: EquipmentItem, suffix?: string): Eq
 }
 
 export function findEquipmentTemplate(item: EquipmentItem): EquipmentItem | undefined {
-  const all = [...STARTER_ITEMS, ...SHOP_ITEMS, ...DUNGEON_ITEMS];
+  const all = [...SHOP_ITEMS, ...DUNGEON_ITEMS];
   const catalogMatch = item.catalogId ? all.find((candidate) => candidate.id === item.catalogId) : undefined;
   if (catalogMatch && (item.id === catalogMatch.id || item.id.startsWith(`${catalogMatch.id}-`))) return catalogMatch;
   const exactMatch = all.find((candidate) => candidate.id === item.id);
