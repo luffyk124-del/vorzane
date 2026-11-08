@@ -106,7 +106,7 @@ returns void
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_user_id uuid := auth.uid();
   v_rows integer;
@@ -122,7 +122,7 @@ begin
     raise exception 'Create your player profile first';
   end if;
 end;
-$;
+$$;
 
 create or replace function public.search_players(p_query text)
 returns table (
@@ -335,7 +335,7 @@ language sql
 stable
 security definer
 set search_path = public, pg_temp
-as $
+as $$
   select f.id, f.requester_id, p.display_name, p.avatar_id, f.created_at
   from public.friend_requests f
   join public.player_profiles p on p.user_id = f.requester_id
@@ -343,7 +343,7 @@ as $
     and f.status = 'pending'
   order by f.created_at desc
   limit 50;
-$;
+$$;
 
 revoke all on function public.upsert_my_profile(text, text) from public, anon;
 revoke all on function public.search_players(text) from public, anon;
