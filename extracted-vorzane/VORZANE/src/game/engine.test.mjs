@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { advanceExpeditions, allocateStatPoint, buyItem, canClaimQuest, claimQuest, createBattleSequence, createHeroState } from "./engine.ts";
+import { advanceExpeditions, allocateStatPoint, buyItem, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress } from "./engine.ts";
 import { createFreshState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
@@ -78,4 +78,33 @@ test("completed expedition pays its reward once and clears the active slot", () 
   assert.equal(completed.state.expeditionsCompleted, 1);
   assert.equal(completed.state.activeExpedition, null);
   assert.equal(advanceExpeditions(completed.state, 600_002).reports.length, 0);
+});
+
+test("exploration achievements unlock from non-combat progress and pay once", () => {
+  const state = createHeroState("اختبار", "Mage");
+  state.expeditionsCompleted = 1;
+
+  assert.equal(getExplorationAchievementProgress(state, "explorer_first"), 1);
+  assert.equal(canClaimExplorationAchievement(state, "explorer_first"), true);
+  assert.equal(canClaimExplorationAchievement(state, "explorer_five"), false);
+
+  const claimed = claimExplorationAchievement(state, "explorer_first");
+  assert.equal(claimed.gold, state.gold + 75);
+  assert.equal(claimed.achievements.explorer_first, true);
+  assert.equal(claimExplorationAchievement(claimed, "explorer_first").gold, claimed.gold);
+  assert.equal(state.gold, 500, "claiming must not mutate the original save");
+});
+
+test("exploration achievements enforce level and expedition thresholds", () => {
+  const state = createHeroState("اختبار", "Mage");
+  state.expeditionsCompleted = 19;
+  state.hero.level = 4;
+
+  assert.equal(canClaimExplorationAchievement(state, "explorer_twenty"), false);
+  assert.equal(canClaimExplorationAchievement(state, "level_five"), false);
+
+  state.expeditionsCompleted = 20;
+  state.hero.level = 5;
+  assert.equal(canClaimExplorationAchievement(state, "explorer_twenty"), true);
+  assert.equal(canClaimExplorationAchievement(state, "level_five"), true);
 });
