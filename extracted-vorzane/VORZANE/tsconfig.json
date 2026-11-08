@@ -17,6 +17,7 @@
   "exclude": [
     "backend/**",
     "dist-backend/**",
-    "shared/**"
+    "shared/**",
+    "supabase/functions/**"
   ]
 }
