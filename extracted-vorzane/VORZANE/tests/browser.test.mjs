@@ -71,8 +71,10 @@ function mockSession() {
   };
 }
 
-async function installSupabaseMock(page, { failAuth = false, failSave = () => false, social = false, store = { state: saveFixture(), writes: [] } } = {}) {
+async function installSupabaseMock(page, { failAuth = false, failSave = () => false, failGameState = false, social = false, store = { state: saveFixture(), writes: [] } } = {}) {
   const writes = store.writes;
+  const reads = store.reads ?? (store.reads = []);
+  const tableReads = store.tableReads ?? (store.tableReads = []);
   const unexpectedRequests = [];
   const session = mockSession();
   // The friends/search browser scenario starts with an existing searchable profile.
@@ -103,7 +105,21 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(session.user) });
       return;
     }
+    if (request.method() === "GET" && url.pathname.endsWith("/functions/v1/game-state")) {
+      reads.push(url.pathname);
+      if (failGameState) {
+        await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ message: "Function not deployed" }) });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ state: store.state, updatedAt: store.state ? new Date().toISOString() : null }),
+      });
+      return;
+    }
     if (request.method() === "GET" && url.pathname.endsWith("/rest/v1/player_saves")) {
+      tableReads.push(url.pathname);
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -160,7 +176,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
     unexpectedRequests.push(`${request.method()} ${url.pathname}`);
     await route.fulfill({ status: 501, contentType: "application/json", body: JSON.stringify({ message: "Unexpected mocked Supabase request" }) });
   });
-  return { store, writes, unexpectedRequests };
+  return { store, writes, reads, tableReads, unexpectedRequests };
 }
 
 async function signInWithMock(page) {
@@ -215,7 +231,7 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       const page = await browserContext.newPage();
       const pageErrors = [];
       const consoleErrors = [];
-      const { writes, unexpectedRequests } = await installSupabaseMock(page);
+      const { writes, reads, unexpectedRequests } = await installSupabaseMock(page);
       page.on("pageerror", (error) => pageErrors.push(error.message));
       page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
 
@@ -244,6 +260,7 @@ test("mocked account save and stat allocation work on desktop and mobile", async
 
       const deadline = Date.now() + 5000;
       while (!writes.length && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 100));
+      assert.ok(reads.length, "the authenticated read-only game-state endpoint was not attempted");
       assert.ok(writes.length, "stat allocation was not persisted through the mocked save API");
       assert.equal(writes.at(-1).game_state.hero.stats.str, 14);
       assert.equal(writes.at(-1).game_state.hero.statPoints, 1);
@@ -255,6 +272,21 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await browserContext.close();
     });
   }
+});
+
+test("game-state read falls back to the RLS-scoped table query when the Edge Function is unavailable", async () => {
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  const { reads, tableReads, unexpectedRequests } = await installSupabaseMock(page, { failGameState: true });
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await signInWithMock(page);
+  assert.ok(reads.length, "the Edge Function should be attempted first");
+  assert.ok(tableReads.length, "the RLS-scoped compatibility query should be used after function failure");
+  assert.deepEqual(unexpectedRequests, []);
+  assert.deepEqual(pageErrors, []);
+  await browserContext.close();
 });
 
 test("new hero creator renders character controls only once", async () => {
