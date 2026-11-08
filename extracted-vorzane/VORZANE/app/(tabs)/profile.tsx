@@ -104,7 +104,7 @@ export default function ProfileScreen() {
           </Pressable>;
         })}
       </View>
-      <CharacterModelViewer gender={state.characterStyle.gender} className={state.hero?.className ?? "Warrior"} />
+      <CharacterModelViewer {...state.characterStyle} className={state.hero?.className ?? "Warrior"} />
       <View style={styles.avatarGrid}>
         {["#F4C9A5", "#DDA47C", "#B87955", "#80543F"].map((color, index) => {
           const selected = state.characterStyle.appearance === index;
