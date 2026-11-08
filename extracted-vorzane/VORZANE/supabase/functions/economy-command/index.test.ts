@@ -133,6 +133,52 @@ Deno.test("stale save version is returned as a conflict", async () => {
   assert(body.updatedAt === "2026-11-08T20:02:00.000Z", "expected current version in conflict response");
 });
 
+
+Deno.test("stale client version is rejected before invoking the privileged RPC", async () => {
+  const { handler, calls } = fixture();
+  const response = await handler(commandRequest(
+    { type: "buyItem", itemId: "sword1" },
+    { expectedUpdatedAt: "2026-11-08T19:59:00.000Z" },
+  ));
+  assert(response.status === 409, "expected 409");
+  assert(calls.rpc === undefined, "stale client must not invoke the RPC");
+});
+
+Deno.test("sellItem credits the canonical catalog sell price", async () => {
+  const initial = createHeroState("Test", "Warrior");
+  initial.gold = 1_000;
+  const bought = buyItem(initial, "sword1");
+  const state = bought.state;
+  const itemId = state.inventory[0]!.id;
+  const { handler, calls } = fixture({ state });
+  const response = await handler(commandRequest({ type: "sellItem", itemId }));
+  const body = await readJson(response);
+  assert(response.status === 200, "expected 200");
+  assert(body.soldPrice === 50, "expected half of the canonical 100 gold price");
+  const args = calls.args as Record<string, unknown>;
+  const saved = args.p_game_state as ReturnType<typeof createHeroState>;
+  assert(saved.gold === 950, "expected sale proceeds to be credited");
+  assert(saved.inventory.length === 0, "sold item must be removed");
+});
+
+Deno.test("equipItem and unequipItem use canonical equipment ownership", async () => {
+  const initial = createHeroState("Test", "Warrior");
+  const bought = buyItem(initial, "sword1");
+  const itemId = bought.state.inventory[0]!.id;
+  const equipped = fixture({ state: bought.state });
+  const equipResponse = await equipped.handler(commandRequest({ type: "equipItem", itemId }));
+  assert(equipResponse.status === 200, "expected equipment command to succeed");
+  const equippedState = (equipped.calls.args as Record<string, unknown>).p_game_state as ReturnType<typeof createHeroState>;
+  assert(equippedState.equipped["سلاح"]?.id === itemId, "item must be equipped in its canonical slot");
+
+  const unequipFixture = fixture({ state: equippedState });
+  const unequipResponse = await unequipFixture.handler(commandRequest({ type: "unequipItem", slot: "سلاح" }));
+  assert(unequipResponse.status === 200, "expected unequip command to succeed");
+  const unequippedState = (unequipFixture.calls.args as Record<string, unknown>).p_game_state as ReturnType<typeof createHeroState>;
+  assert(unequippedState.inventory.some(item => item.id === itemId), "unequipped item must return to inventory");
+  assert(!unequippedState.equipped["سلاح"], "equipment slot must be empty");
+});
+
 Deno.test("another unauthenticated identity cannot invoke commands", async () => {
   const { handler } = fixture({ user: null, authError: new Error("invalid token") });
   const response = await handler(commandRequest({ type: "buyItem", itemId: "sword1" }));
