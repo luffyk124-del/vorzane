@@ -94,7 +94,7 @@ export default function ProfileScreen() {
 
     <SectionTitle title="مظهر الشخصية" icon="color-palette-outline" />
     <Card style={styles.panel}>
-      <Txt muted style={styles.hint}>تم إدخال ملف المجسم إلى المشروع. يمكنك تدوير المشهد بالسحب أو اللمس؛ الملف الحالي يعرض النموذجين معًا، أما فصل الذكر والأنثى وتطبيق بدائل الشعر والوجه والملابس على المجسم فيحتاج تجهيز نسخ مستقلة أو أجزاء قابلة للتبديل.</Txt>
+      <Txt muted style={styles.hint}>اختر ذكرًا أو أنثى لعرض الشخصية المحددة عن قرب، ثم اسحب أو المس المجسم لتدويره 360 درجة. خيارات الشعر والوجه والملابس تُحفظ في ملفك، وسيتم ربطها بأجزاء المجسم في مرحلة تجهيز النماذج القابلة للتبديل.</Txt>
       <View style={styles.avatarGrid}>
         {([{ id: "male", label: "ذكر" }, { id: "female", label: "أنثى" }] as const).map((option) => {
           const selected = state.characterStyle.gender === option.id;
@@ -104,7 +104,7 @@ export default function ProfileScreen() {
           </Pressable>;
         })}
       </View>
-      <CharacterModelViewer />
+      <CharacterModelViewer gender={state.characterStyle.gender} />
       <View style={styles.avatarGrid}>
         {["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"].map((color, index) => {
           const selected = state.characterStyle.appearance === index;
