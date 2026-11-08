@@ -176,7 +176,7 @@ export default function SettingsScreen() {
     <SectionTitle title="إدارة الحفظ" icon="cloud-done-outline" />
     <Card style={styles.cloudCard}>
       <View style={styles.cloudTop}><Pill label={game.status === "ready" ? "مرتبط بالسحابة" : game.status === "offline" ? "محلي مؤقت" : "جارٍ الفحص"} tone={game.status === "ready" ? "jade" : game.status === "offline" ? "red" : "muted"} icon={game.status === "ready" ? "cloud-done-outline" : "cloud-outline"} /><Txt style={styles.settingTitle}>حفظ خاص بهذا اللاعب</Txt></View>
-      <Txt muted style={styles.accountNote}>يُخزَّن صف الحفظ تحت معرّف حساب Supabase؛ سياسات RLS تمنع حسابًا آخر من قراءته أو تعديله. الحذف أدناه يطال حسابك وحده.</Txt>
+      <Txt muted style={styles.accountNote}>تقدمك مرتبط بحسابك وحدك، ولا يستطيع لاعب آخر الوصول إليه. الحذف أدناه يطال تقدمك فقط.</Txt>
       <AppButton label="حذف حفظ حسابي والبدء من جديد" icon="trash-outline" variant="danger" onPress={() => setConfirmReset(true)} disabled={busy || game.status !== "ready"} />
     </Card>
 
