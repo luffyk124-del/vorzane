@@ -172,7 +172,7 @@ begin
   from public.player_profiles p
   where p.is_searchable
     and p.user_id <> v_user_id
-    and p.display_name ilike '%' || v_query || '%'
+    and position(lower(v_query) in lower(p.display_name)) > 0
   order by lower(p.display_name)
   limit 20;
 end;
