@@ -27,7 +27,7 @@ const formatTime = (milliseconds: number) => {
 
 export default function CampScreen() {
   const router = useRouter();
-  const { state, update, saveStatus, status } = useGame();
+  const { state, update, executeEconomyCommand, serverEconomyCommandsEnabled, saveStatus, status } = useGame();
   const [heroName, setHeroName] = useState("");
   const [selectedClass, setSelectedClass] = useState<ClassId>("Warrior");
   const [selectedGender, setSelectedGender] = useState<"male" | "female">("male");
@@ -42,8 +42,13 @@ export default function CampScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  const createHero = () => {
+  const createHero = async () => {
     if (heroName.trim().length < 2) return;
+    if (serverEconomyCommandsEnabled) {
+      const result = await executeEconomyCommand({ type: "createHero", name: heroName.trim(), className: selectedClass, gender: selectedGender, appearance: selectedAppearance });
+      if (!result.success) return;
+      return;
+    }
     const next = createHeroState(heroName, selectedClass);
     next.characterStyle = { ...next.characterStyle, gender: selectedGender, appearance: selectedAppearance };
     const firstSword = createItemInstance(STARTER_ITEMS[0], "starter");
@@ -60,6 +65,10 @@ export default function CampScreen() {
   };
 
   const settleBattle = useCallback((result: BattleResult) => { update(() => result.state); }, [update]);
+  const allocatePoint = async (key: StatKey) => {
+    if (serverEconomyCommandsEnabled) { await executeEconomyCommand({ type: "allocateStatPoint", key }); return; }
+    update((current) => allocateStatPoint(current, key).state);
+  };
 
   if (!hero) return <AppScreen>
     <View style={styles.topline}><Txt style={styles.wordmark}>VORZANE</Txt><Pill label="الزنزانة الأولى • صحوة الرماد" icon="skull" tone="jade" /></View>
@@ -175,7 +184,7 @@ export default function CampScreen() {
             variant="jade"
             small
             disabled={hero.stats[key] >= 999_999}
-            onPress={() => update((current) => allocateStatPoint(current, key).state)}
+            onPress={() => void allocatePoint(key)}
             style={styles.allocateButton}
           />
           <View style={styles.statAllocationValue}>
