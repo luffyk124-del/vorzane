@@ -192,6 +192,11 @@ begin
     raise exception 'Invalid friend recipient';
   end if;
   if not exists (
+    select 1 from public.player_profiles p where p.user_id = v_user_id
+  ) then
+    raise exception 'Create your player profile before sending friend requests';
+  end if;
+  if not exists (
     select 1 from public.player_profiles p
     where p.user_id = p_recipient_id and p.is_searchable
   ) then
