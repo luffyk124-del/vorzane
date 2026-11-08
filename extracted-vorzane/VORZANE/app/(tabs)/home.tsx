@@ -32,8 +32,6 @@ export default function CampScreen() {
   const [selectedClass, setSelectedClass] = useState<ClassId>("Warrior");
   const [selectedGender, setSelectedGender] = useState<"male" | "female">("male");
   const [selectedAppearance, setSelectedAppearance] = useState<0 | 1 | 2 | 3>(0);
-  const [selectedGender, setSelectedGender] = useState<"male" | "female">("male");
-  const [selectedAppearance, setSelectedAppearance] = useState<0 | 1 | 2 | 3>(0);
   const [battleSequence, setBattleSequence] = useState<BattleSequence | null>(null);
   const [now, setNow] = useState(Date.now());
   const hero = state.hero;
