@@ -16,7 +16,7 @@ const timeLabel = (ms: number) => {
 };
 
 export default function ExpeditionsScreen() {
-  const { state, update, clearReport, fpsMode, command } = useGame();
+  const { state, update, clearReport } = useGame();
   const [now, setNow] = useState(Date.now());
   const [notice, setNotice] = useState("");
   useEffect(() => {
@@ -25,7 +25,6 @@ export default function ExpeditionsScreen() {
   }, []);
 
   const begin = (planId: string) => {
-    if (fpsMode) { void command({ type: "beginExpedition", planId }); return; }
     const result = beginOrQueueExpedition(state, planId, now);
     if (result.error) { setNotice(result.error); return; }
     update(() => result.state);
