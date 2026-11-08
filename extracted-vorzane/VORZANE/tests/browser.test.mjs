@@ -325,7 +325,7 @@ test("character appearance choices persist in the cloud save and restore after r
   const characterPreview = page.getByTestId("fantasy-character-preview");
   await characterPreview.waitFor({ timeout: 10_000 });
   assert.equal(await characterPreview.isVisible(), true, "the fantasy character artwork must be visible");
-  await page.getByRole("radio", { name: "درجة اللون 3" }).click();
+  await page.getByRole("radio", { name: "درجة البشرة 3" }).click();
   await page.getByRole("radio", { name: "تسريحة الشعر: طويل" }).click();
 
   const deadline = Date.now() + 10_000;
@@ -343,7 +343,7 @@ test("character appearance choices persist in the cloud save and restore after r
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).waitFor();
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
   await page.getByTestId("fantasy-character-preview").waitFor({ timeout: 10_000 });\n  assert.equal(await page.getByTestId("fantasy-character-preview").isVisible(), true, "the restored fantasy artwork must remain visible");
-  await page.getByRole("radio", { name: "درجة اللون 3" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
+  await page.getByRole("radio", { name: "درجة البشرة 3" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
   await page.getByRole("radio", { name: "تسريحة الشعر: طويل" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
 
   await context.close();
