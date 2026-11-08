@@ -1,5 +1,5 @@
 import type { EquipmentItem, Rarity, StatKey } from "./model";
-import { SHOP_ITEMS, STARTER_ITEMS } from "./catalog";
+import { SHOP_ITEMS } from "./catalog";
 
 type ItemProfile = { main: StatKey; secondary: StatKey; tertiary?: StatKey };
 type SlotBlueprint = { slot: string; icon: string; basePrice: number; profiles: ItemProfile[] };
