@@ -167,7 +167,7 @@ jobs:
 
   deploy:
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.approve_deploy)
-    needs: build
+    needs: [build, social-db]
     runs-on: ubuntu-latest
     permissions:
       pages: write
