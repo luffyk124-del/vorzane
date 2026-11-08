@@ -223,7 +223,7 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await page.getByTestId("page-title").getByText("الملف الشخصي", { exact: true }).waitFor({ timeout: 15_000 });
       await page.getByRole("button", { name: "فتح القائمة" }).click();
       await page.getByRole("button", { name: "المخيم", exact: true }).click();
-      await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
+      await page.getByText("تطوير السمات", { exact: true }).last().waitFor({ timeout: 10_000 });
 
       const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
       assert.equal(hasHorizontalOverflow, false, `${viewport.name} layout has horizontal overflow`);
