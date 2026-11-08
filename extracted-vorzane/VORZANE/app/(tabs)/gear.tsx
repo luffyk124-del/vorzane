@@ -92,7 +92,7 @@ export default function GearScreen() {
               <Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt>
               <Txt muted style={styles.itemBonus}>{Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt>
               <Txt style={styles.requirement}>يتطلب مستوى {shown.requiredLevel ?? 1}{shown.requiredDungeonFloor && shown.requiredDungeonFloor > 1 ? ` • طابق ${shown.requiredDungeonFloor}` : ""}</Txt>
-              <AppButton label="فكّ التجهيز" onPress={() => update((current) => unequipItem(current, slot))} variant="ghost" small />
+              <AppButton label={state.inventory.length >= 500 ? "الحقيبة ممتلئة" : "فكّ التجهيز"} onPress={() => update((current) => unequipItem(current, slot))} variant="ghost" small disabled={state.inventory.length >= 500} />
             </> : <Txt muted style={styles.emptySlot}>فارغ</Txt>}
           </Card>;
         })}
