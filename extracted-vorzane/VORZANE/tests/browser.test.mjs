@@ -209,7 +209,7 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       const pageErrors = [];
       const consoleErrors = [];
       const { writes, unexpectedRequests } = await installSupabaseMock(page);
-      page.on("pageerror", (error) => pageErrors.push(error.stack ?? error.message));
+      page.on("pageerror", (error) => pageErrors.push(error.message));
       page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
 
       await page.goto(`${appUrl}/login`);
@@ -218,8 +218,6 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await page.getByText("2 نقطة متاحة", { exact: true }).waitFor();
       await page.getByRole("button", { name: "فتح القائمة" }).click();
       await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
-      await page.waitForTimeout(700);
-      console.log("PROFILE_ROUTE_DEBUG", page.url(), (await page.locator("body").innerText()).slice(0, 1200), "PAGE_ERRORS", pageErrors, "CONSOLE_ERRORS", consoleErrors, "HTML", (await page.locator("body").innerHTML()).slice(0, 3000));
       await page.getByTestId("page-title").getByText("الملف الشخصي", { exact: true }).waitFor({ timeout: 15_000 });
       await page.getByRole("button", { name: "فتح القائمة" }).click();
       await page.getByRole("button", { name: "المخيم", exact: true }).click();
@@ -300,8 +298,6 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   await signInWithMock(page);
   await page.getByRole("button", { name: "فتح القائمة" }).click();
   await page.getByRole("button", { name: "الأصدقاء", exact: true }).click();
-  await page.waitForTimeout(700);
-  console.log("FRIENDS_ROUTE_DEBUG", page.url(), (await page.locator("body").innerText()).slice(0, 1600), "PAGE_ERRORS", pageErrors, "HTML", (await page.locator("body").innerHTML()).slice(0, 2600));
   await page.getByTestId("page-title").getByText("الأصدقاء", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByPlaceholder("اسم اللاعب...").waitFor({ timeout: 15_000 });
   const createProfileButton = page.getByRole("button", { name: "إنشاء ملف اللاعب" });
