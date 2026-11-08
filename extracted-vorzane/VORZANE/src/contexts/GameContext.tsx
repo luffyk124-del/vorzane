@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from "react";
 import { advanceExpeditions, dismissOfflineReport } from "../game/engine";
-import { createFreshState, LEGACY_CLAIM_KEY, LEGACY_SAVE_KEY, normalizeGameState, USER_SAVE_PREFIX, type GameState } from "../game/model";
+import { createFreshState, LEGACY_CLAIM_KEY, LEGACY_SAVE_KEY, normalizeGameState, USER_SAVE_PREFIX, type CharacterStyle, type ClassId, type GameState, type StatKey } from "../game/model";
 import { supabase } from "../lib/supabase";
 import { clearOfflineSavePending, getOfflineSavePendingToken, hasOfflineSavePending, markOfflineSavePending, type StorageLike } from "../lib/offlineSaveMarker";
 import { useAuth } from "./AuthContext";
@@ -20,7 +20,19 @@ type EconomyCommand =
   | { type: "equipItem"; itemId: string }
   | { type: "unequipItem"; slot: string }
   | { type: "buyPet"; petId: string }
-  | { type: "setPet"; petId: string | null };
+  | { type: "setPet"; petId: string | null }
+  | { type: "createHero"; name: string; className: ClassId; gender: "male" | "female"; appearance: 0 | 1 | 2 | 3 }
+  | { type: "allocateStatPoint"; key: StatKey }
+  | { type: "beginExpedition"; planId: string }
+  | { type: "advanceExpeditions" }
+  | { type: "claimQuest"; questId: string }
+  | { type: "claimExpeditionTask"; taskId: string }
+  | { type: "claimExplorationAchievement"; achievementId: string }
+  | { type: "claimRecurringMission"; scope: "daily" | "weekly" | "season"; missionId: string }
+  | { type: "dismissReport"; id: string }
+  | { type: "updateSettings"; settings: Partial<GameState["settings"]> }
+  | { type: "setProfileAvatar"; avatarId: ClassId | "brand" }
+  | { type: "updateCharacterStyle"; style: CharacterStyle };
 type EconomyCommandResult = { success: boolean; enabled: boolean; error?: string; soldPrice?: number };
 
 // Keep disabled until the additive receipt migration and Edge Function are separately
