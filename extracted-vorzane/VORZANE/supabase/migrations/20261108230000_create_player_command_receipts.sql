@@ -11,6 +11,7 @@ create table public.player_command_receipts (
 
 alter table public.player_command_receipts enable row level security;
 revoke all on table public.player_command_receipts from anon, authenticated;
+grant select on table public.player_command_receipts to service_role;
 
 create or replace function public.commit_player_command(
   p_user_id uuid,
