@@ -13,6 +13,7 @@ alter table public.player_command_receipts enable row level security;
 revoke all on table public.player_command_receipts from anon, authenticated;
 
 create or replace function public.commit_player_command(
+  p_user_id uuid,
   p_command_id uuid,
   p_expected_updated_at timestamptz,
   p_game_state jsonb,
@@ -24,12 +25,12 @@ security definer
 set search_path = pg_catalog, public
 as $$
 declare
-  v_user_id uuid := auth.uid();
+  v_user_id uuid := p_user_id;
   v_current_updated_at timestamptz;
   v_next_updated_at timestamptz;
   v_previous_result jsonb;
 begin
-  if v_user_id is null then
+  if v_user_id is null or auth.role() is distinct from 'service_role' then
     raise exception 'unauthorized' using errcode = '42501';
   end if;
 
@@ -90,5 +91,5 @@ begin
 end;
 $$;
 
-revoke all on function public.commit_player_command(uuid, timestamptz, jsonb, jsonb) from public, anon;
-grant execute on function public.commit_player_command(uuid, timestamptz, jsonb, jsonb) to authenticated;
+revoke all on function public.commit_player_command(uuid, uuid, timestamptz, jsonb, jsonb) from public, anon, authenticated;
+grant execute on function public.commit_player_command(uuid, uuid, timestamptz, jsonb, jsonb) to service_role;
