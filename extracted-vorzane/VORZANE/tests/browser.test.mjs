@@ -209,6 +209,8 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await page.getByText("2 نقطة متاحة", { exact: true }).waitFor();
       await page.getByRole("button", { name: "فتح القائمة" }).click();
       await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
+      await page.waitForTimeout(700);
+      console.log("PROFILE_ROUTE_DEBUG", page.url(), (await page.locator("body").innerText()).slice(0, 1200));
       await page.getByTestId("page-title").getByText("الملف الشخصي", { exact: true }).waitFor({ timeout: 15_000 });
       await page.getByRole("button", { name: "فتح القائمة" }).click();
       await page.getByRole("button", { name: "المخيم", exact: true }).click();
