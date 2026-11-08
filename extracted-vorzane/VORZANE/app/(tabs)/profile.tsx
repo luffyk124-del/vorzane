@@ -43,6 +43,15 @@ export default function ProfileScreen() {
     return () => { active = false; };
   }, [user?.id]);
 
+  const openModelPreview = async () => {
+    setNotice("");
+    try {
+      await Linking.openURL("https://higgsfield.ai/3d-jutsu/33b883b0-edbe-4adf-9ae9-ee5d9960c402");
+    } catch {
+      setNotice("تعذر فتح عارض المجسم. تحقق من اتصالك بالإنترنت ثم حاول مجددًا.");
+    }
+  };
+
   const save = async () => {
     setBusy(true);
     setNotice("");
@@ -86,7 +95,7 @@ export default function ProfileScreen() {
           </Pressable>;
         })}
       </View>
-      <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL("https://higgsfield.ai/3d-jutsu/33b883b0-edbe-4adf-9ae9-ee5d9960c402"); }} style={styles.modelPreviewLink}>
+      <Pressable accessibilityRole="link" accessibilityHint="يفتح عارضًا خارجيًا لمعاينة النموذجين الأوليين" onPress={() => { void openModelPreview(); }} style={styles.modelPreviewLink}>
         <Icon name="cube-outline" color={palette.gold} size={20} />
         <View style={{ flex: 1, alignItems: "flex-end", gap: 3 }}>
           <Txt style={styles.modelPreviewTitle}>معاينة المجسم ثلاثي الأبعاد</Txt>
