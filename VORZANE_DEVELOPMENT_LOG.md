@@ -85,6 +85,18 @@ Updated: 2026-11-07
 - After fixing the Pages image path, `pnpm test` passed 12 tests (including the asset-path test), `pnpm run test:browser` passed all 5 cases, typecheck passed, and the Pages build exported 15 routes.
 - Playwright tests intercept the Supabase project URL and use an in-memory save fixture. They make no production auth, database, or OAuth requests.
 
+
+### 2026-11-08: Expand and make the equipment shop navigable
+
+- Added 192 generated purchasable equipment definitions across eight equipment slots and four shop rarities (common, uncommon, rare, epic); the seven original starter items remain available. The generated catalog is data-driven from slot/tier/variant blueprints. The current purchasable catalog contains 199 equipment items.
+- Kept legendary and mythic dungeon equipment out of the ordinary shop. Shop purchases resolve only against the canonical shop catalog; the existing engine validates hero existence, required level, and available gold before deducting currency and creating an inventory instance.
+- Updated the equipment screen with Arabic search, rarity filters, equipment-slot filters, price sorting, and incremental 30-item rendering to reduce the initial mobile list size.
+- Updated equipment-template lookup to include the expanded shop catalog without duplicating starter templates.
+- Added unit tests for catalog size, successful purchase/inventory insertion, dungeon-only rarity rejection, insufficient funds, and level requirements.
+- **Status:** content/catalog and client-side shop flow implemented; the shop remains client-authoritative and is not safe for competitive or real-money economy use. No true backend purchase transaction, server inventory ledger, or cross-account persistence for shop operations has been implemented in this change.
+- **Not yet verified in this turn:** unit tests, TypeScript, browser tests, and production deployment. These must pass before this change can be called tested or ready to merge.
+- No Supabase schema, production data, service-role secrets, or migrations were changed.
+
 ## Prioritized Roadmap
 
 ### P0: Protect player progress and establish QA
