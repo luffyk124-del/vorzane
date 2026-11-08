@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   inputLabel: { color: palette.muted, fontSize: 12, fontWeight: "800" },
   inputWrap: { minHeight: 50, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 13, borderWidth: 1, borderColor: palette.line, borderRadius: 14, backgroundColor: palette.midnight },
   input: { flex: 1, minHeight: 44, color: palette.text, fontSize: 15, writingDirection: "rtl" },
-  statCard: { flex: 1, minWidth: 82, padding: 12, borderRadius: 17, backgroundColor: palette.panel, borderWidth: 1, borderColor: palette.line, alignItems: "flex-end", gap: 5 },
+  statCard: { flex: 1, minWidth: 0, padding: 9, borderRadius: 17, backgroundColor: palette.panel, borderWidth: 1, borderColor: palette.line, alignItems: "flex-end", gap: 5 },
   statIcon: { borderWidth: 1, width: 31, height: 31, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   statValue: { fontSize: 19, fontWeight: "900", color: palette.text },
   statLabel: { fontSize: 11, fontWeight: "700" },
