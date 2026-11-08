@@ -27,7 +27,7 @@ const formatTime = (milliseconds: number) => {
 
 export default function CampScreen() {
   const router = useRouter();
-  const { state, update, saveStatus, status, fpsMode, command } = useGame();
+  const { state, update, saveStatus, status } = useGame();
   const [heroName, setHeroName] = useState("");
   const [selectedClass, setSelectedClass] = useState<ClassId>("Warrior");
   const [selectedGender, setSelectedGender] = useState<"male" | "female">("male");
@@ -44,7 +44,6 @@ export default function CampScreen() {
 
   const createHero = () => {
     if (heroName.trim().length < 2) return;
-    if (fpsMode) { void command({ type: "createHero", name: heroName.trim(), className: selectedClass }).then((created) => { if (created) update((current) => ({ ...current, characterStyle: { gender: selectedGender, appearance: selectedAppearance } })); }); return; }
     const next = createHeroState(heroName, selectedClass);
     next.characterStyle = { gender: selectedGender, appearance: selectedAppearance };
     next.characterStyle = { gender: selectedGender, appearance: selectedAppearance };
@@ -57,12 +56,11 @@ export default function CampScreen() {
 
   const enterBattle = (mode: BattleMode) => {
     if (!hero) return;
-    if (fpsMode) { void command({ type: "startBattle", mode }); return; }
     const sequence = createBattleSequence(state, mode);
     if (sequence) setBattleSequence(sequence);
   };
 
-  const settleBattle = useCallback((result: BattleResult) => { if (!fpsMode) update(() => result.state); }, [update, fpsMode]);
+  const settleBattle = useCallback((result: BattleResult) => { update(() => result.state); }, [update]);
 
   if (!hero) return <AppScreen>
     <View style={styles.topline}><Txt style={styles.wordmark}>VORZANE</Txt><Pill label="الزنزانة الأولى • صحوة الرماد" icon="skull" tone="jade" /></View>
@@ -203,7 +201,7 @@ export default function CampScreen() {
             icon="add-circle-outline"
             variant="jade"
             small
-            disabled={fpsMode || hero.stats[key] >= 999_999}
+            disabled={hero.stats[key] >= 999_999}
             onPress={() => update((current) => allocateStatPoint(current, key).state)}
             style={styles.allocateButton}
           />
@@ -212,7 +210,7 @@ export default function CampScreen() {
             <Txt muted style={styles.statAllocationLabel}>{STAT_LABELS[key]}</Txt>
           </View>
         </View>)}
-        {fpsMode ? <Txt muted style={styles.statAllocationNote}>تخصيص السمات غير متاح عبر خادم اللعبة الحالي.</Txt> : null}
+        
       </Card>
     </> : null}
 
