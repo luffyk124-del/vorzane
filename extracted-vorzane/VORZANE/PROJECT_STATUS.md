@@ -41,11 +41,12 @@ This file records the actual state of the VORZANE project. Update it after each 
 ## Remaining work
 
 - Confirm the GitHub Pages deployment triggered by PR #13's merge commit.
-- Complete the additive, isolated-CI-tested command receipt / optimistic-concurrency database primitive on the feature branch; server-side economy command validation and client cutover remain separate work.
+- Finish CI verification and review for draft PR #15 (atomic command receipts plus the authenticated economy-command Edge Function).
+- Integrate the economy endpoint into GameContext and migrate every save mutation before considering any client-write privilege revocation. The existing client upsert path remains active and must not be mistaken for server-authoritative security.
 - Continue reviewing and improving existing gameplay and application flows.
 - Verify each change with relevant automated tests before merging.
 - Review authentication, authorization, player data ownership, and server-side validation in the existing architecture.
-- Review progression, rewards, inventory, and economy flows for integrity and abuse resistance.
+- Review progression, rewards, inventory, and economy flows for integrity and abuse resistance. The draft PR #15 endpoint currently covers buy/sell/equip/unequip server-side rules but is not yet wired into the client save lifecycle.
 - Improve mobile usability and verify responsive behavior on real devices.
 - Maintain clear release notes and deployment verification for each production update.
 - Keep database changes additive, reviewed, backed up, and reversible; do not run production migrations without explicit approval.
