@@ -40,7 +40,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 
 ## Remaining work
 
-- Confirm the GitHub Pages deployment triggered by PR #13's merge commit.
+- GitHub Pages deployment for PR #13's merge commit was verified successful (workflow run `42527315821`).
 - Finish CI verification and review for draft PR #15 (atomic command receipts plus the authenticated economy-command Edge Function).
 - Integrate the economy endpoint into GameContext and migrate every save mutation before considering any client-write privilege revocation. The existing client upsert path remains active and must not be mistaken for server-authoritative security.
 - Continue reviewing and improving existing gameplay and application flows.
