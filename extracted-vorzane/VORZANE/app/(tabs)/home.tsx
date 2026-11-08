@@ -91,7 +91,8 @@ export default function CampScreen() {
       <View style={styles.creatorPreview}>
         <View style={[styles.creatorPortrait, { borderColor: APPEARANCE_COLORS[selectedAppearance] }]}>
           <Image source={{ uri: CLASS_ART[selectedClass] }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: APPEARANCE_COLORS[selectedAppearance], opacity: 0.22 }]} />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: APPEARANCE_COLORS[selectedAppearance], opacity: 0.20 }]} />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: selectedGender === "male" ? "#80B7D4" : "#D99AC4", opacity: 0.08 }]} />
           <View style={styles.previewGender}><Txt style={styles.previewGenderText}>{selectedGender === "male" ? "ذكر" : "أنثى"}</Txt></View>
         </View>
         <View style={styles.creatorPreviewText}>
@@ -180,7 +181,8 @@ export default function CampScreen() {
         </View>
         <View style={styles.heroPortrait}>
           <Image source={{ uri: CLASS_ART[hero.className] }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityLabel={CLASS_NAMES[hero.className]} />
-          <View pointerEvents="none" style={[styles.heroPortraitShade, { backgroundColor: APPEARANCE_COLORS[state.characterStyle.appearance], opacity: 0.20 }]} />
+          <View pointerEvents="none" style={[styles.heroPortraitShade, { backgroundColor: APPEARANCE_COLORS[state.characterStyle.appearance], opacity: 0.18 }]} />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: state.characterStyle.gender === "male" ? "#80B7D4" : "#D99AC4", opacity: 0.08 }]} />
           <View style={styles.portraitAura} />
         </View>
       </View>
