@@ -112,11 +112,11 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (error) throw error;
       await clearOfflineSavePending(userId, offlineMarkerStorage(), markerToken);
       setCloudError("");
-      setSaveStatus("تم حفظ التقدم في السحابة");
+      setSaveStatus("تم حفظ تقدمك بأمان");
       return true;
     }).catch(async (caught: unknown) => {
       await markOfflineSavePending(userId, offlineMarkerStorage());
-      const message = caught instanceof Error ? caught.message : "تعذر الاتصال بـSupabase.";
+      const message = caught instanceof Error ? caught.message : "تعذر حفظ تقدمك الآن. سنحاول مجددًا عند عودة الاتصال.";
       setCloudError(message);
       setSaveStatus("تعذرت المزامنة؛ النسخة المحلية محفوظة");
       return false;
@@ -138,7 +138,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         const loaded = normalizeGameState(result.state);
         if (!loaded) throw new Error("حالة الحفظ الواردة غير صالحة.");
         stateRef.current = loaded; setState(loaded); await storeUserCache(userId, loaded);
-        setStatus("ready"); setSaveStatus("تم تحميل تقدمك من الخادم"); return;
+        setStatus("ready"); setSaveStatus("تم تحميل تقدمك"); return;
       }
       const cached = await readUserCache(userId);
       if (generation !== generationRef.current) return;
@@ -147,7 +147,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (generation !== generationRef.current) return;
       if (error) throw error;
       const remote = data ? normalizeGameState(data.game_state) : null;
-      if (data && !remote) throw new Error("حفظ الحساب في السحابة غير صالح؛ لم يتم استبداله.");
+      if (data && !remote) throw new Error("تعذر قراءة حفظ حسابك؛ لم نغيّر أي شيء.");
 
       if (remote) {
         const cloudProgress = advanceExpeditions(remote, Date.now());
@@ -164,7 +164,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         setState(cloudProgress.state);
         stateRef.current = cloudProgress.state;
         await storeUserCache(userId, cloudProgress.state);
-        setSaveStatus("تم تحميل حفظك من السحابة");
+        setSaveStatus("تم استعادة تقدمك");
         setStatus("ready");
         if (cloudProgress.reports.length) await persistSnapshot(cloudProgress.state, userId);
         return;
@@ -211,7 +211,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       setState(fresh);
       stateRef.current = fresh;
       setStatus("ready");
-      setSaveStatus("حساب جديد — سيُحفظ تقدمك في السحابة");
+      setSaveStatus("حساب جديد — ابدأ مغامرتك");
     } catch (caught) {
       if (generation !== generationRef.current) return;
       const message = caught instanceof Error ? caught.message : "تعذر الاتصال بالحفظ السحابي.";
@@ -288,9 +288,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       const next = normalizeGameState(response.state);
       if (!next) throw new Error("حالة الحفظ الواردة غير صالحة.");
       stateRef.current = next; setState(next); await storeUserCache(currentUserId, next);
-      setSaveStatus(response.message || "تم حفظ التغيير على الخادم"); setCloudError(""); return true;
+      setSaveStatus(response.message || "تم حفظ التغيير"); setCloudError(""); return true;
     } catch (caught) {
-      setCloudError(caught instanceof Error ? caught.message : "تعذر الاتصال بالخادم.");
+      setCloudError(caught instanceof Error ? caught.message : "تعذر حفظ التغيير الآن. حاول مجددًا.");
       setSaveStatus("غير متصل — الحفظ المؤقت للعرض فقط؛ لم يُرسل أي تغيير"); return false;
     }
   }, [fpsMode, currentUserId, status]);
@@ -309,7 +309,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (migration.kind === "offline") {
       if (status !== "conflict" || (choice !== "local" && choice !== "cloud")) return false;
       const candidate = choice === "local" ? migration.localState : migration.cloudState;
-      setSaveStatus(choice === "local" ? "جارٍ رفع نسخة الجهاز إلى السحابة..." : "جارٍ اعتماد النسخة السحابية...");
+      setSaveStatus(choice === "local" ? "جارٍ حفظ تقدم هذا الجهاز..." : "جارٍ استعادة تقدم حسابك...");
       const saved = await persistSnapshot(candidate, userId, true);
       if (!saved) {
         setSaveStatus("لم تكتمل المزامنة؛ لم تُحذف أي نسخة. حاول مجددًا.");
