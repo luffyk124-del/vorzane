@@ -39,7 +39,7 @@ export default function FriendsScreen() {
     if (user?.id) {
       void refresh().catch((error) => {
         if (!active) return;
-        setNotice(error instanceof Error ? error.message : "تعذر تحميل الخدمات الاجتماعية.");
+        setNotice(error instanceof Error ? error.message : "تعذر تحديث قائمة الأصدقاء. حاول مجددًا.");
       });
     }
     return () => { active = false; };
