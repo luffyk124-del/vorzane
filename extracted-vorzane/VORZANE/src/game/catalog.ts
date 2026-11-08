@@ -18,6 +18,51 @@ export const STARTER_ITEMS: EquipmentItem[] = [
   { id: "amulet1", name: "قلادة الفجر", slot: "قلادة", rarity: "common", bonus: { vit: 3, luck: 1 }, price: 330, requiredLevel: 1, icon: "diamond" },
 ];
 
+
+
+// Expanded permanent shop catalog: 8 equipment slots × 4 purchasable rarities × 6 variants.
+// Legendary and mythic equipment remain dungeon-exclusive.
+const SHOP_SLOT_BLUEPRINTS = [
+  { slot: "سلاح", icon: "flash", basePrice: 110, main: "str", secondary: "agi" },
+  { slot: "درع", icon: "shield", basePrice: 125, main: "def", secondary: "vit" },
+  { slot: "خوذة", icon: "skull", basePrice: 85, main: "def", secondary: "luck" },
+  { slot: "قفازات", icon: "hand-left", basePrice: 90, main: "str", secondary: "def" },
+  { slot: "حذاء", icon: "footsteps", basePrice: 80, main: "agi", secondary: "vit" },
+  { slot: "قلادة", icon: "diamond", basePrice: 140, main: "vit", secondary: "luck" },
+  { slot: "خاتم أول", icon: "ellipse", basePrice: 100, main: "luck", secondary: "agi" },
+  { slot: "خاتم ثانٍ", icon: "ellipse", basePrice: 100, main: "luck", secondary: "str" },
+] as const;
+
+const SHOP_TIERS = [
+  { rarity: "common", label: "الحديدي", level: 1, multiplier: 1, power: 2 },
+  { rarity: "uncommon", label: "الفولاذي", level: 4, multiplier: 2.1, power: 4 },
+  { rarity: "rare", label: "البلوري", level: 8, multiplier: 4.8, power: 7 },
+  { rarity: "epic", label: "السحري", level: 14, multiplier: 10, power: 11 },
+] as const;
+const SHOP_VARIANTS = ["الفجر", "الرماد", "العاصفة", "السراب", "الهاوية", "النجمة"] as const;
+const SHOP_VARIANCE = [0.9, 0.96, 1, 1.04, 1.1, 1.16] as const;
+
+export const SHOP_ITEMS: EquipmentItem[] = SHOP_SLOT_BLUEPRINTS.flatMap((slot, slotIndex) =>
+  SHOP_TIERS.flatMap((tier) =>
+    SHOP_VARIANTS.map((variant, variantIndex) => {
+      const level = tier.level + Math.floor(variantIndex / 3) * 2;
+      const primary = Math.max(1, Math.round(tier.power * SHOP_VARIANCE[variantIndex]));
+      const secondary = Math.max(1, Math.round(primary * 0.35));
+      const price = Math.round(slot.basePrice * tier.multiplier * SHOP_VARIANCE[variantIndex] * (1 + (level - 1) * 0.12));
+      return {
+        id: `shop-${slotIndex + 1}-${tier.rarity}-${variantIndex + 1}`,
+        name: `${slot.slot} ${tier.label} ${variant}`,
+        slot: slot.slot,
+        rarity: tier.rarity,
+        bonus: { [slot.main]: primary, [slot.secondary]: secondary },
+        price,
+        requiredLevel: level,
+        icon: slot.icon,
+      };
+    }),
+  ),
+);
+
 export const EXPEDITIONS = [
   { id: "ashen-pass", name: "ممرّ الرماد", region: "الحدود المنسية", icon: "trail-sign", durationSeconds: 10 * 60, rewardGold: 40, rewardXP: 35, requiredLevel: 1, difficulty: "سهل", description: "رحلة قصيرة لاستعادة الأنفاس واختبار العتاد." },
   { id: "sunken-archive", name: "الأرشيف الغارق", region: "السرداب الأزرق", icon: "library", durationSeconds: 15 * 60, rewardGold: 100, rewardXP: 55, requiredLevel: 3, difficulty: "متوسط", description: "اكتشف سجلّات قديمة قبل أن تبتلعها المياه." },
