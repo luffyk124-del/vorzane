@@ -178,7 +178,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (data && !remote) throw new Error("تعذر قراءة حفظ حسابك؛ لم نغيّر أي شيء.");
 
       if (remote) {
-        const cloudProgress = advanceExpeditions(remote, Date.now());
+        const cloudProgress = SERVER_ECONOMY_COMMANDS_ENABLED ? { state: remote, reports: [] } : advanceExpeditions(remote, Date.now());
         if (hasOfflineChanges && cached) {
           setMigration({ kind: "offline", localState: cached, cloudState: cloudProgress.state });
           stateRef.current = cached;
@@ -199,7 +199,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
 
       if (cached) {
-        const progressed = advanceExpeditions(cached, Date.now()).state;
+        const progressed = SERVER_ECONOMY_COMMANDS_ENABLED ? cached : advanceExpeditions(cached, Date.now()).state;
         syncReadyRef.current = userId;
         skipNextEffectRef.current = true;
         setState(progressed);
@@ -214,7 +214,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (generation !== generationRef.current) return;
       const claimedBy = localGet(LEGACY_CLAIM_KEY);
       if (legacy && claimedBy === userId) {
-        const progressed = advanceExpeditions(legacy, Date.now()).state;
+        const progressed = SERVER_ECONOMY_COMMANDS_ENABLED ? legacy : advanceExpeditions(legacy, Date.now()).state;
         syncReadyRef.current = userId;
         skipNextEffectRef.current = true;
         setState(progressed);
@@ -304,12 +304,6 @@ export function GameProvider({ children }: PropsWithChildren) {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if ((status !== "ready" && status !== "offline") || !state.activeExpedition) return;
-    const result = advanceExpeditions(state, clock);
-    if (result.reports.length) setState(result.state);
-  }, [clock, state.activeExpedition, status]);
-
   const update = useCallback((updater: (current: GameState) => GameState) => { setState((current) => updater(current)); }, []);
 
   const flushNow = useCallback(async () => {
@@ -367,6 +361,16 @@ export function GameProvider({ children }: PropsWithChildren) {
     economyQueueRef.current = task;
     return task;
   }, [currentUserId, persistSnapshot, status]);
+
+  useEffect(() => {
+    if ((status !== "ready" && status !== "offline") || !state.activeExpedition) return;
+    if (SERVER_ECONOMY_COMMANDS_ENABLED) {
+      if (status === "ready" && state.activeExpedition.endsAt <= clock) void executeEconomyCommand({ type: "advanceExpeditions" });
+      return;
+    }
+    const result = advanceExpeditions(state, clock);
+    if (result.reports.length) setState(result.state);
+  }, [clock, state.activeExpedition, status, executeEconomyCommand]);
 
   const resolveMigration = useCallback(async (choice: Resolution) => {
     if (!currentUserId || !migration) return false;
