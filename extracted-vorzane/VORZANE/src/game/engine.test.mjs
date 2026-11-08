@@ -24,13 +24,12 @@ test("shop rejects unknown items without changing the save", () => {
   assert.equal(state.inventory.length, 0);
 });
 
-test("weapon-category items are not purchasable from the store", () => {
+test("weapon-category items can be purchased from the store", () => {
   const state = createHeroState("اختبار", "Warrior");
   const result = buyItem(state, "sword1");
-  assert.ok(result.error);
-  assert.equal(result.state, state);
-  assert.equal(state.gold, 500);
-  assert.equal(state.inventory.length, 0);
+  assert.equal(result.error, undefined);
+  assert.equal(result.state.gold, 400);
+  assert.equal(result.state.inventory[0]?.catalogId, "sword1");
 });
 
 test("players can buy high-level armor early but cannot equip it before its level", () => {
@@ -54,7 +53,7 @@ test("players can buy high-level armor early but cannot equip it before its leve
   assert.equal(equipped.inventory.length, 0);
 });
 
-test("non-weapon dungeon equipment can be purchased early but remains level and floor gated", () => {
+test("equipment can be purchased early and only its player-level requirement gates equipping", () => {
   const state = createHeroState("اختبار", "Mage");
   state.gold = 10_000;
 
@@ -68,10 +67,7 @@ test("non-weapon dungeon equipment can be purchased early but remains level and 
   assert.equal(earlyEquip, purchased.state);
 
   const levelReady = { ...purchased.state, hero: { ...purchased.state.hero, level: 35 } };
-  assert.equal(equipItem(levelReady, owned.id), levelReady, "dungeon floor requirement must still apply");
-
-  const floorReady = { ...levelReady, dungeonFloor: 40 };
-  assert.equal(equipItem(floorReady, owned.id).equipped["درع"]?.catalogId, "dun-2-mythic-1");
+  assert.equal(equipItem(levelReady, owned.id).equipped["درع"]?.catalogId, "dun-2-mythic-1", "dungeon floor must not gate equipment");
 });
 
 test("players can buy high-level companions early but cannot activate them early", () => {
@@ -201,7 +197,7 @@ test("expedition tasks require their threshold and grant a one-time reward", () 
 });
 
 
-test("2D character appearance choices persist and old saves receive safe defaults", () => {
+test("character appearance choices persist and old saves receive safe defaults", () => {
   const fresh = createFreshState();
   assert.deepEqual(fresh.characterStyle, { gender: "male", appearance: 0 });
 
