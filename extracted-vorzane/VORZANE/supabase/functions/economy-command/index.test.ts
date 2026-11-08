@@ -299,7 +299,8 @@ Deno.test("profile appearance command rejects unsupported style values", async (
   assert(response.status === 400, "unsupported style must be rejected");
   assert(calls.table === undefined && calls.rpc === undefined, "invalid style must not touch save");
 });
-\nDeno.test("another unauthenticated identity cannot invoke commands", async () => {
+
+Deno.test("another unauthenticated identity cannot invoke commands", async () => {
   const { handler } = fixture({ user: null, authError: new Error("invalid token") });
   const response = await handler(commandRequest({ type: "buyItem", itemId: "sword1" }));
   assert(response.status === 401, "expected 401");
