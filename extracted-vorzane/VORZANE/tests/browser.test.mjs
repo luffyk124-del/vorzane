@@ -135,7 +135,8 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
         await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ message: "Unknown social RPC" }) });
         return;
       }
-      const value = responses[rpc];
+      const response = responses[rpc];
+      const value = typeof response === "function" ? response() : response;
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(value) });
       return;
     }
