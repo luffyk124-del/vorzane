@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useState, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
-import type { PropsWithChildren, ReactNode } from "react";
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { useState, type PropsWithChildren, type ReactNode } from "react";
 import { usePathname, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { palette, layout, shared } from "../theme";
