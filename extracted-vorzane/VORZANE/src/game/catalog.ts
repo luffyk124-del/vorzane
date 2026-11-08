@@ -42,7 +42,7 @@ const SHOP_TIERS = [
 const SHOP_VARIANTS = ["الفجر", "الرماد", "العاصفة", "السراب", "الهاوية", "النجمة"] as const;
 const SHOP_VARIANCE = [0.9, 0.96, 1, 1.04, 1.1, 1.16] as const;
 
-export const SHOP_ITEMS: EquipmentItem[] = SHOP_SLOT_BLUEPRINTS.flatMap((slot, slotIndex) =>
+const GENERATED_SHOP_ITEMS: EquipmentItem[] = SHOP_SLOT_BLUEPRINTS.flatMap((slot, slotIndex) =>
   SHOP_TIERS.flatMap((tier) =>
     SHOP_VARIANTS.map((variant, variantIndex) => {
       const level = tier.level + Math.floor(variantIndex / 3) * 2;
@@ -62,6 +62,8 @@ export const SHOP_ITEMS: EquipmentItem[] = SHOP_SLOT_BLUEPRINTS.flatMap((slot, s
     }),
   ),
 );
+
+export const SHOP_ITEMS: EquipmentItem[] = [...STARTER_ITEMS, ...GENERATED_SHOP_ITEMS];
 
 export const EXPEDITIONS = [
   { id: "ashen-pass", name: "ممرّ الرماد", region: "الحدود المنسية", icon: "trail-sign", durationSeconds: 10 * 60, rewardGold: 40, rewardXP: 35, requiredLevel: 1, difficulty: "سهل", description: "رحلة قصيرة لاستعادة الأنفاس واختبار العتاد." },
