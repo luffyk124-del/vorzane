@@ -325,13 +325,14 @@ export function GameProvider({ children }: PropsWithChildren) {
 
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
-      const flushed = await persistSnapshot(stateRef.current, currentUserId);
-      if (!flushed) return { success: false, enabled: true, error: "تعذر مزامنة الحفظ قبل تنفيذ العملية." };
-
       const fingerprint = JSON.stringify(command);
       const pending = pendingCommandRef.current;
       if (pending && pending.fingerprint !== fingerprint) {
         return { success: false, enabled: true, error: "هناك عملية سابقة لم يصل تأكيدها. أعد المحاولة للعملية نفسها أولًا." };
+      }
+      if (!pending) {
+        const flushed = await persistSnapshot(stateRef.current, currentUserId);
+        if (!flushed) return { success: false, enabled: true, error: "تعذر مزامنة الحفظ قبل تنفيذ العملية." };
       }
       const expectedUpdatedAt = pending?.expectedUpdatedAt ?? cloudUpdatedAtRef.current;
       if (!expectedUpdatedAt) return { success: false, enabled: true, error: "لم يتم تأكيد نسخة الحفظ السحابية؛ أعد تحميل تقدمك." };
