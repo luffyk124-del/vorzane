@@ -1,120 +1,155 @@
-import { useState } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import type { CharacterStyle, ClassId } from "../game/model";
-import { CLASS_NAMES } from "../game/model";
-import { CLASS_ART } from "../game/art";
+import { createElement, useEffect, useRef, useState } from "react";
+import { Platform, StyleSheet, Text, View } from "react-native";
+import {
+  applyCharacterMaterials,
+  getCharacterModelPath,
+  resolveModelHairstyle,
+  type ModelHairstyle,
+} from "../game/characterAppearance";
+import type { CharacterStyle } from "../game/model";
 
-const FALLBACK = "#18232D";
+const MODEL_VIEWER_SCRIPT = "https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js";
 
-const STYLE_LABELS = {
-  appearance: ["فاتح", "قمحي", "برونزي", "داكن"],
-  hairstyle: { short: "قصير", long: "طويل", braids: "ضفائر", fringe: "غُرّة" },
-  face: { classic: "كلاسيكي", noble: "نبيل", weathered: "مخضرم" },
-  outfit: { adventurer: "مغامر", royal: "ملكي", shadow: "ظلال" },
-  body: { balanced: "متوازن", sturdy: "قوي البنية", agile: "رشيق" },
-} as const;
+type CharacterModelViewerProps = Pick<CharacterStyle, "gender" | "appearance" | "outfit"> & {
+  hairstyle: ModelHairstyle;
+};
+
+type ModelViewerElement = HTMLElement & {
+  loaded?: boolean;
+  model?: Parameters<typeof applyCharacterMaterials>[0];
+};
 
 export function CharacterModelViewer({
   gender = "male",
   appearance = 0,
-  hairstyle = "short",
-  face = "classic",
   outfit = "adventurer",
-  body = "balanced",
-  className = "Warrior",
-}: Partial<CharacterStyle> & { className?: ClassId }) {
+  hairstyle = "short",
+}: CharacterModelViewerProps) {
+  const cameraTarget = gender === "male" ? "-0.95m 0.95m 0m" : "0.95m 0.95m 0m";
+  const resolvedHairstyle = resolveModelHairstyle(gender, hairstyle);
+  const basePath = (process.env.EXPO_PUBLIC_BASE_PATH ?? "").replace(/\/+$/, "");
+  const modelUrl = getCharacterModelPath(gender, resolvedHairstyle, basePath);
+  const [ready, setReady] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
-  const selectedClass: ClassId = ["Warrior", "Mage", "Assassin", "Archer"].includes(className) ? className : "Warrior";
-  const label = CLASS_NAMES[selectedClass];
+  const modelRef = useRef<HTMLElement | null>(null);
 
-  return (
-    <View
-      testID="fantasy-character-preview"
-      accessible
-      accessibilityLabel={`معاينة شخصية ${label} الفنتازية، ${STYLE_LABELS.appearance[appearance]}، شعر ${STYLE_LABELS.hairstyle[hairstyle]}، زي ${STYLE_LABELS.outfit[outfit]}`}
-      style={styles.frame}
-    >
-      {!failed ? (
-        <Image
-          source={{ uri: CLASS_ART[selectedClass] }}
-          accessibilityLabel={`رسم فنتازي لفئة ${label}`}
-          resizeMode="cover"
-          onError={() => setFailed(true)}
-          style={styles.art}
-        />
-      ) : (
-        <View style={styles.fallback}>
-          <Text style={styles.fallbackGlyph}>{selectedClass === "Mage" ? "✦" : selectedClass === "Assassin" ? "⚔" : selectedClass === "Archer" ? "➶" : "♜"}</Text>
-          <Text style={styles.fallbackTitle}>{label}</Text>
-          <Text style={styles.fallbackSub}>بطل VORZANE</Text>
-        </View>
-      )}
-      <LinearGradient
-        colors={["rgba(5,10,17,0.04)", "rgba(5,10,17,0.02)", "rgba(5,10,17,0.88)"]}
-        locations={[0, 0.55, 1]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-      <View pointerEvents="none" style={styles.topOrnament}>
-        <View style={styles.rune} />
-        <Text style={styles.worldLabel}>VORZANE • DARK FANTASY</Text>
-        <View style={styles.rune} />
-      </View>
-      <View pointerEvents="none" style={styles.bottom}>
-        <View style={styles.divider} />
-        <Text style={styles.className}>{label}</Text>
-        <Text style={styles.subtitle}>{gender === "female" ? "بطلة" : "بطل"} • {STYLE_LABELS.hairstyle[hairstyle]} • {STYLE_LABELS.outfit[outfit]}</Text>
-        <Text style={styles.styleMeta}>{STYLE_LABELS.face[face]} · {STYLE_LABELS.body[body]} · بشرة {STYLE_LABELS.appearance[appearance]}</Text>
-      </View>
-      <View pointerEvents="none" style={styles.cornerTopLeft} />
-      <View pointerEvents="none" style={styles.cornerTopRight} />
-      <View pointerEvents="none" style={styles.cornerBottomLeft} />
-      <View pointerEvents="none" style={styles.cornerBottomRight} />
-    </View>
-  );
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+    if (window.customElements?.get("model-viewer")) {
+      setReady(true);
+      return;
+    }
+
+    let script = document.querySelector<HTMLScriptElement>('script[data-vorzane-model-viewer="true"]');
+    const onLoad = () => setReady(true);
+    const onError = () => setFailed(true);
+
+    if (!script) {
+      script = document.createElement("script");
+      script.type = "module";
+      script.src = MODEL_VIEWER_SCRIPT;
+      script.dataset.vorzaneModelViewer = "true";
+      script.addEventListener("load", onLoad, { once: true });
+      script.addEventListener("error", onError, { once: true });
+      document.head.appendChild(script);
+    } else {
+      script.addEventListener("load", onLoad, { once: true });
+      script.addEventListener("error", onError, { once: true });
+    }
+
+    return () => {
+      script?.removeEventListener("load", onLoad);
+      script?.removeEventListener("error", onError);
+    };
+  }, []);
+
+  useEffect(() => {
+    const model = modelRef.current;
+    if (!ready || !model) return;
+    setLoaded(false);
+    setFailed(false);
+    const onModelLoad = () => {
+      applyCharacterMaterials((model as ModelViewerElement).model, appearance, outfit);
+      setLoaded(true);
+      setFailed(false);
+    };
+    const onModelError = () => {
+      setLoaded(false);
+      setFailed(true);
+    };
+    model.addEventListener("load", onModelLoad);
+    model.addEventListener("error", onModelError);
+    if ((model as ModelViewerElement).loaded) onModelLoad();
+    return () => {
+      model.removeEventListener("load", onModelLoad);
+      model.removeEventListener("error", onModelError);
+    };
+  }, [ready, modelUrl, appearance, outfit]);
+
+  if (Platform.OS !== "web") {
+    return <View style={styles.fallback}><Text style={styles.fallbackText}>معاينة المجسم ثلاثي الأبعاد متاحة في نسخة الويب حالياً.</Text></View>;
+  }
+
+  return <View style={styles.frame}>
+    {createElement("model-viewer" as any, {
+      ref: modelRef,
+      key: modelUrl,
+      src: modelUrl,
+      alt: gender === "male" ? "مجسم شخصية ذكر في VORZANE" : "مجسم شخصية أنثى في VORZANE",
+      "camera-controls": true,
+      "camera-target": cameraTarget,
+      "camera-orbit": "0deg 75deg 2.4m",
+      "field-of-view": "30deg",
+      "auto-rotate": true,
+      "rotation-per-second": "12deg",
+      "shadow-intensity": "0.8",
+      exposure: "1",
+      loading: "eager",
+      reveal: "auto",
+      "interaction-prompt": "none",
+      style: {
+        display: "block",
+        width: "100%",
+        height: "340px",
+        background: "radial-gradient(ellipse at 50% 45%, #263c43 0%, #101b24 72%)",
+        borderRadius: "16px",
+      },
+    })}
+    {!ready && !failed ? <Text style={styles.status}>جارٍ تشغيل عارض المجسم…</Text> : null}
+    {ready && !loaded && !failed ? <Text style={styles.status}>جارٍ تحميل ملف الشخصية ثلاثي الأبعاد…</Text> : null}
+    {failed ? <Text style={styles.status}>تعذر تحميل العارض أو ملف المجسم. تحقق من اتصال الإنترنت ثم أعد فتح الصفحة.</Text> : null}
+  </View>;
 }
 
 const styles = StyleSheet.create({
   frame: {
     width: "100%",
-    height: 430,
-    minHeight: 390,
-    borderRadius: 20,
+    minHeight: 340,
+    borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: FALLBACK,
-    borderWidth: 1,
-    borderColor: "rgba(222,185,111,0.68)",
+    backgroundColor: "#101b24",
     position: "relative",
-    shadowColor: "#000",
-    shadowOpacity: 0.38,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 9 },
   },
-  art: { ...StyleSheet.absoluteFill, width: "100%", height: "100%" },
-  fallback: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: FALLBACK, gap: 8 },
-  fallbackGlyph: { color: "#E6C77C", fontSize: 78, lineHeight: 90 },
-  fallbackTitle: { color: "#F5E6C5", fontSize: 24, fontWeight: "900" },
-  fallbackSub: { color: "#B6A47D", fontSize: 11, letterSpacing: 3 },
-  topOrnament: {
-    position: "absolute",
-    top: 15,
-    left: 18,
-    right: 18,
-    flexDirection: "row",
+  fallback: {
+    minHeight: 120,
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: "#101b24",
   },
-  worldLabel: { color: "#E7D6AD", fontSize: 9, fontWeight: "900", letterSpacing: 2.4, textShadowColor: "#000", textShadowRadius: 7 },
-  rune: { width: 24, height: 1, backgroundColor: "rgba(231,214,173,0.75)" },
-  bottom: { position: "absolute", left: 16, right: 16, bottom: 22, alignItems: "center", gap: 5 },
-  divider: { width: 88, height: 2, backgroundColor: "#D6B56F", marginBottom: 7 },
-  className: { color: "#FFF1D2", fontSize: 27, fontWeight: "900", textShadowColor: "#000", textShadowRadius: 8 },
-  subtitle: { color: "#D8C9A8", fontSize: 11, fontWeight: "700", textShadowColor: "#000", textShadowRadius: 7 },
-  styleMeta: { color: "#E6C77C", fontSize: 9, fontWeight: "800", textShadowColor: "#000", textShadowRadius: 7 },
-  cornerTopLeft: { position: "absolute", top: 7, left: 7, width: 25, height: 25, borderTopWidth: 2, borderLeftWidth: 2, borderColor: "#D8B66D" },
-  cornerTopRight: { position: "absolute", top: 7, right: 7, width: 25, height: 25, borderTopWidth: 2, borderRightWidth: 2, borderColor: "#D8B66D" },
-  cornerBottomLeft: { position: "absolute", bottom: 7, left: 7, width: 25, height: 25, borderBottomWidth: 2, borderLeftWidth: 2, borderColor: "#D8B66D" },
-  cornerBottomRight: { position: "absolute", bottom: 7, right: 7, width: 25, height: 25, borderBottomWidth: 2, borderRightWidth: 2, borderColor: "#D8B66D" },
+  fallbackText: { color: "#c7d1d4", textAlign: "center", fontSize: 13 },
+  status: {
+    position: "absolute",
+    bottom: 10,
+    right: 12,
+    left: 12,
+    color: "#d5dfdf",
+    textAlign: "center",
+    fontSize: 11,
+    backgroundColor: "rgba(8, 15, 20, 0.78)",
+    padding: 8,
+    borderRadius: 8,
+  },
 });

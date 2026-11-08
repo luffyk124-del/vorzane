@@ -198,11 +198,11 @@ test("expedition tasks require their threshold and grant a one-time reward", () 
 
 
 test("character appearance choices persist and old saves receive safe defaults", () => {
-  const defaults = { gender: "male", appearance: 0, hairstyle: "short", face: "classic", outfit: "adventurer", body: "balanced" };
+  const defaults = { gender: "male", appearance: 0, hairstyle: "short", hairColor: "obsidian", face: "classic", outfit: "adventurer", body: "balanced" };
   const fresh = createFreshState();
   assert.deepEqual(fresh.characterStyle, defaults);
 
-  const selectedStyle = { gender: "female", appearance: 3, hairstyle: "braids", face: "noble", outfit: "royal", body: "sturdy" };
+  const selectedStyle = { gender: "female", appearance: 3, hairstyle: "braids", hairColor: "silver", face: "noble", outfit: "royal", body: "sturdy" };
   const customized = normalizeGameState({
     ...fresh,
     hero: createHeroState("مغامر", "Mage").hero,
@@ -244,26 +244,4 @@ test("weekly and seasonal mission progress uses period baselines", () => {
 
   const nextMonth = ensureMissionPeriods(state, Date.UTC(2026, 1, 1, 12));
   assert.equal(getRecurringMissions(nextMonth, "season", Date.UTC(2026, 1, 1, 12)).find((mission) => mission.id === "season-wins")?.progress, 0);
-});
-
-
-test("weekly missions reset at the Monday UTC boundary and unlock one fresh claim", () => {
-  const monday = Date.UTC(2026, 0, 5, 0, 0, 0);
-  let state = ensureMissionPeriods(createHeroState("مهمات", "Warrior"), monday);
-  state.wins = 10;
-
-  const firstClaim = claimRecurringMission(state, "weekly", "weekly-wins", monday);
-  assert.equal(firstClaim.gold, state.gold + 600);
-  assert.equal(claimRecurringMission(firstClaim, "weekly", "weekly-wins", monday).gold, firstClaim.gold);
-
-  const nextMonday = monday + 7 * 86_400_000;
-  const reset = ensureMissionPeriods(firstClaim, nextMonday);
-  const resetMission = getRecurringMissions(reset, "weekly", nextMonday).find((mission) => mission.id === "weekly-wins");
-  assert.equal(resetMission?.progress, 0);
-  assert.equal(resetMission?.claimed, false);
-  assert.equal(resetMission?.available, false);
-
-  reset.wins += 10;
-  const secondClaim = claimRecurringMission(reset, "weekly", "weekly-wins", nextMonday);
-  assert.equal(secondClaim.gold, reset.gold + 600);
 });

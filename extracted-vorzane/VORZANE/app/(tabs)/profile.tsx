@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { ProfileAvatar } from "../../src/components/ProfileAvatar";
-import { CharacterModelViewer } from "../../src/components/CharacterModelViewer";
+import { Character2DViewer } from "../../src/components/Character2DViewer";
 import { useAuth } from "../../src/contexts/AuthContext";
 import { useGame } from "../../src/contexts/GameContext";
-import { CLASS_NAMES, type CharacterStyle, type ClassId } from "../../src/game/model";
+import { CLASS_NAMES, type CharacterHairColor, type CharacterStyle, type ClassId } from "../../src/game/model";
 import { getMyProfile, saveMyProfile, setMyProfileSearchable } from "../../src/lib/social";
 import { palette } from "../../src/theme";
 
@@ -21,15 +21,16 @@ function isAvatarId(value: string): value is ClassId | "brand" {
   return value === "brand" || value === "Warrior" || value === "Mage" || value === "Assassin" || value === "Archer";
 }
 
-type StyleOption = { id: string; label: string };
-function StyleChoiceGroup({ title, value, options, onChange }: { title: string; value: string; options: StyleOption[]; onChange: (value: string) => void }) {
+type StyleOption = { id: string; label: string; color?: string };
+function StyleChoiceGroup({ title, value, options, onChange, helperText }: { title: string; value: string; options: StyleOption[]; onChange: (value: string) => void; helperText?: string }) {
   return <View style={styles.styleGroup}>
     <Txt style={styles.styleGroupTitle}>{title}</Txt>
+    {helperText ? <Txt muted style={styles.styleGroupHint}>{helperText}</Txt> : null}
     <View style={styles.avatarGrid}>
       {options.map((option) => {
         const selected = value === option.id;
         return <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={`${title}: ${option.label}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => onChange(option.id)} style={[styles.styleOption, selected && styles.avatarSelected]}>
-          <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>{option.label}</Txt>
+          <>{option.color ? <View style={[styles.appearanceSwatch, { backgroundColor: option.color }]} /> : null}<Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>{option.label}</Txt></>
           {selected ? <Icon name="checkmark-circle" size={15} color={palette.jade} /> : <View style={styles.checkPlaceholder} />}
         </Pressable>;
       })}
@@ -40,6 +41,12 @@ function StyleChoiceGroup({ title, value, options, onChange }: { title: string; 
 export default function ProfileScreen() {
   const { user } = useAuth();
   const { state, update } = useGame();
+  const hairstyleOptions = (state.characterStyle.gender === "female"
+    ? ["short", "long", "braids"]
+    : ["short", "long", "fringe"]).map((id) => ({
+    id,
+    label: id === "short" ? "قصير" : id === "long" ? "طويل" : id === "fringe" ? "غُرّة" : "ضفائر",
+  }));
   const [displayName, setDisplayName] = useState("");
   const [avatarId, setAvatarId] = useState<ClassId | "brand">("brand");
   const [isSearchable, setIsSearchable] = useState(true);
@@ -94,30 +101,46 @@ export default function ProfileScreen() {
 
     <SectionTitle title="مظهر الشخصية" icon="color-palette-outline" />
     <Card style={styles.panel}>
-      <Txt muted style={styles.hint}>اصنع مظهر بطلك الفنتازي: اختر البشرة والشعر والملامح والدرع والبنية، وستنعكس اختياراتك مباشرة على الرسم.</Txt>
+      <Txt muted style={styles.hint}>صمّم مظهرك بأسلوب فانتازي ثنائي الأبعاد. كل اختيار ينعكس مباشرة على الرسم: لون البشرة والشعر، التسريحة، الملامح، الملابس وبنية الجسم.</Txt>
       <View style={styles.avatarGrid}>
         {([{ id: "male", label: "ذكر" }, { id: "female", label: "أنثى" }] as const).map((option) => {
           const selected = state.characterStyle.gender === option.id;
-          return <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={`تفضيل الشخصية: ${option.label}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, gender: option.id } }))} style={[styles.avatarOption, selected && styles.avatarSelected]}>
+          return <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={`تفضيل الشخصية: ${option.label}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, gender: option.id, hairstyle: option.id === "female" ? (current.characterStyle.hairstyle === "fringe" ? "braids" : current.characterStyle.hairstyle) : (current.characterStyle.hairstyle === "braids" ? "short" : current.characterStyle.hairstyle) } }))} style={[styles.avatarOption, selected && styles.avatarSelected]}>
             <Icon name={option.id === "male" ? "male" : "female"} size={21} color={selected ? palette.gold : palette.jade} />
             <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>{option.label}</Txt>
           </Pressable>;
         })}
       </View>
-      <CharacterModelViewer {...state.characterStyle} className={state.hero?.className ?? "Warrior"} />
+      <Character2DViewer
+        gender={state.characterStyle.gender}
+        appearance={state.characterStyle.appearance}
+        outfit={state.characterStyle.outfit}
+        hairstyle={state.characterStyle.hairstyle}
+        hairColor={state.characterStyle.hairColor}
+        face={state.characterStyle.face}
+        body={state.characterStyle.body}
+      />
       <View style={styles.avatarGrid}>
-        {["#F4C9A5", "#DDA47C", "#B87955", "#80543F"].map((color, index) => {
+        {["#F2C7A5", "#D59A70", "#A66D4C", "#684331"].map((color, index) => {
           const selected = state.characterStyle.appearance === index;
-          return <Pressable key={color} accessibilityRole="radio" accessibilityLabel={`درجة البشرة ${index + 1}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, appearance: index as 0 | 1 | 2 | 3 } }))} style={[styles.appearanceChoice, selected && styles.avatarSelected]}>
+          return <Pressable key={color} accessibilityRole="radio" accessibilityLabel={`درجة اللون ${index + 1}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, appearance: index as 0 | 1 | 2 | 3 } }))} style={[styles.appearanceChoice, selected && styles.avatarSelected]}>
             <View style={[styles.appearanceSwatch, { backgroundColor: color }]} />
-            <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>درجة البشرة {index + 1}</Txt>
+            <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>درجة اللون {index + 1}</Txt>
           </Pressable>;
         })}
       </View>
-      <StyleChoiceGroup title="تسريحة الشعر" value={state.characterStyle.hairstyle} options={[{ id: "short", label: "قصير" }, { id: "long", label: "طويل" }, { id: "braids", label: "ضفائر" }, { id: "fringe", label: "غُرّة" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, hairstyle: value as CharacterStyle["hairstyle"] } }))} />
+      <StyleChoiceGroup title="تسريحة الشعر" value={state.characterStyle.hairstyle} options={hairstyleOptions} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, hairstyle: value as CharacterStyle["hairstyle"] } }))} />
+      <StyleChoiceGroup title="لون الشعر" value={state.characterStyle.hairColor ?? "obsidian"} options={[
+        { id: "obsidian", label: "أسود فحمي", color: "#171B24" },
+        { id: "silver", label: "فضي", color: "#AEB8C8" },
+        { id: "crimson", label: "قرمزي", color: "#782B35" },
+        { id: "gold", label: "ذهبي", color: "#B8893F" },
+        { id: "violet", label: "بنفسجي", color: "#503A78" },
+        { id: "chestnut", label: "كستنائي", color: "#70432F" },
+      ]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, hairColor: value as CharacterHairColor } }))} />
       <StyleChoiceGroup title="ملامح الوجه" value={state.characterStyle.face} options={[{ id: "classic", label: "كلاسيكي" }, { id: "noble", label: "نبيل" }, { id: "weathered", label: "مغامر" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, face: value as CharacterStyle["face"] } }))} />
       <StyleChoiceGroup title="الملابس" value={state.characterStyle.outfit} options={[{ id: "adventurer", label: "مغامر" }, { id: "royal", label: "ملكي" }, { id: "shadow", label: "داكن" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, outfit: value as CharacterStyle["outfit"] } }))} />
-      <StyleChoiceGroup title="نمط الشخصية" value={state.characterStyle.body} options={[{ id: "balanced", label: "متوازن" }, { id: "sturdy", label: "متين" }, { id: "agile", label: "رشيق" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, body: value as CharacterStyle["body"] } }))} />
+      <StyleChoiceGroup title="بنية الجسم" value={state.characterStyle.body} options={[{ id: "balanced", label: "متوازن" }, { id: "sturdy", label: "متين" }, { id: "agile", label: "رشيق" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, body: value as CharacterStyle["body"] } }))} />
     </Card>
 
     <SectionTitle title="اسم اللاعب" icon="person-outline" />
@@ -165,6 +188,7 @@ const styles = StyleSheet.create({
   modelPreviewHint: { fontSize: 9, textAlign: "right" },
   styleGroup: { gap: 7, paddingTop: 7 },
   styleGroupTitle: { fontSize: 11, fontWeight: "900", textAlign: "right" },
+  styleGroupHint: { fontSize: 9, textAlign: "right" },
   styleOption: { minWidth: 74, flexGrow: 1, flexBasis: "28%", minHeight: 48, alignItems: "center", justifyContent: "center", gap: 3, padding: 7, borderRadius: 12, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.midnight },
   appearanceChoice: { flex: 1, minWidth: 65, minHeight: 68, alignItems: "center", justifyContent: "center", gap: 6, padding: 8, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.midnight },
   appearanceSwatch: { width: 22, height: 22, borderRadius: 11 },
