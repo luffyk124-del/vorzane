@@ -75,6 +75,26 @@ async function storeUserCache(userId: string, state: GameState) {
   try { await AsyncStorage.setItem(userKey(userId), JSON.stringify(state)); } catch { /* Best effort device cache. */ }
 }
 
+async function readCloudSave(userId: string) {
+  // Prefer the authenticated read-only Edge Function. Keep the existing RLS-scoped
+  // query as a compatibility fallback until the function is deployed everywhere.
+  const response = await supabase.functions.invoke<{ state: unknown; updatedAt: string | null }>("game-state", { method: "GET" });
+  if (!response.error && response.data && Object.hasOwn(response.data, "state")) {
+    return {
+      data: response.data.state === null
+        ? null
+        : { game_state: response.data.state, updated_at: response.data.updatedAt },
+      error: null,
+    };
+  }
+
+  return await supabase
+    .from("player_saves")
+    .select("game_state, updated_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+}
+
 export function GameProvider({ children }: PropsWithChildren) {
   const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState<GameState>(() => createFreshState());
@@ -131,7 +151,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       const cached = await readUserCache(userId);
       if (generation !== generationRef.current) return;
       const hasOfflineChanges = cached !== null && await hasOfflineSavePending(userId, offlineMarkerStorage());
-      const { data, error } = await supabase.from("player_saves").select("game_state, updated_at").eq("user_id", userId).maybeSingle();
+      const { data, error } = await readCloudSave(userId);
       if (generation !== generationRef.current) return;
       if (error) throw error;
       const remote = data ? normalizeGameState(data.game_state) : null;
