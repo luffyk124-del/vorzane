@@ -157,3 +157,13 @@ Updated: 2026-11-07
 - The social database integration job passed in workflow run `42433056348`, including the literal player-search handling for underscore characters.
 - That run also passed browser tests, TypeScript, and began the web export, but it was triggered before the latest mobile UX and achievement commits. The latest commits still require a fresh full CI run before these additions can be called verified.
 - No production database changes, merge, or deployment were performed.
+
+
+## 2026-11-08: Expedition task milestones
+
+- Added three non-combat expedition milestones (1, 3, and 10 completed expeditions) with one-time gold rewards.
+- Task progress is derived from the existing `expeditionsCompleted` save field; claims are stored in the existing `claimedQuestRewards` and `quests` maps.
+- No schema changes, new database columns, or production migrations are required for these tasks.
+- Added unit coverage for threshold gating, reward amount, duplicate-claim prevention, and original-state immutability.
+- Added an Arabic RTL task section with progress meters and claim controls to the existing quests screen.
+- Latest task/UI/test commits are awaiting a fresh complete CI run; not yet considered verified.
