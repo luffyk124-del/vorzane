@@ -17,7 +17,7 @@ insert into public.player_saves (user_id, game_state)
 values ('00000000-0000-0000-0000-00000000000a', '{"gold":10,"inventory":[]}')
 on conflict (user_id) do update set game_state = excluded.game_state, updated_at = clock_timestamp();
 
-do $main$test$ begin
+do $test$ begin
   begin
     perform public.commit_player_command(
       '00000000-0000-0000-0000-00000000000a',
@@ -35,7 +35,7 @@ end $test$;
 set local role service_role;
 select set_config('request.jwt.claim.role', 'service_role', true);
 
-do $
+do $main$
 declare
   v_expected timestamptz;
   v_after timestamptz;
