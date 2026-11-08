@@ -49,10 +49,14 @@ export type OfflineReport = {
 };
 
 export type CharacterStyle = { gender: "male" | "female"; appearance: 0 | 1 | 2 | 3 };
+export type MissionSnapshot = { wins: number; expeditions: number; level: number };
+export type MissionPeriod = { key: string; baseline: MissionSnapshot; claimed: Record<string, boolean> };
+export type MissionPeriods = { daily: MissionPeriod; weekly: MissionPeriod; season: MissionPeriod };
 
 export type GameState = {
   hero: Hero | null;
   characterStyle: CharacterStyle;
+  missionPeriods: MissionPeriods;
   profileAvatarId: ClassId | "brand";
   gold: number;
   gems: number;
@@ -105,10 +109,21 @@ export const CLASS_DESCRIPTIONS: Record<ClassId, string> = {
 
 export const SLOT_NAMES = ["سلاح", "درع", "خوذة", "قفازات", "حذاء", "قلادة", "خاتم أول", "خاتم ثانٍ"];
 
+function missionWeekKey(date = new Date()) {
+  const day = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+  return day.toISOString().slice(0, 10);
+}
+
 export function createFreshState(): GameState {
   return {
     hero: null,
     characterStyle: { gender: "male", appearance: 0 },
+    missionPeriods: {
+      daily: { key: new Date().toISOString().slice(0, 10), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+      weekly: { key: missionWeekKey(), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+      season: { key: new Date().toISOString().slice(0, 7), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+    },
     profileAvatarId: "brand",
     gold: 500,
     gems: 50,
