@@ -22,9 +22,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: github-pages-main
-  cancel-in-progress: true
 
 jobs:
   social-db:
@@ -172,6 +169,9 @@ jobs:
 
   deploy:
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.approve_deploy)
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
     needs: [build, social-db]
     runs-on: ubuntu-latest
     permissions:
