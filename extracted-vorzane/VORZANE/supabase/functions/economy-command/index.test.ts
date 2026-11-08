@@ -1,4 +1,4 @@
-import { createHeroState, buyItem, buyPet, setPet } from "../../../src/game/engine.ts";
+import { createHeroState, buyItem } from "../../../src/game/engine.ts";
 import { createEconomyCommandHandler } from "./index.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
