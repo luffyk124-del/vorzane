@@ -75,6 +75,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
   const writes = store.writes;
   const unexpectedRequests = [];
   const session = mockSession();
+  let mockedPlayerProfile = null;
   await page.route(`${supabaseUrl}/**`, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -115,14 +116,15 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/rest/v1/player_profiles")) {
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([]) });
+      const rows = mockedPlayerProfile ? [mockedPlayerProfile] : [];
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(rows) });
       return;
     }
     if (social && request.method() === "POST" && url.pathname.includes("/rest/v1/rpc/")) {
       const rpc = url.pathname.split("/").at(-1);
       const args = request.postDataJSON() ?? {};
       const responses = {
-        upsert_my_profile: { user_id: playerId, display_name: args.p_display_name, avatar_id: args.p_avatar_id, is_searchable: true, created_at: new Date().toISOString() },
+        upsert_my_profile: (mockedPlayerProfile = { user_id: playerId, display_name: args.p_display_name, avatar_id: args.p_avatar_id, is_searchable: true, created_at: new Date().toISOString() }),
         set_my_profile_searchable: null,
         list_my_friends: [],
         list_incoming_friend_requests: [],
