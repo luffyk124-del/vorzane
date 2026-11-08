@@ -95,12 +95,33 @@ export function createEconomyCommandHandler(
 
     if (readError) return json({ error: "Could not load save" }, 500);
     if (!save) return json({ error: "Player save not found" }, 404);
+    const state = normalizeGameState(save.game_state);
+    if (!state || !state.hero) return json({ error: "Player state is invalid" }, 409);
+
+    // Resolve a previously committed command before checking the caller's
+    // version or re-running game rules. This makes retries safe even when the
+    // original command already changed or removed the referenced item.
+    const adminClient = makeClient(url, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data: receipt, error: receiptError } = await adminClient
+      .from("player_command_receipts")
+      .select("result")
+      .eq("user_id", userData.user.id)
+      .eq("command_id", body.commandId)
+      .maybeSingle();
+
+    if (receiptError) return json({ error: "Could not check command receipt" }, 500);
+    if (receipt && isRecord(receipt.result)) {
+      return json({
+        state,
+        soldPrice: typeof receipt.result.soldPrice === "number" ? receipt.result.soldPrice : null,
+        updatedAt: save.updated_at,
+        replayed: true,
+      });
+    }
+
     if (body.expectedUpdatedAt !== save.updated_at) {
       return json({ error: "Save changed; reload and retry", updatedAt: save.updated_at }, 409);
     }
-
-    const state = normalizeGameState(save.game_state);
-    if (!state || !state.hero) return json({ error: "Player state is invalid" }, 409);
 
     let next = state;
     let soldPrice: number | null = null;
@@ -123,7 +144,6 @@ export function createEconomyCommandHandler(
 
     // The privileged RPC is called only with the service-role key after the
     // caller has been authenticated and their save has been scoped above.
-    const adminClient = makeClient(url, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
     const result = {
       commandId: body.commandId,
       commandType: body.command.type,
