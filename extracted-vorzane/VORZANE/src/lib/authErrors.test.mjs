@@ -4,7 +4,7 @@ import { friendlyAuthError } from "./authErrors.ts";
 
 test("account sign-in failures are mapped to clear Arabic messages", () => {
   assert.match(friendlyAuthError(new Error("Invalid login credentials")), /البريد أو كلمة المرور/);
-  assert.match(friendlyAuthError(new Error("Anonymous sign-ins are disabled")), /تسجيل الضيف غير مفعّل/);
+  assert.match(friendlyAuthError(new Error("Anonymous sign-ins are disabled")), /تسجيل الضيف غير متاح/);
   assert.match(friendlyAuthError(new Error("redirect URL not allowed")), /عنوان العودة غير مضاف/);
 });
 
