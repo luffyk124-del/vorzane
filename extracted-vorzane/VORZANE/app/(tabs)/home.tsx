@@ -15,7 +15,6 @@ import { createItemInstance } from "../../src/game/dungeonItems";
 
 const CLASSES: ClassId[] = ["Warrior", "Mage", "Assassin", "Archer"];
 const APPEARANCE_COLORS = ["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"];
-const APPEARANCE_COLORS = ["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"];
 const STAT_LABELS: Record<StatKey, string> = { str: "القوة", def: "الدفاع", vit: "الحيوية", agi: "الرشاقة", luck: "الحظ" };
 const STAT_KEYS: StatKey[] = ["str", "def", "vit", "agi", "luck"];
 const formatTime = (milliseconds: number) => {
