@@ -12,12 +12,7 @@ export const PETS: { id: string; name: string; icon: string; bonus: Partial<Reco
 ];
 
 export const STARTER_ITEMS: EquipmentItem[] = [
-  { id: "sword1", name: "نصل البدايات", slot: "سلاح", rarity: "common", bonus: { str: 3 }, price: 100, requiredLevel: 1, icon: "flash" },
-  { id: "staff5", name: "صولجان البلور", slot: "سلاح", rarity: "uncommon", bonus: { str: 12, luck: 3 }, price: 2_500, requiredLevel: 5, icon: "sparkles" },
-  { id: "bow10", name: "قوس الشفق", slot: "سلاح", rarity: "rare", bonus: { str: 24, agi: 10 }, price: 12_000, requiredLevel: 10, icon: "navigate" },
-  { id: "rune-blade20", name: "نصل الرونية", slot: "سلاح", rarity: "epic", bonus: { str: 52, luck: 14 }, price: 75_000, requiredLevel: 20, icon: "moon" },
-  { id: "astral-staff35", name: "صولجان النجوم", slot: "سلاح", rarity: "legendary", bonus: { str: 95, vit: 30, luck: 25 }, price: 400_000, requiredLevel: 35, icon: "sparkles" },
-  { id: "eclipse-bow50", name: "قوس الكسوف", slot: "سلاح", rarity: "mythic", bonus: { str: 180, agi: 70, luck: 45 }, price: 1_500_000, requiredLevel: 50, icon: "sunny" },
+  { id: "sword1", name: "سيف المبتدئ", slot: "سلاح", rarity: "common", bonus: { str: 3 }, price: 100, requiredLevel: 1, icon: "flash" },
 
   { id: "armor1", name: "درع الحارس", slot: "درع", rarity: "common", bonus: { def: 4, vit: 2 }, price: 180, requiredLevel: 1, icon: "shield" },
   { id: "armor10", name: "درع الفولاذ الأزرق", slot: "درع", rarity: "rare", bonus: { def: 28, vit: 16 }, price: 14_000, requiredLevel: 10, icon: "shield" },
