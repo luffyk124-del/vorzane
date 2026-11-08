@@ -9,10 +9,9 @@ import { rarityColor, palette } from "../../src/theme";
 import { useGame } from "../../src/contexts/GameContext";
 
 type Tab = "equipment" | "shop" | "market";
-type ShopCategory = "all" | "weapons" | "armor" | "accessories" | "companions";
+type ShopCategory = "all" | "armor" | "accessories" | "companions";
 const SHOP_CATEGORIES: { id: ShopCategory; label: string }[] = [
   { id: "all", label: "الكل" },
-  { id: "weapons", label: "الأسلحة" },
   { id: "armor", label: "الدروع" },
   { id: "accessories", label: "الإكسسوارات" },
   { id: "companions", label: "الرفقاء" },
@@ -27,10 +26,9 @@ export default function GearScreen() {
   const stats = combatStats(state);
   const heroLevel = state.hero?.level ?? 0;
   const equippedCount = useMemo(() => Object.values(state.equipped).filter(Boolean).length, [state.equipped]);
-  const shopItems = useMemo(() => [...STARTER_ITEMS, ...DUNGEON_ITEMS], []);
+  const shopItems = useMemo(() => [...STARTER_ITEMS, ...DUNGEON_ITEMS].filter((item) => item.slot !== "سلاح"), []);
   const visibleShopItems = useMemo(() => {
     if (shopCategory === "all" || shopCategory === "companions") return shopCategory === "all" ? shopItems : [];
-    if (shopCategory === "weapons") return shopItems.filter((item) => item.slot === "سلاح");
     if (shopCategory === "armor") return shopItems.filter((item) => item.slot === "درع" || item.slot === "خوذة");
     return shopItems.filter((item) => !["سلاح", "درع", "خوذة"].includes(item.slot));
   }, [shopCategory, shopItems]);
