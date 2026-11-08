@@ -32,6 +32,23 @@ begin
 
   perform set_config('request.jwt.claim.sub', v_bob::text, true);
   perform public.set_my_profile_searchable(true);
+  if not exists (
+    select 1 from public.search_players('Alice Test')
+    where display_name = 'Alice Test' and friend_state = 'none'
+  ) then
+    raise exception 'Searchable profile was not returned by player search';
+  end if;
+  begin
+    perform * from public.search_players('%%%');
+    raise exception 'Search accepted wildcard-only input';
+  exception
+    when others then
+      if sqlerrm = 'Search accepted wildcard-only input' then
+        raise;
+      elsif sqlerrm <> 'Search query contains unsupported characters' then
+        raise;
+      end if;
+  end;
   v_request := public.send_friend_request(v_alice);
 
   -- Only the recipient may respond to a request.
