@@ -1,5 +1,5 @@
 import type { EquipmentItem, Rarity, StatKey } from "./model";
-import { STARTER_ITEMS } from "./catalog";
+import { SHOP_ITEMS, STARTER_ITEMS } from "./catalog";
 
 type ItemProfile = { main: StatKey; secondary: StatKey; tertiary?: StatKey };
 type SlotBlueprint = { slot: string; icon: string; basePrice: number; profiles: ItemProfile[] };
@@ -103,7 +103,7 @@ export function createItemInstance(template: EquipmentItem, suffix?: string): Eq
 }
 
 export function findEquipmentTemplate(item: EquipmentItem): EquipmentItem | undefined {
-  const all = [...STARTER_ITEMS, ...DUNGEON_ITEMS];
+  const all = [...STARTER_ITEMS, ...SHOP_ITEMS, ...DUNGEON_ITEMS];
   const catalogMatch = item.catalogId ? all.find((candidate) => candidate.id === item.catalogId) : undefined;
   if (catalogMatch && (item.id === catalogMatch.id || item.id.startsWith(`${catalogMatch.id}-`))) return catalogMatch;
   const exactMatch = all.find((candidate) => candidate.id === item.id);
