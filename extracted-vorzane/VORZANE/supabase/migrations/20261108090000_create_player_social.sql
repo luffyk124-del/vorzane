@@ -202,6 +202,28 @@ begin
   ) then
     raise exception 'Player not found';
   end if;
+
+  -- Serialize sends per account before applying anti-spam quotas.
+  perform 1 from public.player_profiles p
+    where p.user_id = v_user_id
+    for update;
+
+  if (
+    select count(*) from public.friend_requests f
+    where f.requester_id = v_user_id
+      and f.status = 'pending'
+      and f.created_at > now() - interval '1 day'
+  ) >= 20 then
+    raise exception 'Daily pending friend request limit reached';
+  end if;
+  if (
+    select count(*) from public.friend_requests f
+    where f.requester_id = v_user_id
+      and f.created_at > now() - interval '1 day'
+  ) >= 40 then
+    raise exception 'Daily friend request limit reached';
+  end if;
+
   if exists (
     select 1 from public.friend_requests f
     where f.status in ('pending', 'accepted')
