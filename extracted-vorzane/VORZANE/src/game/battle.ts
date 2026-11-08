@@ -118,13 +118,11 @@ export function createBattleSequence(state: GameState, mode: BattleMode, random:
     if (next.wins >= 3) next.quests.battles = true;
     if (mode === "tower") next.tower = Math.min(100_000, next.tower + 1);
     if (mode === "dungeon") next.dungeonFloor = Math.min(100_000, next.dungeonFloor + 1);
-    const modeGold = mode === "dungeon"
-      ? 3 + Math.min(40, floor) * 0.2 + Math.min(40, level) * 0.1
-      : mode === "hard"
-        ? 4 + Math.min(40, level) * 0.2
-        : mode === "tower"
-          ? 4 + Math.min(40, floor) * 0.18 + Math.min(40, level) * 0.1
-          : 3 + Math.min(40, level) * 0.1;
+    const levelProgress = Math.pow(Math.max(0, level - 1), 1.45);
+    const floorProgress = Math.pow(Math.max(0, floor - 1), 1.3);
+    const modeBase = mode === "hard" ? 5 : mode === "tower" ? 4 : mode === "dungeon" ? 3 : 2;
+    const modeMultiplier = mode === "hard" ? 1.35 : mode === "tower" ? 1.15 : mode === "dungeon" ? 1 : 0.8;
+    const modeGold = (modeBase + levelProgress * 0.9 + floorProgress * 1.4) * modeMultiplier;
     gold = Math.max(1, Math.round(modeGold));
     xp = Math.max(1, Math.round((mode === "dungeon" ? 22 + Math.min(50, floor) * 1.1 : 16 + Math.min(20, floor) * 0.7) + Math.min(40, level) * (mode === "dungeon" ? 2 : 1.5)));
     next.gold = Math.min(1_000_000_000, next.gold + gold);
@@ -132,16 +130,19 @@ export function createBattleSequence(state: GameState, mode: BattleMode, random:
     next = leveled.state;
 
     if (mode === "dungeon") {
-      const template = getDungeonDrop(floor, level, random);
-      const item: EquipmentItem = createItemInstance(template, `drop-${Date.now()}-${Math.floor(random() * 1_000_000)}`);
-      if (next.inventory.length < 500) {
-        next.inventory.push(item);
-        dropped = template.name;
-      } else {
-        const quickSale = Math.floor(template.price / 2);
-        next.gold = Math.min(1_000_000_000, next.gold + quickSale);
-        gold += quickSale;
-        dropped = `بيع تلقائي: ${template.name}`;
+      const dropChance = clamp(0.20 + player.stats.luck * 0.003, 0.20, 0.65);
+      if (random() < dropChance) {
+        const template = getDungeonDrop(floor, level, random);
+        const item: EquipmentItem = createItemInstance(template, `drop-${Date.now()}-${Math.floor(random() * 1_000_000)}`);
+        if (next.inventory.length < 500) {
+          next.inventory.push(item);
+          dropped = template.name;
+        } else {
+          const quickSale = Math.floor(template.price / 2);
+          next.gold = Math.min(1_000_000_000, next.gold + quickSale);
+          gold += quickSale;
+          dropped = `بيع تلقائي: ${template.name}`;
+        }
       }
     }
   }
