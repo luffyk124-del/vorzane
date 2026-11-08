@@ -50,9 +50,10 @@ export default function FriendsScreen() {
     if (!mountedRef.current) return;
     setFriends(friendRows);
     setIncoming(requestRows);
-    setProfile(myProfile);
-    if (myProfile) setDisplayName(myProfile.display_name);
-    else if (state.hero?.name && !displayName) setDisplayName(state.hero.name);
+    const validProfile = myProfile && typeof myProfile.display_name === "string" ? myProfile : null;
+    setProfile(validProfile);
+    if (validProfile) setDisplayName(validProfile.display_name);
+    else if (typeof state.hero?.name === "string" && state.hero.name && !displayName) setDisplayName(state.hero.name);
   }, [user?.id, state.hero?.name, displayName]);
 
   useEffect(() => {
@@ -80,7 +81,7 @@ export default function FriendsScreen() {
   };
 
   const saveProfile = async () => {
-    const name = displayName.trim();
+    const name = typeof displayName === "string" ? displayName.trim() : "";
     if (name.length < 3 || name.length > 24) {
       setNotice("اسم اللاعب يجب أن يتكون من 3 إلى 24 حرفًا.");
       return;
@@ -120,14 +121,15 @@ export default function FriendsScreen() {
       setNotice("فعّل ظهور ملفك في البحث قبل استخدام المجتمع.");
       return;
     }
-    if (query.trim().length < 3) {
+    const searchTerm = typeof query === "string" ? query.trim() : "";
+    if (searchTerm.length < 3) {
       setNotice("اكتب ثلاثة أحرف على الأقل للبحث.");
       return;
     }
     setBusy(true);
     setNotice("");
     try {
-      const players = await searchPlayers(query.trim());
+      const players = await searchPlayers(searchTerm);
       if (mountedRef.current) setResults(players);
     } catch (error) {
       if (mountedRef.current) setNotice(error instanceof Error ? error.message : "تعذر البحث عن اللاعبين.");
@@ -159,13 +161,13 @@ export default function FriendsScreen() {
               thumbColor={profile.is_searchable ? palette.jade : "#A9B7BE"}
             />
           </View>
-          <TextInput value={displayName} onChangeText={setDisplayName} maxLength={24} placeholder="اسم اللاعب" placeholderTextColor={palette.muted} style={styles.input} />
-          <AppButton label="حفظ اسم اللاعب" icon="save-outline" onPress={saveProfile} disabled={busy || displayName.trim() === profile.display_name} variant="secondary" />
+          <TextInput value={typeof displayName === "string" ? displayName : ""} onChangeText={setDisplayName} maxLength={24} placeholder="اسم اللاعب" placeholderTextColor={palette.muted} style={styles.input} />
+          <AppButton label="حفظ اسم اللاعب" icon="save-outline" onPress={saveProfile} disabled={busy || (typeof displayName === "string" ? displayName.trim() : "") === profile.display_name} variant="secondary" />
         </> : <>
           <Txt style={styles.playerName}>أنشئ ملفك داخل مجتمع VORZANE</Txt>
           <Txt muted style={styles.playerMeta}>اسم الملف مستقل عن بريدك الإلكتروني. يمكنك إخفاؤه من البحث لاحقًا.</Txt>
           <TextInput value={displayName} onChangeText={setDisplayName} maxLength={24} placeholder="اسم اللاعب (3–24 حرفًا)" placeholderTextColor={palette.muted} style={styles.input} />
-          <AppButton label="إنشاء ملف اللاعب" icon="person-add-outline" onPress={saveProfile} loading={busy} disabled={busy || displayName.trim().length < 3} />
+          <AppButton label="إنشاء ملف اللاعب" icon="person-add-outline" onPress={saveProfile} loading={busy} disabled={busy || (typeof displayName === "string" ? displayName.trim().length : 0) < 3} />
         </>}
       </Card>
 
@@ -191,8 +193,8 @@ export default function FriendsScreen() {
 
       <SectionTitle title="البحث عن لاعبين" icon="search-outline" />
       <Card style={styles.panel}>
-        <TextInput value={query} onChangeText={setQuery} maxLength={24} placeholder="اسم اللاعب..." placeholderTextColor={palette.muted} style={styles.input} returnKeyType="search" onSubmitEditing={doSearch} />
-        <AppButton label="بحث" onPress={doSearch} loading={busy} disabled={busy || !profile?.is_searchable || query.trim().length < 3} icon="search-outline" />
+        <TextInput value={typeof query === "string" ? query : ""} onChangeText={setQuery} maxLength={24} placeholder="اسم اللاعب..." placeholderTextColor={palette.muted} style={styles.input} returnKeyType="search" onSubmitEditing={doSearch} />
+        <AppButton label="بحث" onPress={doSearch} loading={busy} disabled={busy || !profile?.is_searchable || (typeof query === "string" ? query.trim().length : 0) < 3} icon="search-outline" />
       </Card>
       {results.map((player) => <Card key={player.user_id} style={styles.playerRow}>
         {player.friend_state === "none" ? <AppButton label="إضافة" onPress={() => sendRequest(player.user_id)} small disabled={busy} /> : <Pill label={player.friend_state === "friends" ? "صديق" : player.friend_state === "incoming" ? "طلب وارد" : "تم الإرسال"} tone={player.friend_state === "friends" ? "jade" : "muted"} />}
