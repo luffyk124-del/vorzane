@@ -200,8 +200,16 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       page.on("pageerror", (error) => pageErrors.push(error.message));
       page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
 
+      await page.goto(`${appUrl}/login`);
+      assert.equal(await page.getByRole("button", { name: /Google/i }).count(), 0, "Google sign-in must not be shown");
       await signInWithMock(page);
       await page.getByText("2 نقطة متاحة", { exact: true }).waitFor();
+      await page.getByRole("button", { name: "فتح القائمة" }).click();
+      await page.getByRole("button", { name: "الملف الشخصي" }).waitFor();
+      await page.getByRole("button", { name: "الملف الشخصي" }).click();
+      await page.getByText("هويتك في العالم", { exact: true }).waitFor({ timeout: 10_000 });
+      await page.getByRole("button", { name: "رجوع" }).click();
+      await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
 
       const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
       assert.equal(hasHorizontalOverflow, false, `${viewport.name} layout has horizontal overflow`);
@@ -277,7 +285,7 @@ test("friends profile and player search remain usable on a narrow mobile viewpor
 
   await signInWithMock(page);
   await page.goto(`${appUrl}/friends`);
-  await page.getByText("الأصدقاء والملف", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("الأصدقاء", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByPlaceholder("اكتب اسمك داخل VORZANE").fill("لاعب اختبار");
   await page.getByRole("button", { name: "حفظ الملف الشخصي" }).click();
   await page.getByText("تم حفظ ملفك الشخصي.", { exact: true }).waitFor({ timeout: 10_000 });
