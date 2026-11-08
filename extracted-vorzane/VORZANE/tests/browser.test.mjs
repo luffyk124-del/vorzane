@@ -228,7 +228,7 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
       assert.equal(hasHorizontalOverflow, false, `${viewport.name} layout has horizontal overflow`);
 
-      const increaseButtons = page.getByText("+1", { exact: true });
+      const increaseButtons = page.getByText("+1", { exact: true }).filter({ visible: true });
       assert.equal(await increaseButtons.count(), 5);
       await increaseButtons.first().click();
       await page.getByText("1 نقطة متاحة", { exact: true }).waitFor();
