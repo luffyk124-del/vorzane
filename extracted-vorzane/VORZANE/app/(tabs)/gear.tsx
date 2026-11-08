@@ -3,21 +3,37 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, StatCard, Txt } from "../../src/components/ui";
 import { DUNGEON_ITEM_POOL_SIZE, PETS, RARITY_LABELS, STARTER_ITEMS } from "../../src/game/catalog";
 import { buyItem, buyPet, combatStats, equipItem, sellItem, setPet, unequipItem } from "../../src/game/engine";
-import { findEquipmentTemplate, getEquipmentSellPrice } from "../../src/game/dungeonItems";
+import { DUNGEON_ITEMS, findEquipmentTemplate, getEquipmentSellPrice } from "../../src/game/dungeonItems";
 import { SLOT_NAMES } from "../../src/game/model";
 import { rarityColor, palette } from "../../src/theme";
 import { useGame } from "../../src/contexts/GameContext";
 
 type Tab = "equipment" | "shop" | "market";
+type ShopCategory = "all" | "weapons" | "armor" | "accessories" | "companions";
+const SHOP_CATEGORIES: { id: ShopCategory; label: string }[] = [
+  { id: "all", label: "الكل" },
+  { id: "weapons", label: "الأسلحة" },
+  { id: "armor", label: "الدروع" },
+  { id: "accessories", label: "الإكسسوارات" },
+  { id: "companions", label: "الرفقاء" },
+];
 const slotIcons: Record<string, string> = { "سلاح": "flash", "درع": "shield", "خوذة": "skull", "قفازات": "hand-left", "حذاء": "footsteps", "قلادة": "diamond", "خاتم أول": "ellipse", "خاتم ثانٍ": "ellipse" };
 
 export default function GearScreen() {
   const { state, update, fpsMode, command } = useGame();
   const [tab, setTab] = useState<Tab>("equipment");
+  const [shopCategory, setShopCategory] = useState<ShopCategory>("all");
   const [notice, setNotice] = useState("");
   const stats = combatStats(state);
   const heroLevel = state.hero?.level ?? 0;
   const equippedCount = useMemo(() => Object.values(state.equipped).filter(Boolean).length, [state.equipped]);
+  const shopItems = useMemo(() => [...STARTER_ITEMS, ...DUNGEON_ITEMS], []);
+  const visibleShopItems = useMemo(() => {
+    if (shopCategory === "all" || shopCategory === "companions") return shopCategory === "all" ? shopItems : [];
+    if (shopCategory === "weapons") return shopItems.filter((item) => item.slot === "سلاح");
+    if (shopCategory === "armor") return shopItems.filter((item) => item.slot === "درع" || item.slot === "خوذة");
+    return shopItems.filter((item) => !["سلاح", "درع", "خوذة"].includes(item.slot));
+  }, [shopCategory, shopItems]);
   const marketItems = useMemo(() => [
     ...state.inventory.map((item) => ({ item, equipped: false })),
     ...Object.entries(state.equipped).flatMap(([slot, item]) => item ? [{ item, equipped: true, slot }] : []),
@@ -100,8 +116,13 @@ export default function GearScreen() {
 
     {tab === "shop" ? <>
       <SectionTitle title="متجر العالم" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("ar-EG")} ذهب`} icon="cash-outline" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد والرفقاء</Txt><Txt muted style={styles.shopCopy}>كل القطع معروضة من البداية. يمكنك شراء أي قطعة الآن حتى لو كان مستواك أقل؛ تجهيزها أو تفعيل الرفيق يتطلب المستوى المحدد.</Txt></Card>
-      {STARTER_ITEMS.map((item) => {
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العالم الكامل</Txt><Txt muted style={styles.shopCopy}>كل العتاد العادي والنادر والأسطوري وقطع الزنزانة والرفقاء ظاهرة مع أسعارها. تستطيع الشراء بأي مستوى؛ التجهيز والتفعيل يظلان مرتبطين بمتطلبات المستوى والطابق.</Txt><Txt style={styles.poolNote}>{shopItems.length.toLocaleString("ar-EG")} قطعة عتاد • {PETS.length} رفقاء</Txt></Card>
+      <View style={styles.shopFilters}>
+        {SHOP_CATEGORIES.map((category) => <Pressable key={category.id} onPress={() => setShopCategory(category.id)} style={[styles.shopFilter, shopCategory === category.id && styles.shopFilterActive]}>
+          <Txt style={[styles.shopFilterText, shopCategory === category.id && styles.shopFilterTextActive]}>{category.label}</Txt>
+        </Pressable>)}
+      </View>
+      {visibleShopItems.map((item) => {
         const canAfford = state.gold >= item.price;
         return <Card key={item.id} style={styles.itemRow}>
           <AppButton label={canAfford ? `شراء ${item.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => purchaseItem(item.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />
@@ -109,6 +130,7 @@ export default function GearScreen() {
           <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
         </Card>;
       })}
+      {shopCategory === "all" || shopCategory === "companions" ? <>
       <SectionTitle title="رفقاء العالم" icon="paw-outline" action={<Pill label={`${state.pets.length}/${PETS.length}`} tone="jade" />} />
       {PETS.map((pet) => {
         const owned = state.pets.includes(pet.id);
@@ -121,6 +143,7 @@ export default function GearScreen() {
           {owned ? <AppButton label={locked ? `مستوى ${pet.requiredLevel}` : active ? "النشط" : "تفعيل"} onPress={() => fpsMode ? void command({ type: "setPet", petId: pet.id }) : update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active || locked} /> : <AppButton label={canAfford ? `شراء ${pet.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => purchasePet(pet.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />}
         </Card>;
       })}
+      </> : null}
     </> : null}
 
     {tab === "market" ? <>
@@ -144,6 +167,11 @@ export default function GearScreen() {
 const styles = StyleSheet.create({
   statRow: { flexDirection: "row", gap: 8 },
   tabsCard: { padding: 5, flexDirection: "row", gap: 3, borderRadius: 17 },
+  shopFilters: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 7 },
+  shopFilter: { paddingHorizontal: 13, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.panel },
+  shopFilterActive: { backgroundColor: palette.gold, borderColor: palette.gold },
+  shopFilterText: { color: palette.muted, fontSize: 11, fontWeight: "800" },
+  shopFilterTextActive: { color: palette.ink },
   tab: { flex: 1, minHeight: 43, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 4 },
   tabActive: { backgroundColor: palette.gold },
   tabText: { fontSize: 10, fontWeight: "800", color: palette.muted },
