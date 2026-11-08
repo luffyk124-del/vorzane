@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask } from "./engine.ts";
-import { createFreshState } from "./model.ts";
+import { createFreshState, normalizeGameState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
   const state = createHeroState("اختبار", "Warrior");
@@ -198,4 +198,20 @@ test("expedition tasks require their threshold and grant a one-time reward", () 
   assert.equal(claimed.quests.expedition_task_one, true);
   assert.equal(claimExpeditionTask(claimed, "expedition_task_one").gold, claimed.gold);
   assert.equal(state.gold, 500);
+});
+
+
+test("2D character appearance choices persist and old saves receive safe defaults", () => {
+  const fresh = createFreshState();
+  assert.deepEqual(fresh.characterStyle, { gender: "male", appearance: 0 });
+
+  const customized = normalizeGameState({
+    ...fresh,
+    hero: createHeroState("مغامر", "Mage").hero,
+    characterStyle: { gender: "female", appearance: 3 },
+  });
+  assert.deepEqual(customized.characterStyle, { gender: "female", appearance: 3 });
+
+  const legacy = normalizeGameState({ hero: createHeroState("قديم", "Warrior").hero });
+  assert.deepEqual(legacy.characterStyle, { gender: "male", appearance: 0 });
 });
