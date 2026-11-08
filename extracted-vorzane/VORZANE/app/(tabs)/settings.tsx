@@ -32,10 +32,10 @@ export default function SettingsScreen() {
   const identity = auth.user?.email ?? (isGuest ? "حساب ضيف" : "غير مسجّل");
   const canEditProfile = game.status === "ready" || game.status === "offline";
 
-  const setMusic = (patch: Partial<typeof game.state.settings>) => game.fpsMode ? void game.command({ type: "updateSettings", settings: { ...game.state.settings, ...patch } }) : game.update((current) => ({ ...current, settings: { ...current.settings, ...patch } }));
+  const setMusic = (patch: Partial<typeof game.state.settings>) => game.update((current) => ({ ...current, settings: { ...current.settings, ...patch } }));
   const chooseProfileAvatar = (avatarId: (typeof PROFILE_AVATAR_OPTIONS)[number]["id"]) => {
     if (!canEditProfile) return;
-    if (game.fpsMode) void game.command({ type: "setProfileAvatar", avatarId }); else game.update((current) => ({ ...current, profileAvatarId: avatarId }));
+    game.update((current) => ({ ...current, profileAvatarId: avatarId }));
     setAvatarPickerOpen(false);
     setMessage("تم تغيير الصورة الشخصية؛ سيُحفظ اختيارك مع تقدمك.");
   };
@@ -98,7 +98,7 @@ export default function SettingsScreen() {
     if (!pendingImport) return;
     setBusy(true);
     try {
-      if (game.fpsMode) await game.command({ type: "importSave", state: pendingImport }); else game.update(() => pendingImport);
+      game.update(() => pendingImport);
       setConfirmImport(false);
       setPendingImport(null);
       setMessage("استُورد الحفظ؛ جارٍ مزامنته مع حسابك.");
