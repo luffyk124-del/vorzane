@@ -2,7 +2,8 @@
 
 > Last updated: 2026-11-08
 > Main branch: `main`
-> Latest verified application commit: `43a65774f81ac88b6ba941cf962ef0e39cd43c26`
+> Latest merged application commit: `a36ae7cad7f46feb17242f170fcc7227c72a8128`
+> Latest deployment verification: pending for the PR #15 merge commit; GitHub Pages workflow `42531072074` is still running.
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
 
@@ -30,6 +31,8 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Merged PR #12 after all CI checks passed (game-system tests, desktop/mobile browser flows, TypeScript, Supabase Edge Function checks/tests, web export, and isolated social DB tests). Merge commit: `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a`.
 - Fixed duplicated hero-creator UI on the new-player screen: the character preview, character choice, and appearance controls now render once. Added a mobile browser regression test for a fresh account. PR #12 merged as `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a`; game-system, desktop/mobile browser, TypeScript, Edge Function, web export, and isolated social DB checks passed.
 - Merged PR #13: prevented unequipping gear when the 500-item inventory limit is reached; added engine regression coverage and disabled the UI action while full. Merge commit: `43a65774f81ac88b6ba941cf962ef0e39cd43c26`.
+- Merged PR #15 (`a36ae7cad7f46feb17242f170fcc7227c72a8128`): added the additive player command receipt SQL migration, atomic idempotent `commit_player_command` RPC, and authenticated `economy-command` Edge Function for buy/sell/equip/unequip. The TypeScript fixture typing error was fixed in commit `2b02b5a9d28783b0570d2fd24d70d9632a1a3a90`; all PR checks passed before merge, including game tests, desktop/mobile browser tests, TypeScript, Edge Function checks/tests, web export, and isolated social DB tests.
+- Started PR #16 (`feat/wire-server-economy-commands`): added a gated GameContext client flow and routed gear economy actions through it when enabled. The feature flag is intentionally `false`; this code is not active in production. PR #16 remains draft pending CI and end-to-end review.
 - GitHub Pages deployment succeeded for commit `3ddb226a59f78356038180575e7641e02648a981`.
 
 ## Current links
@@ -41,12 +44,14 @@ This file records the actual state of the VORZANE project. Update it after each 
 ## Remaining work
 
 - GitHub Pages deployment for PR #13's merge commit was verified successful (workflow run `42527315821`).
-- Finish CI verification and review for draft PR #15 (atomic command receipts plus the authenticated economy-command Edge Function).
-- Integrate the economy endpoint into GameContext and migrate every save mutation before considering any client-write privilege revocation. The existing client upsert path remains active and must not be mistaken for server-authoritative security.
+- Verify the GitHub Pages deployment workflow for PR #15 merge commit `a36ae7cad7f46feb17242f170fcc7227c72a8128` (workflow run `42531072074` is currently in progress).
+- Finish CI verification and review for draft PR #16 (gated economy command integration in GameContext and gear UI).
+- Keep the server economy feature flag disabled until the additive receipt migration and Edge Function are separately reviewed and explicitly approved for production deployment.
+- Integrate server-backed commands for all remaining save mutations before considering any client-write privilege revocation. The existing client upsert path remains active and must not be mistaken for server-authoritative security.
 - Continue reviewing and improving existing gameplay and application flows.
 - Verify each change with relevant automated tests before merging.
 - Review authentication, authorization, player data ownership, and server-side validation in the existing architecture.
-- Review progression, rewards, inventory, and economy flows for integrity and abuse resistance. The draft PR #15 endpoint currently covers buy/sell/equip/unequip server-side rules but is not yet wired into the client save lifecycle.
+- Review progression, rewards, inventory, and economy flows for integrity and abuse resistance. PR #15 provides server-side buy/sell/equip/unequip rules; PR #16 begins the client wiring but remains draft and feature-gated off.
 - Improve mobile usability and verify responsive behavior on real devices.
 - Maintain clear release notes and deployment verification for each production update.
 - Keep database changes additive, reviewed, backed up, and reversible; do not run production migrations without explicit approval.
@@ -70,6 +75,8 @@ This file records the actual state of the VORZANE project. Update it after each 
 | 2026-11-08 | `a507b530f77f806c9330324aa113c9d25d3ae902` | PR #11 merged: authenticated read-only game-state function; Deno typecheck and tests passed. |
 | 2026-11-08 | `cdc25cc64d941276ca9e8f03de6bd316f5b77738` | PR #6 merged: game tests, desktop/mobile browser flows, TypeScript, Edge Function checks/tests, web build, and social DB tests passed. |
 | 2026-11-08 | `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a` | PR #12 merged: duplicate new-hero creator controls removed; fresh-account mobile browser regression test, game tests, TypeScript, Edge Function checks/tests, web export, and social DB tests passed. |
+| 2026-11-08 | `a36ae7cad7f46feb17242f170fcc7227c72a8128` | PR #15 merged after all PR checks passed: economy command receipts, atomic idempotent RPC, authenticated Edge Function, Deno checks/tests, desktop/mobile browser tests, game tests, TypeScript, web export, and isolated social DB tests. Main-branch Pages deployment still pending verification. |
+| 2026-11-08 | `c3bb54cf1b4b5734d933d12f0fd0233cb98fbcc7` | PR #16 draft: gated client command path added; feature flag remains off; CI and end-to-end review pending. |
 
 ## Update policy
 
