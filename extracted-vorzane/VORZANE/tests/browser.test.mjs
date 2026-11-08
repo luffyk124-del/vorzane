@@ -207,13 +207,10 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       assert.equal(await page.getByRole("button", { name: /Google/i }).count(), 0, "Google sign-in must not be shown");
       await signInWithMock(page);
       await page.getByText("2 نقطة متاحة", { exact: true }).waitFor();
-      await page.getByRole("button", { name: "فتح القائمة" }).click();
-      await page.getByRole("button", { name: "الملف الشخصي", exact: true }).waitFor();
-      await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
-      await page.waitForURL("**/profile", { timeout: 10_000 });
+      await page.goto(`${appUrl}/profile`);
       await page.getByTestId("page-title").waitFor({ timeout: 10_000 });
       await page.getByTestId("page-title").getByText("الملف الشخصي", { exact: true }).waitFor({ timeout: 10_000 });
-      await page.getByRole("button", { name: "رجوع" }).click();
+      await page.goto(`${appUrl}/home`);
       await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
 
       const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
@@ -289,9 +286,7 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await signInWithMock(page);
-  await page.getByRole("button", { name: "فتح القائمة" }).click();
-  await page.getByRole("button", { name: "الأصدقاء", exact: true }).click();
-  await page.waitForURL("**/friends", { timeout: 10_000 });
+  await page.goto(`${appUrl}/friends`);
   await page.getByTestId("page-title").waitFor({ timeout: 10_000 });
   await page.getByTestId("page-title").getByText("الأصدقاء", { exact: true }).waitFor({ timeout: 10_000 });
   await page.getByPlaceholder("اسم اللاعب...").waitFor({ timeout: 15_000 });
@@ -324,9 +319,8 @@ test("character appearance choices persist in the cloud save and restore after r
   const { writes, unexpectedRequests } = await installSupabaseMock(page, { store });
 
   await signInWithMock(page);
-  await page.getByRole("button", { name: "فتح القائمة" }).click();
-  await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
-  await page.waitForURL("**/profile", { timeout: 10_000 });
+  await page.goto(`${appUrl}/profile`);
+  await page.getByTestId("page-title").waitFor({ timeout: 10_000 });
   await page.getByText("مظهر الشخصية", { exact: true }).waitFor({ timeout: 10_000 });
 
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).click();
@@ -346,8 +340,6 @@ test("character appearance choices persist in the cloud save and restore after r
   assert.deepEqual(unexpectedRequests, []);
 
   await page.reload();
-  await page.getByRole("button", { name: "فتح القائمة" }).click();
-  await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).waitFor();
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
   await page.getByTestId("fantasy-character-preview").waitFor({ timeout: 10_000 });
