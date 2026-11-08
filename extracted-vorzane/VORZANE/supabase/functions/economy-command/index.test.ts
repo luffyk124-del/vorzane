@@ -15,6 +15,7 @@ function fixture(options: {
   authError?: unknown;
   readError?: unknown;
   commit?: Record<string, unknown>;
+  receipt?: { result: Record<string, unknown> } | null;
   commitError?: { code?: string } | null;
 } = {}) {
   const state = options.state ?? createHeroState("Test", "Warrior");
@@ -23,6 +24,9 @@ function fixture(options: {
     select(columns: string) { calls.columns = columns; return this; },
     eq(column: string, value: string) { calls.filter = [column, value]; return this; },
     async maybeSingle() {
+      if (calls.table === "player_command_receipts") {
+        return { data: options.receipt ?? null, error: null };
+      }
       return {
         data: options.readError ? null : { game_state: state, updated_at: "2026-11-08T20:00:00.000Z" },
         error: options.readError ?? null,
@@ -133,6 +137,25 @@ Deno.test("stale save version is returned as a conflict", async () => {
   assert(body.updatedAt === "2026-11-08T20:02:00.000Z", "expected current version in conflict response");
 });
 
+
+Deno.test("replayed commands return current save without reapplying game rules", async () => {
+  const current = createHeroState("Test", "Warrior");
+  current.gold = 950;
+  const { handler, calls } = fixture({
+    state: current,
+    receipt: { result: { state: { gold: 900 }, soldPrice: 50 } },
+  });
+  const response = await handler(commandRequest(
+    { type: "sellItem", itemId: "already-sold-item" },
+    { expectedUpdatedAt: "2026-11-08T19:59:00.000Z" },
+  ));
+  const body = await readJson(response);
+  assert(response.status === 200, "replayed command must succeed");
+  assert(body.replayed === true, "expected replay response");
+  assert(body.soldPrice === 50, "expected original sale result");
+  assert((body.state as ReturnType<typeof createHeroState>).gold === 950, "replay must return current save, not overwrite it with old state");
+  assert(calls.rpc === undefined, "replay must not execute the command again");
+});
 
 Deno.test("stale client version is rejected before invoking the privileged RPC", async () => {
   const { handler, calls } = fixture();
