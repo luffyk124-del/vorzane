@@ -231,7 +231,7 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       const increaseButtons = page.getByText("+1", { exact: true }).filter({ visible: true });
       assert.equal(await increaseButtons.count(), 5);
       await increaseButtons.first().click();
-      await page.getByText("1 نقطة متاحة", { exact: true }).waitFor();
+      await page.getByText("1 نقطة متاحة", { exact: true }).filter({ visible: true }).waitFor();
 
       const deadline = Date.now() + 5000;
       while (!writes.length && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 100));
@@ -273,7 +273,7 @@ test("offline progress conflict resolves and restores in a clean second context"
   const secondPage = await secondContext.newPage();
   await installSupabaseMock(secondPage, { store });
   await signInWithMock(secondPage);
-  await secondPage.getByText("1 نقطة متاحة", { exact: true }).waitFor();
+  await secondPage.getByText("1 نقطة متاحة", { exact: true }).filter({ visible: true }).waitFor();
   assert.equal(await secondPage.getByText("14", { exact: true }).count(), 1);
   await secondContext.close();
 });
