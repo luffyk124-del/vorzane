@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission } from "./engine.ts";
+import { advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission } from "./engine.ts";
 import { createFreshState, normalizeGameState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
@@ -68,6 +68,23 @@ test("equipment can be purchased early and only its player-level requirement gat
 
   const levelReady = { ...purchased.state, hero: { ...purchased.state.hero, level: 70 } };
   assert.equal(equipItem(levelReady, owned.id).equipped["درع"]?.catalogId, "dun-2-mythic-1", "dungeon floor must not gate equipment");
+});
+
+test("unequipping is blocked when the bag is full to prevent item overflow", () => {
+  const state = createHeroState("اختبار", "Warrior");
+  const purchased = buyItem(state, "sword1");
+  assert.equal(purchased.error, undefined);
+  const equipped = equipItem(purchased.state, purchased.state.inventory[0].id);
+  assert.ok(equipped.equipped["سلاح"]);
+  equipped.inventory = Array.from({ length: 500 }, (_, index) => ({
+    ...equipped.equipped["سلاح"],
+    id: `bag-item-${index}`,
+  }));
+
+  const blocked = unequipItem(equipped, "سلاح");
+  assert.equal(blocked, equipped, "full bag must leave equipped item untouched");
+  assert.equal(blocked.inventory.length, 500);
+  assert.ok(blocked.equipped["سلاح"]);
 });
 
 test("players can buy high-level companions early but cannot activate them early", () => {
