@@ -40,6 +40,9 @@ export const EXPEDITIONS = [
   { id: "sunken-archive", name: "الأرشيف الغارق", region: "السرداب الأزرق", icon: "library", durationSeconds: 15 * 60, rewardGold: 100, rewardXP: 55, requiredLevel: 3, difficulty: "متوسط", description: "اكتشف سجلّات قديمة قبل أن تبتلعها المياه." },
   { id: "silverwood", name: "غابة الفضة", region: "الأشجار الموشومة", icon: "leaf", durationSeconds: 30 * 60, rewardGold: 180, rewardXP: 100, requiredLevel: 6, difficulty: "متوسط", description: "تتبّع آثار الوحوش واجمع غنائم نادرة." },
   { id: "eclipse-fortress", name: "حصن الكسوف", region: "قلب الظلال", icon: "business", durationSeconds: 60 * 60, rewardGold: 360, rewardXP: 210, requiredLevel: 15, difficulty: "صعب", description: "مهمة طويلة لا يعود منها إلا المستعدّون." },
+  { id: "astral-observatory", name: "مرصد النجوم", region: "قمم الأثير", icon: "telescope", durationSeconds: 2 * 60 * 60, rewardGold: 2_500, rewardXP: 1_200, requiredLevel: 20, difficulty: "صعب", description: "رحلة بعيدة تكشف خرائط ومقتنيات من العصور الأولى." },
+  { id: "sunken-kingdom", name: "مملكة الأعماق", region: "البحر المنسي", icon: "water", durationSeconds: 4 * 60 * 60, rewardGold: 12_000, rewardXP: 5_500, requiredLevel: 40, difficulty: "نخبة", description: "استكشف أطلال مملكة غارقة وعد بمكافآت ثمينة." },
+  { id: "eternal-frontier", name: "الحدود الأبدية", region: "ما وراء الخريطة", icon: "infinite", durationSeconds: 8 * 60 * 60, rewardGold: 65_000, rewardXP: 18_000, requiredLevel: 60, difficulty: "أسطوري", description: "أطول رحلات العالم؛ مكافآتها مخصصة للمستكشفين المخضرمين." },
 ] as const;
 
 export type ExpeditionPlan = (typeof EXPEDITIONS)[number];
