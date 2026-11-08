@@ -4,7 +4,8 @@ import { Platform, StyleSheet, Text, View } from "react-native";
 const MODEL_URL = "https://raw.githubusercontent.com/luffyk124-del/vorzane/main/assets/models/characters/vorzane-characters.glb";
 const MODEL_VIEWER_SCRIPT = "https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js";
 
-export function CharacterModelViewer() {
+export function CharacterModelViewer({ gender = "male" }: { gender?: "male" | "female" }) {
+  const cameraTarget = gender === "male" ? "-0.95m 0.95m 0m" : "0.95m 0.95m 0m";
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -67,8 +68,11 @@ export function CharacterModelViewer() {
     {createElement("model-viewer" as any, {
       ref: modelRef,
       src: MODEL_URL,
-      alt: "مجسما شخصيتي VORZANE، الذكر والأنثى",
+      alt: gender === "male" ? "مجسم شخصية ذكر في VORZANE" : "مجسم شخصية أنثى في VORZANE",
       "camera-controls": true,
+      "camera-target": cameraTarget,
+      "camera-orbit": "0deg 75deg 2.4m",
+      "field-of-view": "30deg",
       "auto-rotate": true,
       "rotation-per-second": "12deg",
       "shadow-intensity": "0.8",
