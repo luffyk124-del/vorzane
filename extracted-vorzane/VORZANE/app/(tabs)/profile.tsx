@@ -4,7 +4,7 @@ import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } 
 import { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { useAuth } from "../../src/contexts/AuthContext";
 import { useGame } from "../../src/contexts/GameContext";
-import { CLASS_NAMES, type ClassId } from "../../src/game/model";
+import { CLASS_NAMES, type CharacterStyle, type ClassId } from "../../src/game/model";
 import { getMyProfile, saveMyProfile, setMyProfileSearchable } from "../../src/lib/social";
 import { palette } from "../../src/theme";
 
@@ -18,6 +18,22 @@ const AVATARS = [
 
 function isAvatarId(value: string): value is ClassId | "brand" {
   return value === "brand" || value === "Warrior" || value === "Mage" || value === "Assassin" || value === "Archer";
+}
+
+type StyleOption = { id: string; label: string };
+function StyleChoiceGroup({ title, value, options, onChange }: { title: string; value: string; options: StyleOption[]; onChange: (value: string) => void }) {
+  return <View style={styles.styleGroup}>
+    <Txt style={styles.styleGroupTitle}>{title}</Txt>
+    <View style={styles.avatarGrid}>
+      {options.map((option) => {
+        const selected = value === option.id;
+        return <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={`${title}: ${option.label}`} accessibilityState={{ checked: selected }} onPress={() => onChange(option.id)} style={[styles.styleOption, selected && styles.avatarSelected]}>
+          <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>{option.label}</Txt>
+          {selected ? <Icon name="checkmark-circle" size={15} color={palette.jade} /> : <View style={styles.checkPlaceholder} />}
+        </Pressable>;
+      })}
+    </View>
+  </View>;
 }
 
 export default function ProfileScreen() {
@@ -85,7 +101,7 @@ export default function ProfileScreen() {
 
     <SectionTitle title="مظهر الشخصية" icon="color-palette-outline" />
     <Card style={styles.panel}>
-      <Txt muted style={styles.hint}>تُحفظ تفضيلات الجنس ودرجة اللون مع تقدمك. تنبيه: هذه الاختيارات لا تغيّر مجسماً ثلاثي الأبعاد داخل اللعبة حتى الآن؛ المجسمات الأولية ما زالت في العارض الخارجي.</Txt>
+      <Txt muted style={styles.hint}>تُحفظ اختيارات المظهر ضمن تقدم اللاعب. تنبيه: ربط هذه الاختيارات بالمجسم الحي داخل اللعبة ينتظر إدخال ملف الشخصية ثلاثي الأبعاد إلى التطبيق؛ النماذج والهيكل الحركي الأولي موجودة حاليًا في مشروع المعاينة الخارجي.</Txt>
       <View style={styles.avatarGrid}>
         {([{ id: "male", label: "ذكر" }, { id: "female", label: "أنثى" }] as const).map((option) => {
           const selected = state.characterStyle.gender === option.id;
@@ -99,7 +115,7 @@ export default function ProfileScreen() {
         <Icon name="cube-outline" color={palette.gold} size={20} />
         <View style={{ flex: 1, alignItems: "flex-end", gap: 3 }}>
           <Txt style={styles.modelPreviewTitle}>معاينة المجسم ثلاثي الأبعاد</Txt>
-          <Txt muted style={styles.modelPreviewHint}>افتح النموذجين الأوليين في عارض منفصل؛ لم يُدمجا داخل اللعبة بعد.</Txt>
+          <Txt muted style={styles.modelPreviewHint}>معاينة النموذجين بعد تجهيز هيكل العظام وحركتي الوقوف والمشي؛ لم يُدمجا داخل اللعبة بعد.</Txt>
         </View>
         <Icon name="open-outline" color={palette.muted} size={17} />
       </Pressable>
@@ -112,6 +128,10 @@ export default function ProfileScreen() {
           </Pressable>;
         })}
       </View>
+      <StyleChoiceGroup title="تسريحة الشعر" value={state.characterStyle.hairstyle} options={[{ id: "short", label: "قصير" }, { id: "long", label: "طويل" }, { id: "braids", label: "ضفائر" }, { id: "fringe", label: "غُرّة" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, hairstyle: value as CharacterStyle["hairstyle"] } }))} />
+      <StyleChoiceGroup title="ملامح الوجه" value={state.characterStyle.face} options={[{ id: "classic", label: "كلاسيكي" }, { id: "noble", label: "نبيل" }, { id: "weathered", label: "مغامر" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, face: value as CharacterStyle["face"] } }))} />
+      <StyleChoiceGroup title="الملابس" value={state.characterStyle.outfit} options={[{ id: "adventurer", label: "مغامر" }, { id: "royal", label: "ملكي" }, { id: "shadow", label: "داكن" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, outfit: value as CharacterStyle["outfit"] } }))} />
+      <StyleChoiceGroup title="نمط الشخصية" value={state.characterStyle.body} options={[{ id: "balanced", label: "متوازن" }, { id: "sturdy", label: "متين" }, { id: "agile", label: "رشيق" }]} onChange={(value) => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, body: value as CharacterStyle["body"] } }))} />
     </Card>
 
     <SectionTitle title="اسم اللاعب" icon="person-outline" />
@@ -157,6 +177,9 @@ const styles = StyleSheet.create({
   modelPreviewLink: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 14, borderWidth: 1, borderColor: "rgba(230,199,124,0.35)", backgroundColor: "rgba(230,199,124,0.06)" },
   modelPreviewTitle: { fontSize: 12, fontWeight: "900" },
   modelPreviewHint: { fontSize: 9, textAlign: "right" },
+  styleGroup: { gap: 7, paddingTop: 7 },
+  styleGroupTitle: { fontSize: 11, fontWeight: "900", textAlign: "right" },
+  styleOption: { minWidth: 74, flexGrow: 1, flexBasis: "28%", minHeight: 48, alignItems: "center", justifyContent: "center", gap: 3, padding: 7, borderRadius: 12, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.midnight },
   appearanceChoice: { flex: 1, minWidth: 65, minHeight: 68, alignItems: "center", justifyContent: "center", gap: 6, padding: 8, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.midnight },
   appearanceSwatch: { width: 22, height: 22, borderRadius: 11 },
   avatarOption: { width: "30%", minWidth: 88, alignItems: "center", justifyContent: "center", gap: 7, padding: 10, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.midnight },
