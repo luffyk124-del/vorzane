@@ -8,7 +8,7 @@ import { SLOT_NAMES } from "../../src/game/model";
 import { rarityColor, palette } from "../../src/theme";
 import { useGame } from "../../src/contexts/GameContext";
 
-type Tab = "equipment" | "shop" | "market" | "companions";
+type Tab = "equipment" | "shop" | "market";
 const slotIcons: Record<string, string> = { "سلاح": "flash", "درع": "shield", "خوذة": "skull", "قفازات": "hand-left", "حذاء": "footsteps", "قلادة": "diamond", "خاتم أول": "ellipse", "خاتم ثانٍ": "ellipse" };
 
 export default function GearScreen() {
@@ -50,7 +50,6 @@ export default function GearScreen() {
     { id: "equipment", label: "عتادي", icon: "shield-checkmark" },
     { id: "shop", label: "المتجر", icon: "storefront-outline" },
     { id: "market", label: "السوق", icon: "cash-outline" },
-    { id: "companions", label: "رفقاء", icon: "paw-outline" },
   ];
 
   return <AppScreen>
@@ -100,15 +99,27 @@ export default function GearScreen() {
     </> : null}
 
     {tab === "shop" ? <>
-      <SectionTitle title="متجر الحدود" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("ar-EG")} ذهب`} icon="cash-outline" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>عتاد البداية</Txt><Txt muted style={styles.shopCopy}>متجر محدود بقطع البداية فقط؛ القطع النادرة المولدة لا تُشترى وتُكتسب من الزنزانة.</Txt></Card>
+      <SectionTitle title="متجر العالم" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("ar-EG")} ذهب`} icon="cash-outline" tone="gold" />} />
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد والرفقاء</Txt><Txt muted style={styles.shopCopy}>كل القطع معروضة من البداية. يمكنك شراء أي قطعة الآن حتى لو كان مستواك أقل؛ تجهيزها أو تفعيل الرفيق يتطلب المستوى المحدد.</Txt></Card>
       {STARTER_ITEMS.map((item) => {
-        const locked = !state.hero || heroLevel < (item.requiredLevel ?? 1);
+        const canAfford = state.gold >= item.price;
         return <Card key={item.id} style={styles.itemRow}>
-        <AppButton label={locked ? `يتطلب المستوى ${item.requiredLevel ?? 1}` : `${item.price} ذهب`} onPress={() => purchaseItem(item.id)} variant={locked ? "secondary" : "jade"} small icon={locked ? "lock-closed-outline" : "cart-outline"} disabled={locked} />
-        <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>يفتح من المستوى {item.requiredLevel ?? 1}</Txt></View>
-        <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
-      </Card>;
+          <AppButton label={canAfford ? `شراء ${item.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => purchaseItem(item.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التجهيز من المستوى {item.requiredLevel ?? 1}</Txt></View>
+          <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
+        </Card>;
+      })}
+      <SectionTitle title="رفقاء العالم" icon="paw-outline" action={<Pill label={`${state.pets.length}/${PETS.length}`} tone="jade" />} />
+      {PETS.map((pet) => {
+        const owned = state.pets.includes(pet.id);
+        const locked = !state.hero || heroLevel < pet.requiredLevel;
+        const active = state.activePet === pet.id && !locked;
+        const canAfford = state.gold >= pet.price;
+        return <Card key={pet.id} style={styles.petCard}>
+          <View style={styles.petBadge}><Icon name={pet.icon as never} color={active ? palette.gold : palette.jade} size={23} /></View>
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : locked ? <Pill label={`تفعيل مستوى ${pet.requiredLevel}`} tone="muted" /> : null}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التفعيل من المستوى {pet.requiredLevel}</Txt></View>
+          {owned ? <AppButton label={locked ? `مستوى ${pet.requiredLevel}` : active ? "النشط" : "تفعيل"} onPress={() => fpsMode ? void command({ type: "setPet", petId: pet.id }) : update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active || locked} /> : <AppButton label={canAfford ? `شراء ${pet.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => purchasePet(pet.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />}
+        </Card>;
       })}
     </> : null}
 
@@ -126,20 +137,7 @@ export default function GearScreen() {
       }) : <Card style={styles.empty}><Icon name="pricetag-outline" color={palette.dim} size={22} /><Txt muted>لا توجد قطع للبيع الآن. انتصر في الزنزانة لتحصل على غنائم جديدة.</Txt></Card>}
     </> : null}
 
-    {tab === "companions" ? <>
-      <SectionTitle title="رفقاء الرحلة" icon="paw-outline" action={<Pill label={`${state.pets.length}/${PETS.length}`} tone="jade" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>لا تسافر وحيدًا</Txt><Txt muted style={styles.shopCopy}>كل رفيق يمنحك سمة مختلفة. رفيق واحد نشط في الوقت نفسه.</Txt></Card>
-      {PETS.map((pet) => {
-        const owned = state.pets.includes(pet.id);
-        const locked = !state.hero || heroLevel < pet.requiredLevel;
-        const active = state.activePet === pet.id && !locked;
-        return <Card key={pet.id} style={styles.petCard}>
-          <View style={styles.petBadge}><Icon name={pet.icon as never} color={active ? palette.gold : palette.jade} size={23} /></View>
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : locked ? <Pill label={`مستوى ${pet.requiredLevel}`} tone="muted" /> : null}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>يفتح من المستوى {pet.requiredLevel}</Txt></View>
-          {owned ? <AppButton label={locked ? `مستوى ${pet.requiredLevel}` : active ? "النشط" : "اختر"} onPress={() => fpsMode ? void command({ type: "setPet", petId: pet.id }) : update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active || locked} /> : <AppButton label={locked ? `يفتح مستوى ${pet.requiredLevel}` : `${pet.price} ذهب`} onPress={() => purchasePet(pet.id)} variant={locked ? "secondary" : "jade"} small icon={locked ? "lock-closed-outline" : "cart-outline"} disabled={locked} />}
-        </Card>;
-      })}
-    </> : null}
+
   </AppScreen>;
 }
 
