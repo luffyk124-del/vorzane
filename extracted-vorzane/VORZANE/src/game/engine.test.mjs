@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { advanceExpeditions, allocateStatPoint, buyItem, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress } from "./engine.ts";
+import { advanceExpeditions, allocateStatPoint, buyItem, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask } from "./engine.ts";
 import { createFreshState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
@@ -107,4 +107,18 @@ test("exploration achievements enforce level and expedition thresholds", () => {
   state.hero.level = 5;
   assert.equal(canClaimExplorationAchievement(state, "explorer_twenty"), true);
   assert.equal(canClaimExplorationAchievement(state, "level_five"), true);
+});
+
+
+test("expedition tasks require their threshold and grant a one-time reward", () => {
+  const state = createHeroState("اختبار", "Mage");
+  state.expeditionsCompleted = 2;
+  assert.equal(canClaimExpeditionTask(state, "expedition_task_one"), true);
+  assert.equal(canClaimExpeditionTask(state, "expedition_task_three"), false);
+
+  const claimed = claimExpeditionTask(state, "expedition_task_one");
+  assert.equal(claimed.gold, state.gold + 50);
+  assert.equal(claimed.quests.expedition_task_one, true);
+  assert.equal(claimExpeditionTask(claimed, "expedition_task_one").gold, claimed.gold);
+  assert.equal(state.gold, 500);
 });
