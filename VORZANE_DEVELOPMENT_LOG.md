@@ -91,6 +91,7 @@ Updated: 2026-11-07
 - Added an additive Supabase migration defining searchable player profiles and friend-request relationships. Existing `player_saves`, auth users, and player data are not modified by this migration.
 - Added RLS policies that limit profile reads to searchable profiles or the owner, and friend-request reads to the two participants. Writes are routed through authenticated RPC functions rather than direct client table writes.
 - Added RPCs for profile creation/update, profile search (minimum three-character query, maximum 20 results), privacy visibility, sending/responding to/removing friend relationships, listing friends, and listing incoming requests.
+- Added server-side anti-spam quotas for friend requests: at most 20 pending requests and 40 total requests per rolling day, serialized per sender profile.
 - Added typed client wrappers in `src/lib/social.ts` and an Arabic friends/profile screen, then added it to the app tab navigation.
 - **Status:** social UI and client integration are implemented in source. The database migration has **not** been applied to Supabase and has not yet been exercised against a dedicated test project. Therefore profile saving, search, requests, acceptance, and removal are not yet verified as live features.
 - **Not implemented yet:** online presence/last-seen, push or realtime notifications, public combat statistics, profile privacy controls beyond search visibility, and account moderation/rate limiting.
