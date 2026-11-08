@@ -30,6 +30,15 @@ export type IncomingFriendRequest = {
   requested_at: string;
 };
 
+export type PlayerNotification = {
+  notification_id: string;
+  notification_type: "friend_request" | "friend_request_accepted";
+  actor_name: string;
+  created_at: string;
+  read_at: string | null;
+  friend_request_id: string;
+};
+
 function requireData<T>(data: T | null, error: { message: string } | null): T {
   if (error) throw new Error(error.message);
   if (data === null) throw new Error("لم تصل بيانات من خدمة الأصدقاء.");
@@ -90,4 +99,19 @@ export async function listMyFriends(): Promise<FriendSummary[]> {
 export async function listIncomingFriendRequests(): Promise<IncomingFriendRequest[]> {
   const { data, error } = await supabase.rpc("list_incoming_friend_requests");
   return requireData((data ?? []) as IncomingFriendRequest[], error);
+}
+
+export async function listMyNotifications(): Promise<PlayerNotification[]> {
+  const { data, error } = await supabase.rpc("list_my_notifications");
+  return requireData((data ?? []) as PlayerNotification[], error);
+}
+
+export async function markNotificationRead(notificationId: string): Promise<void> {
+  const { error } = await supabase.rpc("mark_notification_read", { p_notification_id: notificationId });
+  if (error) throw new Error(error.message);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  const { error } = await supabase.rpc("mark_all_notifications_read");
+  if (error) throw new Error(error.message);
 }

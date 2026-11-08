@@ -1,0 +1,63 @@
+name: VORZANE social database tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/social-db.yml"
+      - "extracted-vorzane/VORZANE/supabase/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/social-db.yml"
+      - "extracted-vorzane/VORZANE/supabase/**"
+
+permissions:
+  contents: read
+
+jobs:
+  social-db:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vorzane_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d vorzane_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Create isolated Supabase auth test schema
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/vorzane_test
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE anon NOLOGIN;
+          CREATE ROLE authenticated NOLOGIN;
+          GRANT USAGE ON SCHEMA public TO anon, authenticated;
+          CREATE SCHEMA auth;
+          CREATE TABLE auth.users (id uuid PRIMARY KEY);
+          CREATE FUNCTION auth.uid() RETURNS uuid
+          LANGUAGE sql STABLE
+          AS $$
+            SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+          $$;
+          GRANT USAGE ON SCHEMA auth TO authenticated;
+          GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
+          SQL
+      - name: Apply additive migrations and test social privacy and notifications
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/vorzane_test
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261108012451_create_player_social.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261108180000_create_player_notifications.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/tests/player_social.integration.sql

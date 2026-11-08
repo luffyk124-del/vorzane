@@ -1,23 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Switch, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { useAuth } from "../../src/contexts/AuthContext";
+import { useGame } from "../../src/contexts/GameContext";
 import {
+  getMyProfile,
   listIncomingFriendRequests,
   listMyFriends,
   removeFriend,
   respondToFriendRequest,
+  saveMyProfile,
   searchPlayers,
   sendFriendRequest,
+  setMyProfileSearchable,
   type FriendSummary,
   type IncomingFriendRequest,
+  type PlayerProfile,
   type PlayerSearchResult,
 } from "../../src/lib/social";
 import { palette } from "../../src/theme";
 
 export default function FriendsScreen() {
   const { user } = useAuth();
+  const { state } = useGame();
+  const router = useRouter();
   const [query, setQuery] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [results, setResults] = useState<PlayerSearchResult[]>([]);
   const [friends, setFriends] = useState<FriendSummary[]>([]);
   const [incoming, setIncoming] = useState<IncomingFriendRequest[]>([]);
@@ -32,14 +42,18 @@ export default function FriendsScreen() {
 
   const refresh = useCallback(async () => {
     if (!user?.id) return;
-    const [friendRows, requestRows] = await Promise.all([
+    const [friendRows, requestRows, myProfile] = await Promise.all([
       listMyFriends(),
       listIncomingFriendRequests(),
+      getMyProfile(user.id),
     ]);
     if (!mountedRef.current) return;
     setFriends(friendRows);
     setIncoming(requestRows);
-  }, [user?.id]);
+    setProfile(myProfile);
+    if (myProfile) setDisplayName(myProfile.display_name);
+    else if (state.hero?.name && !displayName) setDisplayName(state.hero.name);
+  }, [user?.id, state.hero?.name, displayName]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -65,6 +79,27 @@ export default function FriendsScreen() {
     }
   };
 
+  const saveProfile = async () => {
+    const name = displayName.trim();
+    if (name.length < 3 || name.length > 24) {
+      setNotice("اسم اللاعب يجب أن يتكون من 3 إلى 24 حرفًا.");
+      return;
+    }
+    await run(async () => {
+      const saved = await saveMyProfile(name, String(state.profileAvatarId));
+      if (mountedRef.current) setProfile(saved);
+    }, "تم حفظ ملف اللاعب.");
+  };
+
+  const toggleSearchable = async (enabled: boolean) => {
+    if (!profile) return;
+    await run(async () => {
+      await setMyProfileSearchable(enabled);
+      if (mountedRef.current) setProfile((current) => current ? { ...current, is_searchable: enabled } : current);
+      if (!enabled) setResults([]);
+    }, enabled ? "أصبح ملفك ظاهرًا في البحث." : "أصبح ملفك مخفيًا من البحث.");
+  };
+
   const sendRequest = async (playerId: string) => {
     await run(async () => {
       await sendFriendRequest(playerId);
@@ -77,6 +112,14 @@ export default function FriendsScreen() {
   };
 
   const doSearch = async () => {
+    if (!profile) {
+      setNotice("أنشئ ملف اللاعب أولًا قبل البحث عن الأصدقاء.");
+      return;
+    }
+    if (!profile.is_searchable) {
+      setNotice("فعّل ظهور ملفك في البحث قبل استخدام المجتمع.");
+      return;
+    }
     if (query.trim().length < 3) {
       setNotice("اكتب ثلاثة أحرف على الأقل للبحث.");
       return;
@@ -95,8 +138,36 @@ export default function FriendsScreen() {
 
   return <AppScreen>
     <View style={styles.content}>
-      <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء" subtitle="ابحث عن لاعبين، وأدر طلبات الصداقة وقائمتك." />
+      <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء" subtitle="تحكم بظهور ملفك، وابحث عن لاعبين، وأدر طلبات الصداقة." />
+      <AppButton label="صندوق الإشعارات" icon="notifications-outline" onPress={() => router.push("/(tabs)/notifications" as never)} variant="secondary" />
       {notice ? <Card style={styles.notice}><Icon name="information-circle-outline" color={palette.gold} size={18} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
+
+      <SectionTitle title="ملف اللاعب والخصوصية" icon="shield-checkmark-outline" />
+      <Card style={styles.panel}>
+        {profile ? <>
+          <Txt style={styles.profileName}>{profile.display_name}</Txt>
+          <View style={styles.privacyRow}>
+            <View style={styles.playerInfo}>
+              <Txt style={styles.playerName}>السماح بالظهور في البحث</Txt>
+              <Txt muted style={styles.playerMeta}>{profile.is_searchable ? "يمكن للاعبين العثور عليك بالاسم." : "ملفك مخفي عن نتائج البحث."}</Txt>
+            </View>
+            <Switch
+              value={profile.is_searchable}
+              onValueChange={toggleSearchable}
+              disabled={busy}
+              trackColor={{ false: "#293744", true: palette.jadeDark }}
+              thumbColor={profile.is_searchable ? palette.jade : "#A9B7BE"}
+            />
+          </View>
+          <TextInput value={displayName} onChangeText={setDisplayName} maxLength={24} placeholder="اسم اللاعب" placeholderTextColor={palette.muted} style={styles.input} />
+          <AppButton label="حفظ اسم اللاعب" icon="save-outline" onPress={saveProfile} disabled={busy || displayName.trim() === profile.display_name} variant="secondary" />
+        </> : <>
+          <Txt style={styles.playerName}>أنشئ ملفك داخل مجتمع VORZANE</Txt>
+          <Txt muted style={styles.playerMeta}>اسم الملف مستقل عن بريدك الإلكتروني. يمكنك إخفاؤه من البحث لاحقًا.</Txt>
+          <TextInput value={displayName} onChangeText={setDisplayName} maxLength={24} placeholder="اسم اللاعب (3–24 حرفًا)" placeholderTextColor={palette.muted} style={styles.input} />
+          <AppButton label="إنشاء ملف اللاعب" icon="person-add-outline" onPress={saveProfile} loading={busy} disabled={busy || displayName.trim().length < 3} />
+        </>}
+      </Card>
 
       <SectionTitle title={`طلبات الصداقة الواردة (${incoming.length})`} icon="mail-unread-outline" />
       {incoming.length ? incoming.map((request) => <Card key={request.request_id} style={styles.playerRow}>
@@ -121,7 +192,7 @@ export default function FriendsScreen() {
       <SectionTitle title="البحث عن لاعبين" icon="search-outline" />
       <Card style={styles.panel}>
         <TextInput value={query} onChangeText={setQuery} maxLength={24} placeholder="اسم اللاعب..." placeholderTextColor={palette.muted} style={styles.input} returnKeyType="search" onSubmitEditing={doSearch} />
-        <AppButton label="بحث" onPress={doSearch} loading={busy} disabled={busy || query.trim().length < 3} icon="search-outline" />
+        <AppButton label="بحث" onPress={doSearch} loading={busy} disabled={busy || !profile?.is_searchable || query.trim().length < 3} icon="search-outline" />
       </Card>
       {results.map((player) => <Card key={player.user_id} style={styles.playerRow}>
         {player.friend_state === "none" ? <AppButton label="إضافة" onPress={() => sendRequest(player.user_id)} small disabled={busy} /> : <Pill label={player.friend_state === "friends" ? "صديق" : player.friend_state === "incoming" ? "طلب وارد" : "تم الإرسال"} tone={player.friend_state === "friends" ? "jade" : "muted"} />}
@@ -135,19 +206,14 @@ export default function FriendsScreen() {
 
 const styles = StyleSheet.create({
   content: { gap: 13, width: "100%" },
-  panel: { gap: 10, backgroundColor: "#13242C" },
+  panel: { gap: 10, backgroundColor: "#13242C", padding: 13 },
   input: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 12, color: palette.text, textAlign: "right", backgroundColor: "#0B171D" },
-  fieldLabel: { fontSize: 11, fontWeight: "800", textAlign: "right" },
-  avatarRow: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  avatarOption: { minWidth: 82, minHeight: 48, flexGrow: 1, alignItems: "center", justifyContent: "center", gap: 5, borderWidth: 1, borderColor: palette.line, borderRadius: 12, padding: 9 },
-  avatarSelected: { backgroundColor: palette.gold, borderColor: palette.gold },
-  avatarText: { fontSize: 10, color: palette.muted, fontWeight: "800" },
-  avatarTextSelected: { color: palette.ink },
-  privacyRow: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingVertical: 5 },
+  profileName: { fontSize: 15, fontWeight: "900", textAlign: "right" },
+  privacyRow: { minHeight: 54, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingVertical: 5 },
   playerRow: { padding: 12, flexDirection: "row", alignItems: "center", gap: 10 },
   playerInfo: { flex: 1, alignItems: "flex-end" },
-  playerName: { fontSize: 14, fontWeight: "900" },
-  playerMeta: { fontSize: 10, marginTop: 3 },
+  playerName: { fontSize: 13, fontWeight: "900", textAlign: "right" },
+  playerMeta: { fontSize: 10, marginTop: 3, textAlign: "right" },
   playerActions: { flexDirection: "row", gap: 5 },
   empty: { padding: 16, alignItems: "center" },
   notice: { padding: 11, flexDirection: "row", alignItems: "center", gap: 8 },
