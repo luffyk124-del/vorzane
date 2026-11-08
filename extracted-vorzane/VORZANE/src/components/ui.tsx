@@ -64,7 +64,7 @@ export function AppScreen({ children, scroll = true, contentStyle, safe = true }
           </View>
           {gameMenuItems.map((item) => {
             const active = pathname.endsWith(item.href.split("/").at(-1) ?? "");
-            return <Pressable key={item.href} accessibilityRole="button" accessibilityLabel={item.label} onPress={() => { setMenuOpen(false); if (!active) setTimeout(() => router.push(item.href), 350); }} style={[styles.drawerItem, active && styles.drawerItemActive]}>
+            return <Pressable key={item.href} accessibilityRole="button" accessibilityLabel={item.label} onPress={() => { setMenuOpen(false); if (!active) setTimeout(() => router.navigate(item.href), 350); }} style={[styles.drawerItem, active && styles.drawerItemActive]}>
               <Icon name={item.icon} size={19} color={active ? palette.ink : palette.jade} />
               <Txt style={[styles.drawerItemText, active && styles.drawerItemTextActive]}>{item.label}</Txt>
             </Pressable>;
@@ -85,7 +85,7 @@ export function GradientCard({ children, colors = ["#1D3842", "#121B27", "#171A2
 }
 
 export function PageTitle({ eyebrow, title, subtitle, trailing }: { eyebrow?: string; title: string; subtitle?: string; trailing?: ReactNode }) {
-  return <View style={styles.titleRow}>
+  return <View testID="page-title" style={styles.titleRow}>
     <View style={{ flex: 1, alignItems: "flex-end" }}>
       {eyebrow ? <Txt style={styles.eyebrow}>{eyebrow}</Txt> : null}
       <Txt style={styles.pageTitle}>{title}</Txt>
