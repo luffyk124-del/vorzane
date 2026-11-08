@@ -113,7 +113,7 @@ export default function FriendsScreen() {
         <Icon name="person-outline" color={palette.jade} size={22} />
       </Card>)}
       <AppButton label="تحديث البيانات" onPress={() => run(refresh, "تم تحديث بيانات المجتمع.")} variant="ghost" disabled={busy} icon="refresh-outline" />
-    </ScrollView>
+    </View>
   </AppScreen>;
 }
 
