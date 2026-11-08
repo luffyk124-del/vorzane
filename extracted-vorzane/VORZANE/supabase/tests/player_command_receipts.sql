@@ -13,6 +13,10 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
 
+insert into public.player_saves (user_id, game_state)
+values ('00000000-0000-0000-0000-00000000000a', '{"gold":10,"inventory":[]}')
+on conflict (user_id) do update set game_state = excluded.game_state, updated_at = clock_timestamp();
+
 do $test$ begin
   begin
     perform public.commit_player_command(
@@ -31,11 +35,7 @@ end $test$;
 set local role service_role;
 select set_config('request.jwt.claim.role', 'service_role', true);
 
-insert into public.player_saves (user_id, game_state)
-values ('00000000-0000-0000-0000-00000000000a', '{"gold":10,"inventory":[]}')
-on conflict (user_id) do update set game_state = excluded.game_state, updated_at = clock_timestamp();
-
-do $$
+do $
 declare
   v_expected timestamptz;
   v_after timestamptz;
