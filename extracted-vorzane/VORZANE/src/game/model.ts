@@ -196,7 +196,7 @@ function normalizeMissionPeriods(value: unknown, wins: number, expeditions: numb
   const clean = (period: unknown, fallback: MissionPeriod): MissionPeriod => {
     if (!period || typeof period !== "object") return { ...fallback, baseline, claimed: {} };
     const item = period as Partial<MissionPeriod>;
-    const saved = item.baseline && typeof item.baseline === "object" ? item.baseline : {};
+    const saved = (item.baseline && typeof item.baseline === "object" ? item.baseline : {}) as Partial<MissionSnapshot>;
     const claimed = item.claimed && typeof item.claimed === "object"
       ? Object.fromEntries(Object.entries(item.claimed).filter(([, flag]) => flag === true))
       : {};
