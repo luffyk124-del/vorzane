@@ -64,7 +64,7 @@ export function AppScreen({ children, scroll = true, contentStyle, safe = true }
           </View>
           {gameMenuItems.map((item) => {
             const active = pathname.endsWith(item.href.split("/").at(-1) ?? "");
-            return <Pressable key={item.href} accessibilityRole="button" accessibilityLabel={item.label} onPress={() => { setMenuOpen(false); if (!active) router.push(item.href); }} style={[styles.drawerItem, active && styles.drawerItemActive]}>
+            return <Pressable key={item.href} accessibilityRole="button" accessibilityLabel={item.label} onPress={() => { setMenuOpen(false); if (!active) setTimeout(() => router.push(item.href), 80); }} style={[styles.drawerItem, active && styles.drawerItemActive]}>
               <Icon name={item.icon} size={19} color={active ? palette.ink : palette.jade} />
               <Txt style={[styles.drawerItemText, active && styles.drawerItemTextActive]}>{item.label}</Txt>
             </Pressable>;
