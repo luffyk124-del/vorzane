@@ -286,6 +286,9 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   await signInWithMock(page);
   await page.goto(`${appUrl}/friends`);
   await page.getByText("الأصدقاء", { exact: true }).first().waitFor({ timeout: 15_000 });
+  await page.getByText("أنشئ ملفك داخل مجتمع VORZANE", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByRole("button", { name: "إنشاء ملف اللاعب" }).click();
+  await page.getByText("تم حفظ ملف اللاعب.", { exact: true }).waitFor({ timeout: 10_000 });
   await page.getByPlaceholder("اسم اللاعب...").fill("صديق");
   await page.getByText("بحث", { exact: true }).click();
   await page.getByText("صديق تجريبي", { exact: true }).waitFor({ timeout: 10_000 });
