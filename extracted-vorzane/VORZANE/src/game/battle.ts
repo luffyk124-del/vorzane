@@ -1,8 +1,8 @@
-import { BATTLE_ENEMIES } from "./catalog";
-import { createItemInstance, getDungeonDrop, getEquipmentSellPrice } from "./dungeonItems";
-import { addExperience, combatStats } from "./stats";
-import type { BattleMode, ClassId, EquipmentItem, GameState } from "./model";
-import type { EnemyBlueprint } from "./catalog";
+import { BATTLE_ENEMIES } from "./catalog.ts";
+import { createItemInstance, getDungeonDrop, getEquipmentSellPrice } from "./dungeonItems.ts";
+import { addExperience, combatStats } from "./stats.ts";
+import type { BattleMode, ClassId, EquipmentItem, GameState } from "./model.ts";
+import type { EnemyBlueprint } from "./catalog.ts";
 
 export type BattleTurn = {
   index: number;
