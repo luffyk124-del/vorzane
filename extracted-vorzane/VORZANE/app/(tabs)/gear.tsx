@@ -114,7 +114,7 @@ export default function GearScreen() {
 
     {tab === "shop" ? <>
       <SectionTitle title="متجر العالم" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("ar-EG")} ذهب`} icon="cash-outline" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العالم الكامل</Txt><Txt muted style={styles.shopCopy}>كل العتاد العادي والنادر والأسطوري وقطع الزنزانة والرفقاء ظاهرة مع أسعارها. تستطيع الشراء بأي مستوى؛ التجهيز والتفعيل يظلان مرتبطين بمتطلبات المستوى والطابق.</Txt><Txt style={styles.poolNote}>{shopItems.length.toLocaleString("ar-EG")} قطعة عتاد • {PETS.length} رفقاء</Txt></Card>
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>الدروع والخوذ والقفازات والأحذية والإكسسوارات وقطع الزنزانة والرفقاء ظاهرة مع أسعارها. تستطيع الشراء بأي مستوى؛ التجهيز والتفعيل يظلان مرتبطين بمتطلبات المستوى والطابق.</Txt><Txt style={styles.poolNote}>{shopItems.length.toLocaleString("ar-EG")} قطعة عتاد • {PETS.length} رفقاء</Txt></Card>
       <View style={styles.shopFilters}>
         {SHOP_CATEGORIES.map((category) => <Pressable key={category.id} onPress={() => setShopCategory(category.id)} style={[styles.shopFilter, shopCategory === category.id && styles.shopFilterActive]}>
           <Txt style={[styles.shopFilterText, shopCategory === category.id && styles.shopFilterTextActive]}>{category.label}</Txt>
