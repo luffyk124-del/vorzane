@@ -147,6 +147,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   const loadForUser = useCallback(async (userId: string, generation: number) => {
     activeUserRef.current = userId;
     syncReadyRef.current = null;
+    cloudUpdatedAtRef.current = null;
     setStatus("loading");
     setCloudError("");
     setMigration(null);
@@ -248,6 +249,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (!currentUserId) {
       activeUserRef.current = null;
       syncReadyRef.current = null;
+      cloudUpdatedAtRef.current = null;
       setMigration(null);
       setCloudError("");
       const fresh = createFreshState();
