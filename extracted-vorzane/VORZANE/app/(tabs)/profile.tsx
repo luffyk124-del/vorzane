@@ -85,11 +85,11 @@ export default function ProfileScreen() {
 
     <SectionTitle title="مظهر الشخصية" icon="color-palette-outline" />
     <Card style={styles.panel}>
-      <Txt muted style={styles.hint}>يمكنك تغيير المظهر في أي وقت دون التأثير على مستواك أو تقدمك. تُحفظ اختياراتك تلقائياً مع تقدم اللاعب.</Txt>
+      <Txt muted style={styles.hint}>تُحفظ تفضيلات الجنس ودرجة اللون مع تقدمك. تنبيه: هذه الاختيارات لا تغيّر مجسماً ثلاثي الأبعاد داخل اللعبة حتى الآن؛ المجسمات الأولية ما زالت في العارض الخارجي.</Txt>
       <View style={styles.avatarGrid}>
         {([{ id: "male", label: "ذكر" }, { id: "female", label: "أنثى" }] as const).map((option) => {
           const selected = state.characterStyle.gender === option.id;
-          return <Pressable key={option.id} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, gender: option.id } }))} style={[styles.avatarOption, selected && styles.avatarSelected]}>
+          return <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={`تفضيل الشخصية: ${option.label}`} accessibilityState={{ checked: selected }} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, gender: option.id } }))} style={[styles.avatarOption, selected && styles.avatarSelected]}>
             <Icon name={option.id === "male" ? "male" : "female"} size={21} color={selected ? palette.gold : palette.jade} />
             <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>{option.label}</Txt>
           </Pressable>;
@@ -106,9 +106,9 @@ export default function ProfileScreen() {
       <View style={styles.avatarGrid}>
         {["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"].map((color, index) => {
           const selected = state.characterStyle.appearance === index;
-          return <Pressable key={color} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, appearance: index as 0 | 1 | 2 | 3 } }))} style={[styles.appearanceChoice, selected && styles.avatarSelected]}>
+          return <Pressable key={color} accessibilityRole="radio" accessibilityLabel={`درجة اللون ${index + 1}`} accessibilityState={{ checked: selected }} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, appearance: index as 0 | 1 | 2 | 3 } }))} style={[styles.appearanceChoice, selected && styles.avatarSelected]}>
             <View style={[styles.appearanceSwatch, { backgroundColor: color }]} />
-            <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>مظهر {index + 1}</Txt>
+            <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>درجة اللون {index + 1}</Txt>
           </Pressable>;
         })}
       </View>
