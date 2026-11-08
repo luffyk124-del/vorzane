@@ -109,32 +109,6 @@ export default function CampScreen() {
           {selectedAppearance === index ? <Icon name="checkmark-circle" size={15} color={palette.gold} /> : null}
         </Pressable>)}
       </View>
-      <View style={styles.creatorPreview}>
-        <View style={[styles.creatorPortrait, { borderColor: APPEARANCE_COLORS[selectedAppearance] }]}>
-          <Image source={{ uri: CLASS_ART[selectedClass] }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: APPEARANCE_COLORS[selectedAppearance], opacity: 0.22 }]} />
-          <View style={styles.previewGender}><Txt style={styles.previewGenderText}>{selectedGender === "male" ? "ذكر" : "أنثى"}</Txt></View>
-        </View>
-        <View style={styles.creatorPreviewText}>
-          <Txt style={styles.creatorPreviewTitle}>معاينة شخصيتك</Txt>
-          <Txt muted style={styles.creatorPreviewCopy}>مظهر ثنائي الأبعاد قابل للتخصيص، ويمكنك تغييره لاحقًا.</Txt>
-        </View>
-      </View>
-      <SectionTitle title="اختيار الشخصية" icon="person-circle-outline" />
-      <View style={styles.choiceRow}>
-        {([{ id: "male", label: "ذكر", icon: "male" }, { id: "female", label: "أنثى", icon: "female" }] as const).map((option) => <Pressable key={option.id} onPress={() => setSelectedGender(option.id)} style={[styles.choiceButton, selectedGender === option.id && styles.choiceButtonActive]}>
-          <Icon name={option.icon as never} size={18} color={selectedGender === option.id ? palette.ink : palette.jade} />
-          <Txt style={[styles.choiceLabel, selectedGender === option.id && styles.choiceLabelActive]}>{option.label}</Txt>
-        </Pressable>)}
-      </View>
-      <Txt style={styles.appearanceHeading}>المظهر</Txt>
-      <View style={styles.appearanceRow}>
-        {APPEARANCE_COLORS.map((color, index) => <Pressable key={index} onPress={() => setSelectedAppearance(index as 0 | 1 | 2 | 3)} style={[styles.appearanceOption, { borderColor: selectedAppearance === index ? palette.gold : palette.line }]}>
-          <View style={[styles.appearanceSwatch, { backgroundColor: color }]} />
-          <Txt style={styles.appearanceLabel}>مظهر {index + 1}</Txt>
-          {selectedAppearance === index ? <Icon name="checkmark-circle" size={15} color={palette.gold} /> : null}
-        </Pressable>)}
-      </View>
       <InputField label="اسم البطل" value={heroName} onChangeText={setHeroName} placeholder="اسمٌ يليق بالأساطير" icon="person-outline" />
       <AppButton label="ابدأ الرحلة" icon="arrow-back" onPress={createHero} disabled={heroName.trim().length < 2} />
     </GradientCard>
