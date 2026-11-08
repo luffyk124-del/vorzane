@@ -1,18 +1,29 @@
 import { useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import type { ClassId } from "../game/model";
-import { CLASS_ART, CLASS_NAMES } from "../game/art";
+import type { CharacterStyle, ClassId } from "../game/model";
+import { CLASS_NAMES } from "../game/model";
+import { CLASS_ART } from "../game/art";
 
 const FALLBACK = "#18232D";
 
+const STYLE_LABELS = {
+  appearance: ["فاتح", "قمحي", "برونزي", "داكن"],
+  hairstyle: { short: "قصير", long: "طويل", braids: "ضفائر", fringe: "غُرّة" },
+  face: { classic: "كلاسيكي", noble: "نبيل", weathered: "مخضرم" },
+  outfit: { adventurer: "مغامر", royal: "ملكي", shadow: "ظلال" },
+  body: { balanced: "متوازن", sturdy: "قوي البنية", agile: "رشيق" },
+} as const;
+
 export function CharacterModelViewer({
   gender = "male",
+  appearance = 0,
+  hairstyle = "short",
+  face = "classic",
+  outfit = "adventurer",
+  body = "balanced",
   className = "Warrior",
-}: {
-  gender?: "male" | "female";
-  className?: ClassId;
-}) {
+}: Partial<CharacterStyle> & { className?: ClassId }) {
   const [failed, setFailed] = useState(false);
   const selectedClass: ClassId = ["Warrior", "Mage", "Assassin", "Archer"].includes(className) ? className : "Warrior";
   const label = CLASS_NAMES[selectedClass];
@@ -21,7 +32,7 @@ export function CharacterModelViewer({
     <View
       testID="fantasy-character-preview"
       accessible
-      accessibilityLabel={`معاينة شخصية ${label} الفنتازية`}
+      accessibilityLabel={`معاينة شخصية ${label} الفنتازية، ${STYLE_LABELS.appearance[appearance]}، شعر ${STYLE_LABELS.hairstyle[hairstyle]}، زي ${STYLE_LABELS.outfit[outfit]}`}
       style={styles.frame}
     >
       {!failed ? (
@@ -53,7 +64,8 @@ export function CharacterModelViewer({
       <View pointerEvents="none" style={styles.bottom}>
         <View style={styles.divider} />
         <Text style={styles.className}>{label}</Text>
-        <Text style={styles.subtitle}>{gender === "female" ? "بطلة" : "بطل"} • أسطورة قيد الصنع</Text>
+        <Text style={styles.subtitle}>{gender === "female" ? "بطلة" : "بطل"} • {STYLE_LABELS.hairstyle[hairstyle]} • {STYLE_LABELS.outfit[outfit]}</Text>
+        <Text style={styles.styleMeta}>{STYLE_LABELS.face[face]} · {STYLE_LABELS.body[body]} · بشرة {STYLE_LABELS.appearance[appearance]}</Text>
       </View>
       <View pointerEvents="none" style={styles.cornerTopLeft} />
       <View pointerEvents="none" style={styles.cornerTopRight} />
@@ -100,6 +112,7 @@ const styles = StyleSheet.create({
   divider: { width: 88, height: 2, backgroundColor: "#D6B56F", marginBottom: 7 },
   className: { color: "#FFF1D2", fontSize: 27, fontWeight: "900", textShadowColor: "#000", textShadowRadius: 8 },
   subtitle: { color: "#D8C9A8", fontSize: 11, fontWeight: "700", textShadowColor: "#000", textShadowRadius: 7 },
+  styleMeta: { color: "#E6C77C", fontSize: 9, fontWeight: "800", textShadowColor: "#000", textShadowRadius: 7 },
   cornerTopLeft: { position: "absolute", top: 7, left: 7, width: 25, height: 25, borderTopWidth: 2, borderLeftWidth: 2, borderColor: "#D8B66D" },
   cornerTopRight: { position: "absolute", top: 7, right: 7, width: 25, height: 25, borderTopWidth: 2, borderRightWidth: 2, borderColor: "#D8B66D" },
   cornerBottomLeft: { position: "absolute", bottom: 7, left: 7, width: 25, height: 25, borderBottomWidth: 2, borderLeftWidth: 2, borderColor: "#D8B66D" },
