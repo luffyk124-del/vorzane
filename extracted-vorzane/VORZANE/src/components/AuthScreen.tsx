@@ -68,23 +68,6 @@ export default function AuthScreen() {
     } finally { setBusy(false); }
   };
 
-  const continueGoogle = async () => {
-    setNotice("");
-    auth.clearError();
-    setBusy(true);
-    try {
-      if (auth.user?.is_anonymous) {
-        const flushed = await game.flushNow();
-        if (!flushed) {
-          setNotice("تعذر تأكيد حفظ الضيف؛ لم يبدأ ربط Google.");
-          return;
-        }
-      }
-      const error = await auth.signInWithGoogle(!!auth.user?.is_anonymous);
-      if (error) setNotice(error);
-    } finally { setBusy(false); }
-  };
-
   return <AppScreen contentStyle={styles.page}>
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboard}>
       <LinearGradient colors={["#143039", "#0A1017", "#080C12"]} style={styles.backdrop} />
@@ -108,11 +91,8 @@ export default function AuthScreen() {
 
         {notice || auth.error ? <View style={styles.notice}><Icon name="information-circle" color={palette.gold} size={18} /><Txt style={styles.noticeText}>{notice || auth.error}</Txt></View> : null}
 
-        <View style={styles.separator}><View style={styles.rule} /><Txt muted style={styles.or}>أو</Txt><View style={styles.rule} /></View>
-        <AppButton label="المتابعة باستخدام Google" onPress={continueGoogle} variant="secondary" icon="logo-google" disabled={busy} />
-        <Txt muted style={styles.googleHint}>يظهر زر Google الآن؛ تفعيل المزود يحتاج بيانات OAuth في إعدادات Supabase.</Txt>
         <AppButton label="ابدأ كضيف" onPress={continueGuest} variant="ghost" icon="person-outline" disabled={busy} />
-        <Txt muted style={styles.guestHint}>حساب الضيف يحفظ بشكل مستقل، لكن اربطه ببريد أو Google قبل تبديل الجهاز.</Txt>
+        <Txt muted style={styles.guestHint}>حساب الضيف يحفظ تقدمك على هذا الجهاز. اربطه ببريد إلكتروني لتتمكن من استعادته على جهاز آخر.</Txt>
       </Card>
       <View style={styles.footer}><Icon name="sparkles" size={15} color={palette.gold} /><Txt muted style={styles.footerText}>صُمّم ليبقى تقدمك لك وحدك.</Txt></View>
     </KeyboardAvoidingView>
@@ -132,10 +112,6 @@ const styles = StyleSheet.create({
   modeRow: { flexDirection: "row", gap: 8, marginTop: 2 },
   notice: { flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 11, borderRadius: 13, backgroundColor: "rgba(230,199,124,0.09)", borderWidth: 1, borderColor: "rgba(230,199,124,0.20)" },
   noticeText: { flex: 1, fontSize: 13, lineHeight: 21 },
-  separator: { flexDirection: "row", alignItems: "center", gap: 12 },
-  rule: { height: 1, backgroundColor: palette.line, flex: 1 },
-  or: { fontSize: 12 },
-  googleHint: { fontSize: 11, lineHeight: 18, marginTop: -9, textAlign: "center" },
   guestHint: { fontSize: 11, lineHeight: 18, textAlign: "center", marginTop: -9 },
   footer: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 7 },
   footerText: { fontSize: 12 },
