@@ -58,7 +58,8 @@ export function createEconomyCommandHandler(
 
     const url = getEnv("SUPABASE_URL");
     const anonKey = getEnv("SUPABASE_ANON_KEY");
-    if (!url || !anonKey) return json({ error: "Server configuration is incomplete" }, 500);
+    const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !anonKey || !serviceRoleKey) return json({ error: "Server configuration is incomplete" }, 500);
 
     let body: RequestBody;
     try {
@@ -117,13 +118,17 @@ export function createEconomyCommandHandler(
       if (next === state) return json({ error: "Item cannot be unequipped" }, 400);
     }
 
+    // The privileged RPC is called only with the service-role key after the
+    // caller has been authenticated and their save has been scoped above.
+    const adminClient = makeClient(url, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
     const result = {
       commandId: body.commandId,
       commandType: body.command.type,
       state: next,
       soldPrice,
     };
-    const { data: commit, error: commitError } = await client.rpc("commit_player_command", {
+    const { data: commit, error: commitError } = await adminClient.rpc("commit_player_command", {
+      p_user_id: userData.user.id,
       p_command_id: body.commandId,
       p_expected_updated_at: body.expectedUpdatedAt,
       p_game_state: next,
