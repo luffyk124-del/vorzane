@@ -79,7 +79,7 @@ export default function FriendsScreen() {
 
   return <AppScreen>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء والملف" subtitle="أنشئ هويتك داخل العالم، وابحث عن لاعبين وأدر علاقاتك." />
+      <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء" subtitle="ابحث عن لاعبين، وأدر طلبات الصداقة وقائمتك." />
       {notice ? <Card style={styles.notice}><Icon name="information-circle-outline" color={palette.gold} size={18} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
 
       <SectionTitle title={`طلبات الصداقة الواردة (${incoming.length})`} icon="mail-unread-outline" />
