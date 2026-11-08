@@ -198,18 +198,20 @@ test("expedition tasks require their threshold and grant a one-time reward", () 
 
 
 test("character appearance choices persist and old saves receive safe defaults", () => {
+  const defaults = { gender: "male", appearance: 0, hairstyle: "short", face: "classic", outfit: "adventurer", body: "balanced" };
   const fresh = createFreshState();
-  assert.deepEqual(fresh.characterStyle, { gender: "male", appearance: 0 });
+  assert.deepEqual(fresh.characterStyle, defaults);
 
+  const selectedStyle = { gender: "female", appearance: 3, hairstyle: "braids", face: "noble", outfit: "royal", body: "sturdy" };
   const customized = normalizeGameState({
     ...fresh,
     hero: createHeroState("مغامر", "Mage").hero,
-    characterStyle: { gender: "female", appearance: 3 },
+    characterStyle: selectedStyle,
   });
-  assert.deepEqual(customized.characterStyle, { gender: "female", appearance: 3 });
+  assert.deepEqual(customized.characterStyle, selectedStyle);
 
   const legacy = normalizeGameState({ hero: createHeroState("قديم", "Warrior").hero });
-  assert.deepEqual(legacy.characterStyle, { gender: "male", appearance: 0 });
+  assert.deepEqual(legacy.characterStyle, defaults);
 });
 
 
