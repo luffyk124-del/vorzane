@@ -52,7 +52,13 @@ export default function GearScreen() {
     update(() => result.state);
     message("أُضيف العتاد إلى حقيبتك.");
   };
-  const purchasePet = (id: string) => {
+  const purchasePet = async (id: string) => {
+    if (serverEconomyCommandsEnabled) {
+      const result = await executeEconomyCommand({ type: "buyPet", petId: id });
+      if (!result.success) { message(result.error ?? "تعذر شراء الرفيق."); return; }
+      message("انضم رفيق جديد إلى رحلتك.");
+      return;
+    }
     const result = buyPet(state, id);
     if (result.error) { message(result.error); return; }
     update(() => result.state);
@@ -167,7 +173,11 @@ export default function GearScreen() {
         return <Card key={pet.id} style={styles.petCard}>
           <View style={styles.petBadge}><Icon name={pet.icon as never} color={active ? palette.gold : palette.jade} size={23} /></View>
           <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : locked ? <Pill label={`تفعيل مستوى ${pet.requiredLevel}`} tone="muted" /> : null}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التفعيل من المستوى {pet.requiredLevel}</Txt></View>
-          {owned ? <AppButton label={locked ? `مستوى ${pet.requiredLevel}` : active ? "النشط" : "تفعيل"} onPress={() => update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active || locked} /> : <AppButton label={canAfford ? `شراء ${pet.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => purchasePet(pet.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />}
+          {owned ? <AppButton label={locked ? `مستوى ${pet.requiredLevel}` : active ? "النشط" : "تفعيل"} onPress={() => {
+            if (serverEconomyCommandsEnabled) {
+              void executeEconomyCommand({ type: "setPet", petId: pet.id }).then((result) => { if (!result.success) message(result.error ?? "تعذر تفعيل الرفيق."); });
+            } else update((current) => setPet(current, pet.id));
+          }} variant={active ? "secondary" : "jade"} small disabled={active || locked} /> : <AppButton label={canAfford ? `شراء ${pet.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => void purchasePet(pet.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />}
         </Card>;
       })}
       </> : null}
