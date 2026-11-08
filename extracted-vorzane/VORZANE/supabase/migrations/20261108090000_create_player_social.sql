@@ -146,6 +146,225 @@ begin
   if char_length(v_query) < 3 then
     raise exception 'Search query must contain at least 3 characters';
   end if;
+  if v_query !~ '^[[:alnum:]_ -]{3,24}
+  select p.user_id, p.display_name, p.avatar_id,
+    case
+      when exists (
+        select 1 from public.friend_requests f
+        where f.status = 'accepted'
+          and least(f.requester_id, f.recipient_id) = least(v_user_id, p.user_id)
+          and greatest(f.requester_id, f.recipient_id) = greatest(v_user_id, p.user_id)
+      ) then 'friends'
+      when exists (
+        select 1 from public.friend_requests f
+        where f.status = 'pending' and f.requester_id = v_user_id and f.recipient_id = p.user_id
+      ) then 'outgoing'
+      when exists (
+        select 1 from public.friend_requests f
+        where f.status = 'pending' and f.requester_id = p.user_id and f.recipient_id = v_user_id
+      ) then 'incoming'
+      else 'none'
+    end as friend_state
+  from public.player_profiles p
+  where p.is_searchable
+    and p.user_id <> v_user_id
+    and p.display_name ilike '%' || v_query || '%'
+  order by lower(p.display_name)
+  limit 20;
+end;
+$$;
+
+create or replace function public.send_friend_request(p_recipient_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_request_id uuid;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required';
+  end if;
+  if p_recipient_id is null or p_recipient_id = v_user_id then
+    raise exception 'Invalid friend recipient';
+  end if;
+  if not exists (
+    select 1 from public.player_profiles p where p.user_id = v_user_id
+  ) then
+    raise exception 'Create your player profile before sending friend requests';
+  end if;
+  if not exists (
+    select 1 from public.player_profiles p
+    where p.user_id = p_recipient_id and p.is_searchable
+  ) then
+    raise exception 'Player not found';
+  end if;
+
+  -- Serialize sends per account before applying anti-spam quotas.
+  perform 1 from public.player_profiles p
+    where p.user_id = v_user_id
+    for update;
+
+  if (
+    select count(*) from public.friend_requests f
+    where f.requester_id = v_user_id
+      and f.status = 'pending'
+      and f.created_at > now() - interval '1 day'
+  ) >= 20 then
+    raise exception 'Daily pending friend request limit reached';
+  end if;
+  if (
+    select count(*) from public.friend_requests f
+    where f.requester_id = v_user_id
+      and f.created_at > now() - interval '1 day'
+  ) >= 40 then
+    raise exception 'Daily friend request limit reached';
+  end if;
+
+  if exists (
+    select 1 from public.friend_requests f
+    where f.status in ('pending', 'accepted')
+      and least(f.requester_id, f.recipient_id) = least(v_user_id, p_recipient_id)
+      and greatest(f.requester_id, f.recipient_id) = greatest(v_user_id, p_recipient_id)
+  ) then
+    raise exception 'A request or friendship already exists';
+  end if;
+
+  insert into public.friend_requests (requester_id, recipient_id)
+  values (v_user_id, p_recipient_id)
+  returning id into v_request_id;
+
+  return v_request_id;
+end;
+$$;
+
+create or replace function public.respond_friend_request(
+  p_request_id uuid,
+  p_accept boolean
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_rows integer;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required';
+  end if;
+
+  update public.friend_requests
+    set status = case when p_accept then 'accepted' else 'rejected' end,
+        updated_at = now(),
+        responded_at = now()
+  where id = p_request_id
+    and recipient_id = v_user_id
+    and status = 'pending';
+
+  get diagnostics v_rows = row_count;
+  if v_rows <> 1 then
+    raise exception 'Pending friend request not found';
+  end if;
+end;
+$$;
+
+create or replace function public.remove_friend(p_friend_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_rows integer;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required';
+  end if;
+  if p_friend_id is null or p_friend_id = v_user_id then
+    raise exception 'Invalid friend';
+  end if;
+
+  update public.friend_requests
+    set status = 'removed', updated_at = now()
+  where status = 'accepted'
+    and least(requester_id, recipient_id) = least(v_user_id, p_friend_id)
+    and greatest(requester_id, recipient_id) = greatest(v_user_id, p_friend_id);
+
+  get diagnostics v_rows = row_count;
+  if v_rows <> 1 then
+    raise exception 'Friendship not found';
+  end if;
+end;
+$$;
+
+create or replace function public.list_my_friends()
+returns table (
+  user_id uuid,
+  display_name text,
+  avatar_id text,
+  friends_since timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select p.user_id, p.display_name, p.avatar_id, f.created_at
+  from public.friend_requests f
+  join public.player_profiles p
+    on p.user_id = case when f.requester_id = auth.uid() then f.recipient_id else f.requester_id end
+  where f.status = 'accepted'
+    and (f.requester_id = auth.uid() or f.recipient_id = auth.uid())
+  order by lower(p.display_name);
+$$;
+
+create or replace function public.list_incoming_friend_requests()
+returns table (
+  request_id uuid,
+  requester_id uuid,
+  display_name text,
+  avatar_id text,
+  requested_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $
+  select f.id, f.requester_id, p.display_name, p.avatar_id, f.created_at
+  from public.friend_requests f
+  join public.player_profiles p on p.user_id = f.requester_id
+  where f.recipient_id = auth.uid()
+    and f.status = 'pending'
+  order by f.created_at desc
+  limit 50;
+$;
+
+revoke all on function public.upsert_my_profile(text, text) from public, anon;
+revoke all on function public.search_players(text) from public, anon;
+revoke all on function public.set_my_profile_searchable(boolean) from public, anon;
+revoke all on function public.send_friend_request(uuid) from public, anon;
+revoke all on function public.respond_friend_request(uuid, boolean) from public, anon;
+revoke all on function public.remove_friend(uuid) from public, anon;
+revoke all on function public.list_my_friends() from public, anon;
+revoke all on function public.list_incoming_friend_requests() from public, anon;
+
+grant execute on function public.upsert_my_profile(text, text) to authenticated;
+grant execute on function public.search_players(text) to authenticated;
+grant execute on function public.set_my_profile_searchable(boolean) to authenticated;
+grant execute on function public.send_friend_request(uuid) to authenticated;
+grant execute on function public.respond_friend_request(uuid, boolean) to authenticated;
+grant execute on function public.remove_friend(uuid) to authenticated;
+grant execute on function public.list_my_friends() to authenticated;
+grant execute on function public.list_incoming_friend_requests() to authenticated;
+ then
+    raise exception 'Search query contains unsupported characters';
+  end if;
 
   return query
   select p.user_id, p.display_name, p.avatar_id,
