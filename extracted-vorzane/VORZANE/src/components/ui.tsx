@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   headerBackPlaceholder: { width: 74, height: 44 },
   backButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   drawerRoot: { flex: 1, flexDirection: "row-reverse" },
-  drawerScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.68)" },
+  drawerScrim: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.68)" },
   drawerPanel: { width: "82%", maxWidth: 340, height: "100%", paddingTop: 54, paddingHorizontal: 18, paddingBottom: 24, backgroundColor: "#101A24", borderLeftWidth: 1, borderLeftColor: palette.line, gap: 8, elevation: 24 },
   drawerHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: palette.line },
   drawerWordmark: { color: palette.gold, fontSize: 20, fontWeight: "900", letterSpacing: 2 },
