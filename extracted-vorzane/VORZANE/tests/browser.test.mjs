@@ -342,7 +342,7 @@ test("character appearance choices persist in the cloud save and restore after r
   await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).waitFor();
   await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  assert.equal(await page.locator("model-viewer").getAttribute("camera-target"), "0.95m 0.95m 0m", "restored gender must restore the 3D camera focus");
+  await page.getByTestId("fantasy-character-preview").waitFor({ timeout: 10_000 });\n  assert.equal(await page.getByTestId("fantasy-character-preview").isVisible(), true, "the restored fantasy artwork must remain visible");
   await page.getByRole("radio", { name: "درجة اللون 3" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
   await page.getByRole("radio", { name: "تسريحة الشعر: طويل" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
 
