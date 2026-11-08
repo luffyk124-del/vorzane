@@ -128,7 +128,6 @@ export function claimQuest(state: GameState, questId: string): GameState {
 export function buyItem(state: GameState, itemId: string): { state: GameState; error?: string } {
   const item = STARTER_ITEMS.find((candidate) => candidate.id === itemId) ?? DUNGEON_ITEMS.find((candidate) => candidate.id === itemId);
   if (!item) return { state, error: "هذا العنصر غير متاح للشراء." };
-  if (item.slot === "سلاح") return { state, error: "هذا النوع من العناصر غير متاح للشراء." };
   if (!state.hero) return { state, error: "أنشئ شخصية أولًا." };
   if (state.inventory.length >= 500) return { state, error: "حقيبتك ممتلئة؛ بع بعض القطع أولًا." };
   if (state.gold < item.price) return { state, error: "الذهب غير كافٍ." };
@@ -141,7 +140,6 @@ export function equipItem(state: GameState, itemId: string): GameState {
   const template = findEquipmentTemplate(item);
   if (!template) return state;
   if ((state.hero?.level ?? 1) < (template.requiredLevel ?? item.requiredLevel ?? 1)) return state;
-  if (state.dungeonFloor < (template.requiredDungeonFloor ?? item.requiredDungeonFloor ?? 1)) return state;
   const canonicalItem = { ...template, id: item.id, catalogId: template.id, bonus: { ...template.bonus } };
   const nextInventory = state.inventory.filter((candidate) => candidate.id !== itemId);
   const old = state.equipped[canonicalItem.slot];
