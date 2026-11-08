@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Linking, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { useAuth } from "../../src/contexts/AuthContext";
@@ -76,7 +76,7 @@ export default function ProfileScreen() {
 
     <SectionTitle title="مظهر الشخصية" icon="color-palette-outline" />
     <Card style={styles.panel}>
-      <Txt muted style={styles.hint}>يمكنك تغيير المظهر في أي وقت دون التأثير على مستواك أو تقدمك.</Txt>
+      <Txt muted style={styles.hint}>يمكنك تغيير المظهر في أي وقت دون التأثير على مستواك أو تقدمك. تُحفظ اختياراتك تلقائياً مع تقدم اللاعب.</Txt>
       <View style={styles.avatarGrid}>
         {([{ id: "male", label: "ذكر" }, { id: "female", label: "أنثى" }] as const).map((option) => {
           const selected = state.characterStyle.gender === option.id;
@@ -86,6 +86,14 @@ export default function ProfileScreen() {
           </Pressable>;
         })}
       </View>
+      <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL("https://higgsfield.ai/3d-jutsu/33b883b0-edbe-4adf-9ae9-ee5d9960c402"); }} style={styles.modelPreviewLink}>
+        <Icon name="cube-outline" color={palette.gold} size={20} />
+        <View style={{ flex: 1, alignItems: "flex-end", gap: 3 }}>
+          <Txt style={styles.modelPreviewTitle}>معاينة المجسم ثلاثي الأبعاد</Txt>
+          <Txt muted style={styles.modelPreviewHint}>افتح النموذجين الأوليين في عارض منفصل؛ لم يُدمجا داخل اللعبة بعد.</Txt>
+        </View>
+        <Icon name="open-outline" color={palette.muted} size={17} />
+      </Pressable>
       <View style={styles.avatarGrid}>
         {["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"].map((color, index) => {
           const selected = state.characterStyle.appearance === index;
@@ -137,6 +145,9 @@ const styles = StyleSheet.create({
   input: { minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 12, color: palette.text, textAlign: "right", backgroundColor: "#0B171D" },
   hint: { fontSize: 10 },
   avatarGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" },
+  modelPreviewLink: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 14, borderWidth: 1, borderColor: "rgba(230,199,124,0.35)", backgroundColor: "rgba(230,199,124,0.06)" },
+  modelPreviewTitle: { fontSize: 12, fontWeight: "900" },
+  modelPreviewHint: { fontSize: 9, textAlign: "right" },
   appearanceChoice: { flex: 1, minWidth: 65, minHeight: 68, alignItems: "center", justifyContent: "center", gap: 6, padding: 8, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.midnight },
   appearanceSwatch: { width: 22, height: 22, borderRadius: 11 },
   avatarOption: { width: "30%", minWidth: 88, alignItems: "center", justifyContent: "center", gap: 7, padding: 10, borderRadius: 14, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.midnight },
