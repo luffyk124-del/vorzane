@@ -186,8 +186,6 @@ export function createEconomyCommandHandler(
     if (!save) return json({ error: "Player save not found" }, 404);
     const state = normalizeGameState(save.game_state);
     if (!state) return json({ error: "Player state is invalid" }, 409);
-    if (!state.hero && body.command.type !== "createHero") return json({ error: "Create a hero first" }, 409);
-    if (state.hero && body.command.type === "createHero") return json({ error: "Hero already exists" }, 409);
 
     // Resolve a previously committed command before checking the caller's
     // version or re-running game rules. This makes retries safe even when the
@@ -209,6 +207,9 @@ export function createEconomyCommandHandler(
         replayed: true,
       });
     }
+
+    if (!state.hero && body.command.type !== "createHero") return json({ error: "Create a hero first" }, 409);
+    if (state.hero && body.command.type === "createHero") return json({ error: "Hero already exists" }, 409);
 
     if (body.expectedUpdatedAt !== save.updated_at) {
       return json({ error: "Save changed; reload and retry", updatedAt: save.updated_at }, 409);
