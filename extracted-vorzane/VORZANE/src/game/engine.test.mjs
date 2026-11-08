@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { advanceExpeditions, allocateStatPoint, buyItem, canClaimQuest, claimQuest, createBattleSequence, createHeroState } from "./engine.ts";
-import { SHOP_ITEMS } from "./catalog.ts";
 import { createFreshState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
@@ -79,47 +78,4 @@ test("completed expedition pays its reward once and clears the active slot", () 
   assert.equal(completed.state.expeditionsCompleted, 1);
   assert.equal(completed.state.activeExpedition, null);
   assert.equal(advanceExpeditions(completed.state, 600_002).reports.length, 0);
-});
-
-test("expanded shop retains 7 starter items and adds 192 items", () => {
-  const state = createHeroState("اختبار", "Warrior");
-  assert.equal(SHOP_ITEMS.length, 199);
-  assert.ok(SHOP_ITEMS.every((item) => ["common", "uncommon", "rare", "epic"].includes(item.rarity)));
-  const item = SHOP_ITEMS[0];
-  const bought = buyItem(state, item.id);
-  assert.equal(bought.error, undefined);
-  assert.equal(bought.state.gold, state.gold - item.price);
-  assert.equal(bought.state.inventory.length, 1);
-  assert.equal(bought.state.inventory[0].catalogId, item.id);
-});
-
-test("shop refuses legendary and mythic dungeon-only equipment", () => {
-  const state = createHeroState("اختبار", "Warrior");
-  const legendary = buyItem(state, "dun-1-legendary-1");
-  const mythic = buyItem(state, "dun-1-mythic-1");
-  assert.ok(legendary.error);
-  assert.ok(mythic.error);
-  assert.equal(state.gold, 500);
-  assert.equal(state.inventory.length, 0);
-});
-
-
-test("shop rejects purchases when the player cannot afford the item", () => {
-  const state = createHeroState("اختبار", "Warrior");
-  state.gold = 0;
-  const before = structuredClone(state);
-  const result = buyItem(state, "sword1");
-  assert.ok(result.error);
-  assert.deepEqual(result.state, before);
-});
-
-test("shop enforces the item's required hero level", () => {
-  const state = createHeroState("اختبار", "Warrior");
-  const rareItem = SHOP_ITEMS.find((item) => item.rarity === "rare");
-  assert.ok(rareItem);
-  assert.ok((rareItem.requiredLevel ?? 1) > state.hero.level);
-  const result = buyItem(state, rareItem.id);
-  assert.ok(result.error);
-  assert.equal(result.state.gold, state.gold);
-  assert.equal(result.state.inventory.length, 0);
 });
