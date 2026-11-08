@@ -230,7 +230,7 @@ test("daily missions reset by date and rewards can only be claimed once", () => 
 
   const nextDay = ensureMissionPeriods(claimed, start + 86_400_000);
   assert.equal(getRecurringMissions(nextDay, "daily", start + 86_400_000).find((mission) => mission.id === "daily-wins")?.progress, 0);
-  assert.equal(getRecurringMissions(nextDay, "weekly", start + 86_400_000).find((mission) => mission.id === "weekly-wins")?.progress, 0);
+  assert.equal(getRecurringMissions(nextDay, "weekly", start + 86_400_000).find((mission) => mission.id === "weekly-wins")?.progress, 2, "weekly progress must continue across days");
 });
 
 test("weekly and seasonal mission progress uses period baselines", () => {
