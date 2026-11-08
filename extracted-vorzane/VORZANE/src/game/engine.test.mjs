@@ -81,7 +81,7 @@ test("completed expedition pays its reward once and clears the active slot", () 
   assert.equal(advanceExpeditions(completed.state, 600_002).reports.length, 0);
 });
 
-test("expanded shop contains 192 items and sells only common through epic gear", () => {
+test("expanded shop retains 7 starter items and adds 192 items", () => {
   const state = createHeroState("اختبار", "Warrior");
   assert.equal(SHOP_ITEMS.length, 199);
   assert.ok(SHOP_ITEMS.every((item) => ["common", "uncommon", "rare", "epic"].includes(item.rarity)));
