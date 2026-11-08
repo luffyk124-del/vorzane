@@ -102,3 +102,24 @@ test("shop refuses legendary and mythic dungeon-only equipment", () => {
   assert.equal(state.gold, 500);
   assert.equal(state.inventory.length, 0);
 });
+
+
+test("shop rejects purchases when the player cannot afford the item", () => {
+  const state = createHeroState("اختبار", "Warrior");
+  state.gold = 0;
+  const before = structuredClone(state);
+  const result = buyItem(state, "sword1");
+  assert.ok(result.error);
+  assert.deepEqual(result.state, before);
+});
+
+test("shop enforces the item's required hero level", () => {
+  const state = createHeroState("اختبار", "Warrior");
+  const rareItem = SHOP_ITEMS.find((item) => item.rarity === "rare");
+  assert.ok(rareItem);
+  assert.ok((rareItem.requiredLevel ?? 1) > state.hero.level);
+  const result = buyItem(state, rareItem.id);
+  assert.ok(result.error);
+  assert.equal(result.state.gold, state.gold);
+  assert.equal(result.state.inventory.length, 0);
+});
