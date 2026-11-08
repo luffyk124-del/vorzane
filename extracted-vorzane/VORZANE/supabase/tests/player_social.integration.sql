@@ -49,6 +49,9 @@ begin
         raise;
       end if;
   end;
+  if exists (select 1 from public.search_players('___')) then
+    raise exception 'Underscores were treated as search wildcards';
+  end if;
   v_request := public.send_friend_request(v_alice);
 
   -- Only the recipient may respond to a request.
