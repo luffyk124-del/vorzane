@@ -9,9 +9,10 @@ import { rarityColor, palette } from "../../src/theme";
 import { useGame } from "../../src/contexts/GameContext";
 
 type Tab = "equipment" | "shop" | "market";
-type ShopCategory = "all" | "armor" | "accessories" | "companions";
+type ShopCategory = "all" | "weapons" | "armor" | "accessories" | "companions";
 const SHOP_CATEGORIES: { id: ShopCategory; label: string }[] = [
   { id: "all", label: "الكل" },
+  { id: "weapons", label: "الأسلحة" },
   { id: "armor", label: "الدروع" },
   { id: "accessories", label: "الإكسسوارات" },
   { id: "companions", label: "الرفقاء" },
@@ -26,9 +27,10 @@ export default function GearScreen() {
   const stats = combatStats(state);
   const heroLevel = state.hero?.level ?? 0;
   const equippedCount = useMemo(() => Object.values(state.equipped).filter(Boolean).length, [state.equipped]);
-  const shopItems = useMemo(() => [...STARTER_ITEMS, ...DUNGEON_ITEMS].filter((item) => item.slot !== "سلاح"), []);
+  const shopItems = useMemo(() => [...STARTER_ITEMS, ...DUNGEON_ITEMS], []);
   const visibleShopItems = useMemo(() => {
     if (shopCategory === "all" || shopCategory === "companions") return shopCategory === "all" ? shopItems : [];
+    if (shopCategory === "weapons") return shopItems.filter((item) => item.slot === "سلاح");
     if (shopCategory === "armor") return shopItems.filter((item) => item.slot === "درع" || item.slot === "خوذة");
     return shopItems.filter((item) => !["سلاح", "درع", "خوذة"].includes(item.slot));
   }, [shopCategory, shopItems]);
@@ -102,8 +104,8 @@ export default function GearScreen() {
       {state.inventory.length ? state.inventory.map((item) => {
         const template = findEquipmentTemplate(item);
         const shown = template ?? item;
-        const locked = !template || !state.hero || heroLevel < (shown.requiredLevel ?? 1) || state.dungeonFloor < (shown.requiredDungeonFloor ?? 1);
-        const required = `مستوى ${shown.requiredLevel ?? 1}${shown.requiredDungeonFloor && shown.requiredDungeonFloor > 1 ? ` • طابق ${shown.requiredDungeonFloor}` : ""}`;
+        const locked = !template || !state.hero || heroLevel < (shown.requiredLevel ?? 1);
+        const required = `مستوى ${shown.requiredLevel ?? 1}`;
         return <Card key={item.id} style={styles.itemRow}>
           <AppButton label={locked ? "مقيّد" : "جهّز"} onPress={() => fpsMode ? void command({ type: "equipItem", itemId: item.id }) : update((current) => equipItem(current, item.id))} variant={locked ? "secondary" : "jade"} small disabled={locked} />
           <View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt><Txt muted style={styles.itemBonus}>{shown.slot} • {Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>يتطلب {required}</Txt></View>
@@ -114,7 +116,7 @@ export default function GearScreen() {
 
     {tab === "shop" ? <>
       <SectionTitle title="متجر العالم" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("ar-EG")} ذهب`} icon="cash-outline" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>الدروع والخوذ والقفازات والأحذية والإكسسوارات وقطع الزنزانة والرفقاء ظاهرة مع أسعارها. تستطيع الشراء بأي مستوى؛ التجهيز والتفعيل يظلان مرتبطين بمتطلبات المستوى والطابق.</Txt><Txt style={styles.poolNote}>{shopItems.length.toLocaleString("ar-EG")} قطعة عتاد • {PETS.length} رفقاء</Txt></Card>
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>الأسلحة والدروع والخوذ والقفازات والأحذية والإكسسوارات والرفقاء متاحة بأسعار متدرجة. لا توجد قيود طوابق على العتاد؛ بعض القطع تتطلب مستوى مناسبًا للتجهيز فقط.</Txt><Txt style={styles.poolNote}>{shopItems.length.toLocaleString("ar-EG")} قطعة عتاد • {PETS.length} رفقاء</Txt></Card>
       <View style={styles.shopFilters}>
         {SHOP_CATEGORIES.map((category) => <Pressable key={category.id} onPress={() => setShopCategory(category.id)} style={[styles.shopFilter, shopCategory === category.id && styles.shopFilterActive]}>
           <Txt style={[styles.shopFilterText, shopCategory === category.id && styles.shopFilterTextActive]}>{category.label}</Txt>
@@ -124,7 +126,7 @@ export default function GearScreen() {
         const canAfford = state.gold >= item.price;
         return <Card key={item.id} style={styles.itemRow}>
           <AppButton label={canAfford ? `شراء ${item.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => purchaseItem(item.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التجهيز: مستوى {item.requiredLevel ?? 1}{(item.requiredDungeonFloor ?? 1) > 1 ? ` • طابق ${item.requiredDungeonFloor}` : ""}</Txt></View>
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التجهيز: مستوى {item.requiredLevel ?? 1}</Txt></View>
           <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
         </Card>;
       })}
@@ -152,7 +154,7 @@ export default function GearScreen() {
         const sellPrice = getEquipmentSellPrice(item);
         return <Card key={`sale-${item.id}`} style={styles.itemRow}>
           <AppButton label={sellPrice === null ? "غير معتمد" : `بيع ${sellPrice}`} icon="cash-outline" onPress={() => sellOwnedItem(item.id)} variant={sellPrice === null ? "secondary" : "jade"} small disabled={sellPrice === null} />
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={equipped ? "مجهّز" : RARITY_LABELS[shown.rarity]} tone={equipped ? "muted" : shown.rarity === "legendary" || shown.rarity === "mythic" ? "gold" : shown.rarity === "epic" || shown.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt></View><Txt muted style={styles.itemBonus}>{shown.slot} • {Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التجهيز: مستوى {shown.requiredLevel ?? 1}{shown.requiredDungeonFloor && shown.requiredDungeonFloor > 1 ? ` • طابق ${shown.requiredDungeonFloor}` : ""}</Txt></View>
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={equipped ? "مجهّز" : RARITY_LABELS[shown.rarity]} tone={equipped ? "muted" : shown.rarity === "legendary" || shown.rarity === "mythic" ? "gold" : shown.rarity === "epic" || shown.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt></View><Txt muted style={styles.itemBonus}>{shown.slot} • {Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التجهيز: مستوى {shown.requiredLevel ?? 1}</Txt></View>
           <Icon name={(shown.icon ?? "ellipse") as never} color={rarityColor[shown.rarity]} size={20} />
         </Card>;
       }) : <Card style={styles.empty}><Icon name="pricetag-outline" color={palette.dim} size={22} /><Txt muted>لا توجد قطع للبيع الآن. انتصر في الزنزانة لتحصل على غنائم جديدة.</Txt></Card>}
