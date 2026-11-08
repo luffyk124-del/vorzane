@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 9 },
   },
-  art: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
+  art: { ...StyleSheet.absoluteFill, width: "100%", height: "100%" },
   fallback: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: FALLBACK, gap: 8 },
   fallbackGlyph: { color: "#E6C77C", fontSize: 78, lineHeight: 90 },
   fallbackTitle: { color: "#F5E6C5", fontSize: 24, fontWeight: "900" },
