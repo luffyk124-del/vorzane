@@ -125,6 +125,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
   const economyQueueRef = useRef<Promise<EconomyCommandResult>>(Promise.resolve({ success: false, enabled: false }));
+  const pendingCommandRef = useRef<{ fingerprint: string; commandId: string; expectedUpdatedAt: string } | null>(null);
   const cloudUpdatedAtRef = useRef<string | null>(null);
   const skipNextEffectRef = useRef(false);
   const stateRef = useRef(state);
@@ -160,6 +161,7 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   const loadForUser = useCallback(async (userId: string, generation: number) => {
     activeUserRef.current = userId;
+    pendingCommandRef.current = null;
     syncReadyRef.current = null;
     cloudUpdatedAtRef.current = null;
     setStatus("loading");
@@ -262,6 +264,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (!currentUserId) {
       activeUserRef.current = null;
+      pendingCommandRef.current = null;
       syncReadyRef.current = null;
       cloudUpdatedAtRef.current = null;
       setMigration(null);
@@ -325,16 +328,28 @@ export function GameProvider({ children }: PropsWithChildren) {
       const flushed = await persistSnapshot(stateRef.current, currentUserId);
       if (!flushed) return { success: false, enabled: true, error: "تعذر مزامنة الحفظ قبل تنفيذ العملية." };
 
-      const expectedUpdatedAt = cloudUpdatedAtRef.current;
+      const fingerprint = JSON.stringify(command);
+      const pending = pendingCommandRef.current;
+      if (pending && pending.fingerprint !== fingerprint) {
+        return { success: false, enabled: true, error: "هناك عملية سابقة لم يصل تأكيدها. أعد المحاولة للعملية نفسها أولًا." };
+      }
+      const expectedUpdatedAt = pending?.expectedUpdatedAt ?? cloudUpdatedAtRef.current;
       if (!expectedUpdatedAt) return { success: false, enabled: true, error: "لم يتم تأكيد نسخة الحفظ السحابية؛ أعد تحميل تقدمك." };
+      const commandId = pending?.commandId ?? createCommandId();
+      pendingCommandRef.current = { fingerprint, commandId, expectedUpdatedAt };
 
       const { data, error } = await supabase.functions.invoke("economy-command", {
-        body: { commandId: createCommandId(), expectedUpdatedAt, command },
+        body: { commandId, expectedUpdatedAt, command },
       });
       if (error) {
         const message = typeof data?.error === "string" ? data.error : error.message;
-        if (error.message.includes("409") || message.toLowerCase().includes("save changed")) {
+        const statusCode = (error as unknown as { context?: { status?: number } }).context?.status;
+        if (statusCode === 409 || error.message.includes("409") || message.toLowerCase().includes("save changed")) {
+          pendingCommandRef.current = null;
           return { success: false, enabled: true, error: "تغيّر الحفظ من جهاز آخر. أعد تحميل تقدمك ثم حاول مجددًا." };
+        }
+        if (statusCode && statusCode >= 400 && statusCode < 500 && statusCode !== 408 && statusCode !== 429) {
+          pendingCommandRef.current = null;
         }
         return { success: false, enabled: true, error: message || "تعذر تنفيذ العملية على الخادم." };
       }
@@ -344,6 +359,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         return { success: false, enabled: true, error: "استجابة الخادم غير صالحة؛ لم نحدّث الحفظ المحلي." };
       }
 
+      pendingCommandRef.current = null;
       cloudUpdatedAtRef.current = data.updatedAt;
       stateRef.current = next;
       skipNextEffectRef.current = true;
