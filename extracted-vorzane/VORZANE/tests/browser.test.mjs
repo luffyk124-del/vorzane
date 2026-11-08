@@ -205,8 +205,8 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await signInWithMock(page);
       await page.getByText("2 نقطة متاحة", { exact: true }).waitFor();
       await page.getByRole("button", { name: "فتح القائمة" }).click();
-      await page.getByRole("button", { name: "الملف الشخصي" }).waitFor();
-      await page.getByRole("button", { name: "الملف الشخصي" }).click();
+      await page.getByRole("button", { name: "الملف الشخصي", exact: true }).waitFor();
+      await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
       await page.getByText("هويتك في العالم", { exact: true }).waitFor({ timeout: 10_000 });
       await page.getByRole("button", { name: "رجوع" }).click();
       await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
@@ -295,4 +295,40 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   assert.deepEqual(unexpectedRequests, []);
   assert.deepEqual(pageErrors, []);
   await browserContext.close();
+});
+
+
+test("character appearance choices persist in the cloud save and restore after reload", async () => {
+  const store = { state: saveFixture(), writes: [] };
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  const { writes, unexpectedRequests } = await installSupabaseMock(page, { store });
+
+  await signInWithMock(page);
+  await page.getByRole("button", { name: "فتح القائمة" }).click();
+  await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
+  await page.getByText("مظهر الشخصية", { exact: true }).waitFor({ timeout: 10_000 });
+
+  await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).click();
+  await page.getByRole("radio", { name: "درجة اللون 3" }).click();
+  await page.getByRole("radio", { name: "تسريحة الشعر: طويل" }).click();
+
+  const deadline = Date.now() + 10_000;
+  while ((!writes.length || store.state.characterStyle?.hairstyle !== "long") && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.equal(store.state.characterStyle.gender, "female");
+  assert.equal(store.state.characterStyle.appearance, 2);
+  assert.equal(store.state.characterStyle.hairstyle, "long");
+  assert.deepEqual(unexpectedRequests, []);
+
+  await page.reload();
+  await page.getByRole("button", { name: "فتح القائمة" }).click();
+  await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
+  await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).waitFor();
+  await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
+  await page.getByRole("radio", { name: "درجة اللون 3" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
+  await page.getByRole("radio", { name: "تسريحة الشعر: طويل" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
+
+  await context.close();
 });

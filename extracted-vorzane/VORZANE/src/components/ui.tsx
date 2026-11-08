@@ -64,7 +64,7 @@ export function AppScreen({ children, scroll = true, contentStyle, safe = true }
           </View>
           {gameMenuItems.map((item) => {
             const active = pathname.endsWith(item.href.split("/").at(-1) ?? "");
-            return <Pressable key={item.href} accessibilityRole="button" onPress={() => { setMenuOpen(false); if (!active) router.push(item.href); }} style={[styles.drawerItem, active && styles.drawerItemActive]}>
+            return <Pressable key={item.href} accessibilityRole="button" accessibilityLabel={item.label} onPress={() => { setMenuOpen(false); if (!active) router.push(item.href); }} style={[styles.drawerItem, active && styles.drawerItemActive]}>
               <Icon name={item.icon} size={19} color={active ? palette.ink : palette.jade} />
               <Txt style={[styles.drawerItemText, active && styles.drawerItemTextActive]}>{item.label}</Txt>
             </Pressable>;
@@ -187,16 +187,16 @@ export function StatCard({ label, value, icon, color = palette.gold }: { label: 
 const styles = StyleSheet.create({
   safe: { flex: 1, width: "100%", alignItems: "center" },
   gameHeader: { width: "100%", maxWidth: 560, minHeight: 62, paddingHorizontal: 17, flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: palette.line, backgroundColor: "#0D141E" },
-  menuButton: { minWidth: 74, minHeight: 44, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 5 },
+  menuButton: { position: "absolute", right: 17, top: 9, zIndex: 2, minWidth: 74, minHeight: 44, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 5 },
   menuButtonText: { color: palette.gold, fontSize: 12, fontWeight: "900" },
   headerBrand: { flex: 1, alignItems: "center", gap: 1 },
   headerWordmark: { color: palette.gold, fontSize: 15, fontWeight: "900", letterSpacing: 2 },
   headerPage: { fontSize: 10 },
   headerBackPlaceholder: { width: 74, height: 44 },
-  backButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  backButton: { position: "absolute", left: 17, top: 9, width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   drawerRoot: { flex: 1, flexDirection: "row-reverse" },
   drawerScrim: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.68)" },
-  drawerPanel: { width: "82%", maxWidth: 340, height: "100%", paddingTop: 54, paddingHorizontal: 18, paddingBottom: 24, backgroundColor: "#101A24", borderLeftWidth: 1, borderLeftColor: palette.line, gap: 8, elevation: 24 },
+  drawerPanel: { position: "absolute", right: 0, top: 0, bottom: 0, width: "82%", maxWidth: 340, height: "100%", paddingTop: 54, paddingHorizontal: 18, paddingBottom: 24, backgroundColor: "#101A24", borderLeftWidth: 1, borderLeftColor: palette.line, gap: 8, elevation: 24 },
   drawerHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: palette.line },
   drawerWordmark: { color: palette.gold, fontSize: 20, fontWeight: "900", letterSpacing: 2 },
   drawerSubtitle: { fontSize: 11, marginTop: 3 },

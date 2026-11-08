@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, TextInput, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { useAuth } from "../../src/contexts/AuthContext";
@@ -23,27 +23,31 @@ export default function FriendsScreen() {
   const [incoming, setIncoming] = useState<IncomingFriendRequest[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const mountedRef = useRef(true);
 
-  const refresh = async () => {
-    if (!user) return;
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const refresh = useCallback(async () => {
+    if (!user?.id) return;
     const [friendRows, requestRows] = await Promise.all([
       listMyFriends(),
       listIncomingFriendRequests(),
     ]);
+    if (!mountedRef.current) return;
     setFriends(friendRows);
     setIncoming(requestRows);
-  };
+  }, [user?.id]);
 
   useEffect(() => {
-    let active = true;
-    if (user?.id) {
-      void refresh().catch((error) => {
-        if (!active) return;
-        setNotice(error instanceof Error ? error.message : "تعذر تحديث قائمة الأصدقاء. حاول مجددًا.");
-      });
-    }
-    return () => { active = false; };
-  }, [user?.id]);
+    if (!user?.id) return;
+    void refresh().catch((error) => {
+      if (!mountedRef.current) return;
+      setNotice(error instanceof Error ? error.message : "تعذر تحديث قائمة الأصدقاء. حاول مجددًا.");
+    });
+  }, [refresh]);
 
   useEffect(() => { setResults([]); }, [query]);
 
@@ -55,9 +59,9 @@ export default function FriendsScreen() {
       await refresh();
       setNotice(success);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "تعذر تنفيذ العملية.");
+      if (mountedRef.current) setNotice(error instanceof Error ? error.message : "تعذر تنفيذ العملية.");
     } finally {
-      setBusy(false);
+      if (mountedRef.current) setBusy(false);
     }
   };
 
@@ -69,11 +73,12 @@ export default function FriendsScreen() {
     setBusy(true);
     setNotice("");
     try {
-      setResults(await searchPlayers(query.trim()));
+      const players = await searchPlayers(query.trim());
+      if (mountedRef.current) setResults(players);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "تعذر البحث عن اللاعبين.");
+      if (mountedRef.current) setNotice(error instanceof Error ? error.message : "تعذر البحث عن اللاعبين.");
     } finally {
-      setBusy(false);
+      if (mountedRef.current) setBusy(false);
     }
   };
 
