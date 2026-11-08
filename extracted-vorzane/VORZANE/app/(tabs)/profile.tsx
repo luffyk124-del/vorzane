@@ -94,7 +94,7 @@ export default function ProfileScreen() {
 
     <SectionTitle title="مظهر الشخصية" icon="color-palette-outline" />
     <Card style={styles.panel}>
-      <Txt muted style={styles.hint}>استعرض بطلك برسوم فنتازية أصلية لكل فئة. خيارات المظهر التي تختارها تُحفظ في ملفك، وتظهر هوية الفئة الحالية في لوحة العرض.</Txt>
+      <Txt muted style={styles.hint}>اصنع مظهر بطلك الفنتازي: اختر البشرة والشعر والملامح والدرع والبنية، وستنعكس اختياراتك مباشرة على الرسم.</Txt>
       <View style={styles.avatarGrid}>
         {([{ id: "male", label: "ذكر" }, { id: "female", label: "أنثى" }] as const).map((option) => {
           const selected = state.characterStyle.gender === option.id;
@@ -106,11 +106,11 @@ export default function ProfileScreen() {
       </View>
       <CharacterModelViewer gender={state.characterStyle.gender} className={state.hero?.className ?? "Warrior"} />
       <View style={styles.avatarGrid}>
-        {["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"].map((color, index) => {
+        {["#F4C9A5", "#DDA47C", "#B87955", "#80543F"].map((color, index) => {
           const selected = state.characterStyle.appearance === index;
-          return <Pressable key={color} accessibilityRole="radio" accessibilityLabel={`درجة اللون ${index + 1}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, appearance: index as 0 | 1 | 2 | 3 } }))} style={[styles.appearanceChoice, selected && styles.avatarSelected]}>
+          return <Pressable key={color} accessibilityRole="radio" accessibilityLabel={`درجة البشرة ${index + 1}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, appearance: index as 0 | 1 | 2 | 3 } }))} style={[styles.appearanceChoice, selected && styles.avatarSelected]}>
             <View style={[styles.appearanceSwatch, { backgroundColor: color }]} />
-            <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>درجة اللون {index + 1}</Txt>
+            <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>درجة البشرة {index + 1}</Txt>
           </Pressable>;
         })}
       </View>
