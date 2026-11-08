@@ -24,36 +24,36 @@ test("shop rejects unknown items without changing the save", () => {
   assert.equal(state.inventory.length, 0);
 });
 
-test("players can buy high-level gear early but cannot equip it before its level", () => {
+test("players can buy high-level armor early but cannot equip it before its level", () => {
   const state = createHeroState("اختبار", "Mage");
-  state.gold = 2_000_000;
+  state.gold = 1_000_000;
 
-  const purchased = buyItem(state, "eclipse-bow50");
+  const purchased = buyItem(state, "armor30");
   assert.equal(purchased.error, undefined);
-  assert.equal(purchased.state.gold, 500_000);
+  assert.equal(purchased.state.gold, 680_000);
   assert.equal(purchased.state.inventory.length, 1);
   const ownedItem = purchased.state.inventory[0];
-  assert.equal(ownedItem.catalogId, "eclipse-bow50");
+  assert.equal(ownedItem.catalogId, "armor30");
 
   const blocked = equipItem(purchased.state, ownedItem.id);
   assert.equal(blocked, purchased.state, "level requirement must block equipping");
-  assert.equal(blocked.equipped["سلاح"], undefined);
+  assert.equal(blocked.equipped["درع"], undefined);
 
-  const eligible = { ...purchased.state, hero: { ...purchased.state.hero, level: 50 } };
+  const eligible = { ...purchased.state, hero: { ...purchased.state.hero, level: 30 } };
   const equipped = equipItem(eligible, ownedItem.id);
-  assert.equal(equipped.equipped["سلاح"]?.catalogId, "eclipse-bow50");
+  assert.equal(equipped.equipped["درع"]?.catalogId, "armor30");
   assert.equal(equipped.inventory.length, 0);
 });
 
-test("the complete dungeon loot catalogue is visible for early purchase but remains level and floor gated", () => {
+test("non-weapon dungeon equipment can be purchased early but remains level and floor gated", () => {
   const state = createHeroState("اختبار", "Mage");
   state.gold = 10_000;
 
-  const purchased = buyItem(state, "dun-1-mythic-1");
+  const purchased = buyItem(state, "dun-2-mythic-1");
   assert.equal(purchased.error, undefined);
   assert.equal(purchased.state.inventory.length, 1);
   const owned = purchased.state.inventory[0];
-  assert.equal(owned.catalogId, "dun-1-mythic-1");
+  assert.equal(owned.catalogId, "dun-2-mythic-1");
 
   const earlyEquip = equipItem(purchased.state, owned.id);
   assert.equal(earlyEquip, purchased.state);
@@ -62,7 +62,7 @@ test("the complete dungeon loot catalogue is visible for early purchase but rema
   assert.equal(equipItem(levelReady, owned.id), levelReady, "dungeon floor requirement must still apply");
 
   const floorReady = { ...levelReady, dungeonFloor: 40 };
-  assert.equal(equipItem(floorReady, owned.id).equipped["سلاح"]?.catalogId, "dun-1-mythic-1");
+  assert.equal(equipItem(floorReady, owned.id).equipped["درع"]?.catalogId, "dun-2-mythic-1");
 });
 
 test("players can buy high-level companions early but cannot activate them early", () => {
