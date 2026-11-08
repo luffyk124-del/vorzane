@@ -4,20 +4,20 @@
 
 begin;
 
-insert into auth.users (id, aud, role, email)
+insert into auth.users (id)
 values
-  ('00000000-0000-0000-0000-00000000000a', 'authenticated', 'authenticated', 'rls-a@test.local'),
-  ('00000000-0000-0000-0000-00000000000b', 'authenticated', 'authenticated', 'rls-b@test.local')
+  ('00000000-0000-0000-0000-00000000000a'),
+  ('00000000-0000-0000-0000-00000000000b')
 on conflict (id) do nothing;
 
 -- Owner A writes own save.
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}', true);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', true);
 insert into public.player_saves (user_id, game_state)
 values ('00000000-0000-0000-0000-00000000000a', '{"gold":10}');
 
 -- B must not read A's save.
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000b","role":"authenticated"}', true);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', true);
 do $$ begin
   if (select count(*) from public.player_saves where user_id = '00000000-0000-0000-0000-00000000000a') <> 0 then
     raise exception 'RLS FAIL: B can read A save';
@@ -27,7 +27,7 @@ end $$;
 -- B must not update A's save.
 update public.player_saves set game_state = '{"gold":999999}'
   where user_id = '00000000-0000-0000-0000-00000000000a';
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}', true);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', true);
 do $$ begin
   if (select game_state->>'gold' from public.player_saves where user_id = '00000000-0000-0000-0000-00000000000a') <> '10' then
     raise exception 'RLS FAIL: B modified A save';
@@ -35,9 +35,9 @@ do $$ begin
 end $$;
 
 -- B must not delete A's save.
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000b","role":"authenticated"}', true);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', true);
 delete from public.player_saves where user_id = '00000000-0000-0000-0000-00000000000a';
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}', true);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', true);
 do $$ begin
   if not exists (select 1 from public.player_saves where user_id = '00000000-0000-0000-0000-00000000000a') then
     raise exception 'RLS FAIL: B deleted A save';
@@ -45,7 +45,7 @@ do $$ begin
 end $$;
 
 -- Size limit: oversized payload must be rejected for new rows.
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000b","role":"authenticated"}', true);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', true);
 do $$ begin
   begin
     insert into public.player_saves (user_id, game_state)
