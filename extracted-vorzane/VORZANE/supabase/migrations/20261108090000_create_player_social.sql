@@ -297,6 +297,28 @@ as $$
   order by lower(p.display_name);
 $$;
 
+create or replace function public.list_incoming_friend_requests()
+returns table (
+  request_id uuid,
+  requester_id uuid,
+  display_name text,
+  avatar_id text,
+  requested_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $
+  select f.id, f.requester_id, p.display_name, p.avatar_id, f.created_at
+  from public.friend_requests f
+  join public.player_profiles p on p.user_id = f.requester_id
+  where f.recipient_id = auth.uid()
+    and f.status = 'pending'
+  order by f.created_at desc
+  limit 50;
+$;
+
 revoke all on function public.upsert_my_profile(text, text) from public, anon;
 revoke all on function public.search_players(text) from public, anon;
 revoke all on function public.set_my_profile_searchable(boolean) from public, anon;
@@ -304,6 +326,7 @@ revoke all on function public.send_friend_request(uuid) from public, anon;
 revoke all on function public.respond_friend_request(uuid, boolean) from public, anon;
 revoke all on function public.remove_friend(uuid) from public, anon;
 revoke all on function public.list_my_friends() from public, anon;
+revoke all on function public.list_incoming_friend_requests() from public, anon;
 
 grant execute on function public.upsert_my_profile(text, text) to authenticated;
 grant execute on function public.search_players(text) to authenticated;
@@ -312,3 +335,4 @@ grant execute on function public.send_friend_request(uuid) to authenticated;
 grant execute on function public.respond_friend_request(uuid, boolean) to authenticated;
 grant execute on function public.remove_friend(uuid) to authenticated;
 grant execute on function public.list_my_friends() to authenticated;
+grant execute on function public.list_incoming_friend_requests() to authenticated;
