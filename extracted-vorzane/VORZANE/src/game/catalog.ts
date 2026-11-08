@@ -1,4 +1,4 @@
-import type { BattleMode, ClassId, EquipmentItem, StatKey } from "./model";
+import type { BattleMode, ClassId, EquipmentItem, StatKey } from "./model.ts";
 
 export const PETS: { id: string; name: string; icon: string; bonus: Partial<Record<StatKey, number>>; price: number; requiredLevel: number; description: string }[] = [
   { id: "wolf", name: "ذئب الرماد", icon: "paw", bonus: { agi: 2 }, price: 300, requiredLevel: 1, description: "رفيق البداية؛ يرفع الرشاقة قليلًا." },
