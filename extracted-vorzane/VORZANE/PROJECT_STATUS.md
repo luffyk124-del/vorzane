@@ -20,6 +20,10 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Added an original SVG fantasy character preview.
 - Connected character appearance selections to the character preview.
 - Updated browser tests for character preview and appearance controls.
+- Merged PR #6 (character customization and 2D model preview) after all CI checks passed: desktop/mobile browser flows, game-system tests, TypeScript, Supabase Edge Function checks/tests, web export, and isolated social DB tests. Merge commit: `cdc25cc64d941276ca9e8f03de6bd316f5b77738`.
+- Merged PR #9 (save-data integrity and ownership protections) in commit `004ac127d3b661982de88058743983cd3b862b57`.
+- Merged PR #10 (server-authority design for progression, rewards, and combat outcomes) in commit `3d6598a9ffd4fc011410adb0e2958f493191cc09`.
+- Merged PR #11 (authenticated, read-only game-state Edge Function) in commit `a507b530f77f806c9330324aa113c9d25d3ae902`; its dedicated Deno checks and tests passed.
 - Fixed the character page import issue and friends-page database mock behavior in browser tests.
 - Verified desktop/mobile browser flows, TypeScript checks, web build, and isolated social database tests on the latest recorded main commit.
 - GitHub Pages deployment succeeded for commit `3ddb226a59f78356038180575e7641e02648a981`.
@@ -54,6 +58,10 @@ This file records the actual state of the VORZANE project. Update it after each 
 | Date | Commit | Verification |
 |---|---|---|
 | 2026-11-08 | `3ddb226a59f78356038180575e7641e02648a981` | Desktop/mobile browser flows, TypeScript checks, web build, isolated social DB tests, and GitHub Pages deployment passed. |
+| 2026-11-08 | `004ac127d3b661982de88058743983cd3b862b57` | PR #9 merged: isolated PostgreSQL ownership and save-size validation checks passed. |
+| 2026-11-08 | `3d6598a9ffd4fc011410adb0e2958f493191cc09` | PR #10 merged: server-authority architecture specification; documentation-only change. |
+| 2026-11-08 | `a507b530f77f806c9330324aa113c9d25d3ae902` | PR #11 merged: authenticated read-only game-state function; Deno typecheck and tests passed. |
+| 2026-11-08 | `cdc25cc64d941276ca9e8f03de6bd316f5b77738` | PR #6 merged: game tests, desktop/mobile browser flows, TypeScript, Edge Function checks/tests, web build, and social DB tests passed. PR deployment job was skipped as expected; post-merge Pages deployment must be checked separately. |
 
 ## Update policy
 
