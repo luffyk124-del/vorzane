@@ -6,16 +6,33 @@ export const PETS: { id: string; name: string; icon: string; bonus: Partial<Reco
   { id: "fox", name: "ثعلب السراب", icon: "sparkles", bonus: { luck: 9 }, price: 540, requiredLevel: 7, description: "حظّه الأقوى يرافق الصيادين بعد المستوى السابع." },
   { id: "phoenix", name: "عنقاء الفجر", icon: "sunny", bonus: { vit: 10 }, price: 620, requiredLevel: 10, description: "نور متجدد يمنح حيوية عالية من المستوى العاشر." },
   { id: "dragon", name: "تنين الياقوت", icon: "flame", bonus: { str: 9 }, price: 700, requiredLevel: 15, description: "رفيق متقدم يرفع القوة الهجومية بعد المستوى الخامس عشر." },
+  { id: "owl", name: "بومة الحكمة", icon: "eye", bonus: { luck: 18, agi: 8 }, price: 18_000, requiredLevel: 20, description: "رفيق نادر يزيد الحظ وسرعة الحركة." },
+  { id: "moon-deer", name: "أيل القمر", icon: "moon", bonus: { vit: 35, def: 12 }, price: 90_000, requiredLevel: 30, description: "رفيق أسطوري يمنح الحيوية والصمود." },
+  { id: "star-drake", name: "تنين الشهب", icon: "star", bonus: { str: 60, luck: 24 }, price: 450_000, requiredLevel: 45, description: "رفيق عظيم يعزز القوة والحظ." },
 ];
 
 export const STARTER_ITEMS: EquipmentItem[] = [
-  { id: "sword1", name: "سيف المبتدئ", slot: "سلاح", rarity: "common", bonus: { str: 3 }, price: 100, requiredLevel: 1, icon: "flash" },
+  { id: "sword1", name: "نصل البدايات", slot: "سلاح", rarity: "common", bonus: { str: 3 }, price: 100, requiredLevel: 1, icon: "flash" },
+  { id: "staff5", name: "صولجان البلور", slot: "سلاح", rarity: "uncommon", bonus: { str: 12, luck: 3 }, price: 2_500, requiredLevel: 5, icon: "sparkles" },
+  { id: "bow10", name: "قوس الشفق", slot: "سلاح", rarity: "rare", bonus: { str: 24, agi: 10 }, price: 12_000, requiredLevel: 10, icon: "navigate" },
+  { id: "rune-blade20", name: "نصل الرونية", slot: "سلاح", rarity: "epic", bonus: { str: 52, luck: 14 }, price: 75_000, requiredLevel: 20, icon: "moon" },
+  { id: "astral-staff35", name: "صولجان النجوم", slot: "سلاح", rarity: "legendary", bonus: { str: 95, vit: 30, luck: 25 }, price: 400_000, requiredLevel: 35, icon: "sparkles" },
+  { id: "eclipse-bow50", name: "قوس الكسوف", slot: "سلاح", rarity: "mythic", bonus: { str: 180, agi: 70, luck: 45 }, price: 1_500_000, requiredLevel: 50, icon: "sunny" },
+
   { id: "armor1", name: "درع الحارس", slot: "درع", rarity: "common", bonus: { def: 4, vit: 2 }, price: 180, requiredLevel: 1, icon: "shield" },
-  { id: "ring1", name: "خاتم الحظ", slot: "خاتم أول", rarity: "common", bonus: { luck: 4 }, price: 250, requiredLevel: 1, icon: "ellipse" },
-  { id: "boots1", name: "حذاء المسافر", slot: "حذاء", rarity: "common", bonus: { agi: 2 }, price: 90, requiredLevel: 1, icon: "footsteps" },
+  { id: "armor10", name: "درع الفولاذ الأزرق", slot: "درع", rarity: "rare", bonus: { def: 28, vit: 16 }, price: 14_000, requiredLevel: 10, icon: "shield" },
+  { id: "armor30", name: "درع حارس الأطلال", slot: "درع", rarity: "legendary", bonus: { def: 110, vit: 65, luck: 18 }, price: 320_000, requiredLevel: 30, icon: "shield-checkmark" },
   { id: "helm1", name: "خوذة الحديد", slot: "خوذة", rarity: "common", bonus: { def: 3 }, price: 150, requiredLevel: 1, icon: "skull" },
-  { id: "gloves1", name: "قبضة الحارس", slot: "قفازات", rarity: "common", bonus: { str: 2, def: 1 }, price: 210, requiredLevel: 1, icon: "hand-left" },
+  { id: "helm15", name: "تاج المرايا", slot: "خوذة", rarity: "epic", bonus: { def: 38, luck: 16 }, price: 42_000, requiredLevel: 15, icon: "sparkles" },
+  { id: "gloves1", name: "قفازات الحارس", slot: "قفازات", rarity: "common", bonus: { str: 2, def: 1 }, price: 210, requiredLevel: 1, icon: "hand-left" },
+  { id: "gloves25", name: "قفازات الشفق", slot: "قفازات", rarity: "epic", bonus: { str: 45, agi: 24 }, price: 95_000, requiredLevel: 25, icon: "hand-left" },
+  { id: "boots1", name: "حذاء المسافر", slot: "حذاء", rarity: "common", bonus: { agi: 2 }, price: 90, requiredLevel: 1, icon: "footsteps" },
+  { id: "boots20", name: "خطوات الريح", slot: "حذاء", rarity: "epic", bonus: { agi: 48, vit: 18 }, price: 80_000, requiredLevel: 20, icon: "footsteps" },
   { id: "amulet1", name: "قلادة الفجر", slot: "قلادة", rarity: "common", bonus: { vit: 3, luck: 1 }, price: 330, requiredLevel: 1, icon: "diamond" },
+  { id: "amulet30", name: "قلادة قلب النجم", slot: "قلادة", rarity: "legendary", bonus: { vit: 70, luck: 42 }, price: 280_000, requiredLevel: 30, icon: "diamond" },
+  { id: "ring1", name: "خاتم الحظ", slot: "خاتم أول", rarity: "common", bonus: { luck: 4 }, price: 250, requiredLevel: 1, icon: "ellipse" },
+  { id: "ring15", name: "خاتم المجرّة", slot: "خاتم أول", rarity: "epic", bonus: { luck: 35, str: 20 }, price: 55_000, requiredLevel: 15, icon: "ellipse" },
+  { id: "ring2-25", name: "خاتم العهد", slot: "خاتم ثانٍ", rarity: "epic", bonus: { def: 24, vit: 28 }, price: 68_000, requiredLevel: 25, icon: "ellipse" },
 ];
 
 export const EXPEDITIONS = [
