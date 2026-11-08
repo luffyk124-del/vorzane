@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { buyItem, equipItem, sellItem, unequipItem } from "../../../src/game/engine.ts";
+import { buyItem, buyPet, equipItem, sellItem, setPet, unequipItem } from "../../../src/game/engine.ts";
 import { normalizeGameState } from "../../../src/game/model.ts";
 
 const corsHeaders = {
@@ -12,7 +12,9 @@ type EconomyCommand =
   | { type: "buyItem"; itemId: string }
   | { type: "sellItem"; itemId: string }
   | { type: "equipItem"; itemId: string }
-  | { type: "unequipItem"; slot: string };
+  | { type: "unequipItem"; slot: string }
+  | { type: "buyPet"; petId: string }
+  | { type: "setPet"; petId: string | null };
 
 type RequestBody = {
   commandId: string;
@@ -37,6 +39,14 @@ function parseCommand(value: unknown): EconomyCommand | null {
   if (command.type === "unequipItem") {
     if (typeof command.slot !== "string" || !command.slot.trim() || command.slot.length > 40) return null;
     return { type: "unequipItem", slot: command.slot };
+  }
+  if (command.type === "buyPet") {
+    if (typeof command.petId !== "string" || !command.petId.trim() || command.petId.length > 120) return null;
+    return { type: "buyPet", petId: command.petId };
+  }
+  if (command.type === "setPet") {
+    if (command.petId !== null && (typeof command.petId !== "string" || !command.petId.trim() || command.petId.length > 120)) return null;
+    return { type: "setPet", petId: command.petId as string | null };
   }
   return null;
 }
@@ -137,9 +147,16 @@ export function createEconomyCommandHandler(
     } else if (body.command.type === "equipItem") {
       next = equipItem(state, body.command.itemId);
       if (next === state) return json({ error: "Item cannot be equipped" }, 400);
-    } else {
+    } else if (body.command.type === "unequipItem") {
       next = unequipItem(state, body.command.slot);
       if (next === state) return json({ error: "Item cannot be unequipped" }, 400);
+    } else if (body.command.type === "buyPet") {
+      const result = buyPet(state, body.command.petId);
+      if (result.error) return json({ error: result.error }, 400);
+      next = result.state;
+    } else {
+      next = setPet(state, body.command.petId);
+      if (next === state) return json({ error: "Pet cannot be activated" }, 400);
     }
 
     // The privileged RPC is called only with the service-role key after the
