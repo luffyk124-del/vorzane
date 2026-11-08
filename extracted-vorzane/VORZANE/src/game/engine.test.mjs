@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask } from "./engine.ts";
+import { advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission } from "./engine.ts";
 import { createFreshState, normalizeGameState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
@@ -214,4 +214,36 @@ test("2D character appearance choices persist and old saves receive safe default
 
   const legacy = normalizeGameState({ hero: createHeroState("قديم", "Warrior").hero });
   assert.deepEqual(legacy.characterStyle, { gender: "male", appearance: 0 });
+});
+
+
+test("daily missions reset by date and rewards can only be claimed once", () => {
+  const start = Date.UTC(2026, 0, 1, 12);
+  let state = ensureMissionPeriods(createHeroState("مهمات", "Mage"), start);
+  state.wins = 2;
+  const daily = getRecurringMissions(state, "daily", start).find((mission) => mission.id === "daily-wins");
+  assert.equal(daily?.available, true);
+
+  const claimed = claimRecurringMission(state, "daily", "daily-wins", start);
+  assert.equal(claimed.gold, state.gold + 120);
+  assert.equal(claimRecurringMission(claimed, "daily", "daily-wins", start).gold, claimed.gold);
+
+  const nextDay = ensureMissionPeriods(claimed, start + 86_400_000);
+  assert.equal(getRecurringMissions(nextDay, "daily", start + 86_400_000).find((mission) => mission.id === "daily-wins")?.progress, 0);
+  assert.equal(getRecurringMissions(nextDay, "weekly", start + 86_400_000).find((mission) => mission.id === "weekly-wins")?.progress, 0);
+});
+
+test("weekly and seasonal mission progress uses period baselines", () => {
+  const start = Date.UTC(2026, 0, 5, 12);
+  let state = ensureMissionPeriods(createHeroState("مهمات", "Warrior"), start);
+  state.wins = 10;
+  state.expeditionsCompleted = 4;
+  state.hero.level = 3;
+  const weekly = getRecurringMissions(state, "weekly", start);
+  assert.equal(weekly.find((mission) => mission.id === "weekly-wins")?.available, true);
+  assert.equal(weekly.find((mission) => mission.id === "weekly-expeditions")?.available, true);
+  assert.equal(weekly.find((mission) => mission.id === "weekly-levels")?.available, true);
+
+  const nextMonth = ensureMissionPeriods(state, Date.UTC(2026, 1, 1, 12));
+  assert.equal(getRecurringMissions(nextMonth, "season", Date.UTC(2026, 1, 1, 12)).find((mission) => mission.id === "season-wins")?.progress, 0);
 });
