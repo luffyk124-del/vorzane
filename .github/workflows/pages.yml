@@ -116,10 +116,10 @@ jobs:
           deno-version: v2.x
       - name: Typecheck Supabase Edge Functions
         working-directory: extracted-vorzane/VORZANE
-        run: deno check supabase/functions/game-state/index.ts supabase/functions/game-state/index.test.ts
+        run: deno check supabase/functions/game-state/index.ts supabase/functions/game-state/index.test.ts supabase/functions/economy-command/index.ts supabase/functions/economy-command/index.test.ts
       - name: Test Supabase Edge Functions
         working-directory: extracted-vorzane/VORZANE
-        run: deno test supabase/functions/game-state/index.test.ts
+        run: deno test supabase/functions/game-state/index.test.ts supabase/functions/economy-command/index.test.ts
       - name: Build web export
         working-directory: extracted-vorzane/VORZANE
         env:
