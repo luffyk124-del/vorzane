@@ -146,7 +146,11 @@ begin
   if char_length(v_query) < 3 then
     raise exception 'Search query must contain at least 3 characters';
   end if;
-  if v_query !~ '^[[:alnum:]_ -]{3,24}
+  if v_query !~ '^[[:alnum:]_ -]{3,24}$' then
+    raise exception 'Search query contains unsupported characters';
+  end if;
+
+  return query
   select p.user_id, p.display_name, p.avatar_id,
     case
       when exists (
