@@ -1,4 +1,4 @@
-import { createHeroState, buyItem } from "../../../src/game/engine.ts";
+import { createHeroState, buyItem, buyPet, setPet } from "../../../src/game/engine.ts";
 import { createEconomyCommandHandler } from "./index.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -213,6 +213,34 @@ Deno.test("equipItem and unequipItem use canonical equipment ownership", async (
   const unequippedState = (unequipFixture.calls.args as Record<string, unknown>).p_game_state as ReturnType<typeof createHeroState>;
   assert(unequippedState.inventory.some(item => item.id === itemId), "unequipped item must return to inventory");
   assert(!unequippedState.equipped["سلاح"], "equipment slot must be empty");
+});
+
+
+Deno.test("buyPet uses canonical price, ownership, and activation rules", async () => {
+  const state = createHeroState("Test", "Warrior");
+  state.gold = 500;
+  const { handler, calls } = fixture({ state });
+  const response = await handler(commandRequest({ type: "buyPet", petId: "wolf" }));
+  assert(response.status === 200, "expected 200");
+  const saved = (calls.args as Record<string, unknown>).p_game_state as ReturnType<typeof createHeroState>;
+  assert(saved.gold === 200, "wolf price must be deducted from canonical catalog");
+  assert(saved.pets.includes("wolf"), "purchased pet must be owned");
+  assert(saved.activePet === "wolf", "eligible first pet should become active");
+});
+
+Deno.test("setPet requires ownership and canonical level eligibility", async () => {
+  const state = createHeroState("Test", "Warrior");
+  state.pets = ["wolf", "golem"];
+  const { handler, calls } = fixture({ state });
+  const response = await handler(commandRequest({ type: "setPet", petId: "wolf" }));
+  assert(response.status === 200, "owned eligible pet should activate");
+  const saved = (calls.args as Record<string, unknown>).p_game_state as ReturnType<typeof createHeroState>;
+  assert(saved.activePet === "wolf", "selected pet should become active");
+
+  const lockedState = createHeroState("Test", "Warrior");
+  lockedState.pets = ["golem"];
+  const locked = await fixture({ state: lockedState }).handler(commandRequest({ type: "setPet", petId: "golem" }));
+  assert(locked.status === 400, "pet above hero level must not activate");
 });
 
 Deno.test("another unauthenticated identity cannot invoke commands", async () => {
