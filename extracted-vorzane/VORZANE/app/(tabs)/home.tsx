@@ -45,7 +45,7 @@ export default function CampScreen() {
   const createHero = () => {
     if (heroName.trim().length < 2) return;
     const next = createHeroState(heroName, selectedClass);
-    next.characterStyle = { gender: selectedGender, appearance: selectedAppearance };
+    next.characterStyle = { ...next.characterStyle, gender: selectedGender, appearance: selectedAppearance };
     const firstSword = createItemInstance(STARTER_ITEMS[0], "starter");
     const firstBoots = createItemInstance(STARTER_ITEMS[3], "starter");
     next.equipped[firstSword.slot] = firstSword;
