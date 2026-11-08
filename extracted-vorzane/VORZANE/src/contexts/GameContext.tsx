@@ -18,7 +18,9 @@ type EconomyCommand =
   | { type: "buyItem"; itemId: string }
   | { type: "sellItem"; itemId: string }
   | { type: "equipItem"; itemId: string }
-  | { type: "unequipItem"; slot: string };
+  | { type: "unequipItem"; slot: string }
+  | { type: "buyPet"; petId: string }
+  | { type: "setPet"; petId: string | null };
 type EconomyCommandResult = { success: boolean; enabled: boolean; error?: string; soldPrice?: number };
 
 // Keep disabled until the additive receipt migration and Edge Function are separately
