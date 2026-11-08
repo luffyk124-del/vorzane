@@ -101,6 +101,29 @@ begin
 end;
 $$;
 
+create or replace function public.set_my_profile_searchable(p_enabled boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $
+declare
+  v_user_id uuid := auth.uid();
+  v_rows integer;
+begin
+  if v_user_id is null then
+    raise exception 'Authentication required';
+  end if;
+  update public.player_profiles
+    set is_searchable = coalesce(p_enabled, true), updated_at = now()
+  where user_id = v_user_id;
+  get diagnostics v_rows = row_count;
+  if v_rows <> 1 then
+    raise exception 'Create your player profile first';
+  end if;
+end;
+$;
+
 create or replace function public.search_players(p_query text)
 returns table (
   user_id uuid,
@@ -276,6 +299,7 @@ $$;
 
 revoke all on function public.upsert_my_profile(text, text) from public, anon;
 revoke all on function public.search_players(text) from public, anon;
+revoke all on function public.set_my_profile_searchable(boolean) from public, anon;
 revoke all on function public.send_friend_request(uuid) from public, anon;
 revoke all on function public.respond_friend_request(uuid, boolean) from public, anon;
 revoke all on function public.remove_friend(uuid) from public, anon;
@@ -283,6 +307,7 @@ revoke all on function public.list_my_friends() from public, anon;
 
 grant execute on function public.upsert_my_profile(text, text) to authenticated;
 grant execute on function public.search_players(text) to authenticated;
+grant execute on function public.set_my_profile_searchable(boolean) to authenticated;
 grant execute on function public.send_friend_request(uuid) to authenticated;
 grant execute on function public.respond_friend_request(uuid, boolean) to authenticated;
 grant execute on function public.remove_friend(uuid) to authenticated;
