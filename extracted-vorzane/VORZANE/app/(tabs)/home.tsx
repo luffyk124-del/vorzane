@@ -180,7 +180,7 @@ export default function CampScreen() {
         </View>
         <View style={styles.heroPortrait}>
           <Image source={{ uri: CLASS_ART[hero.className] }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityLabel={CLASS_NAMES[hero.className]} />
-          <View pointerEvents="none" style={styles.heroPortraitShade} />
+          <View pointerEvents="none" style={[styles.heroPortraitShade, { backgroundColor: APPEARANCE_COLORS[state.characterStyle.appearance], opacity: 0.20 }]} />
           <View style={styles.portraitAura} />
         </View>
       </View>
