@@ -66,7 +66,7 @@ test("equipment can be purchased early and only its player-level requirement gat
   const earlyEquip = equipItem(purchased.state, owned.id);
   assert.equal(earlyEquip, purchased.state);
 
-  const levelReady = { ...purchased.state, hero: { ...purchased.state.hero, level: 35 } };
+  const levelReady = { ...purchased.state, hero: { ...purchased.state.hero, level: 70 } };
   assert.equal(equipItem(levelReady, owned.id).equipped["درع"]?.catalogId, "dun-2-mythic-1", "dungeon floor must not gate equipment");
 });
 
