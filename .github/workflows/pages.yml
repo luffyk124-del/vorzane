@@ -100,6 +100,13 @@ jobs:
       - name: Typecheck
         working-directory: extracted-vorzane/VORZANE
         run: pnpm run typecheck
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Typecheck Supabase Edge Functions
+        working-directory: extracted-vorzane/VORZANE
+        run: deno check supabase/functions/game-state/index.ts
       - name: Build web export
         working-directory: extracted-vorzane/VORZANE
         env:
