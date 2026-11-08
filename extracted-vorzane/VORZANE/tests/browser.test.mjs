@@ -114,7 +114,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       await route.fulfill({ status: 204, body: "" });
       return;
     }
-    if (social && request.method() === "GET" && url.pathname.endsWith("/rest/v1/player_profiles")) {
+    if (request.method() === "GET" && url.pathname.endsWith("/rest/v1/player_profiles")) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([]) });
       return;
     }
@@ -285,7 +285,7 @@ test("friends profile and player search remain usable on a narrow mobile viewpor
 
   await signInWithMock(page);
   await page.goto(`${appUrl}/friends`);
-  await page.getByText("الأصدقاء", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("الأصدقاء", { exact: true }).first().waitFor({ timeout: 15_000 });
   await page.getByPlaceholder("اكتب اسمك داخل VORZANE").fill("لاعب اختبار");
   await page.getByRole("button", { name: "حفظ الملف الشخصي" }).click();
   await page.getByText("تم حفظ ملفك الشخصي.", { exact: true }).waitFor({ timeout: 10_000 });
