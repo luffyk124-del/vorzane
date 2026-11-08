@@ -11,6 +11,25 @@ on conflict (id) do nothing;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+
+do $ begin
+  begin
+    perform public.commit_player_command(
+      '00000000-0000-0000-0000-00000000000a',
+      '10000000-0000-4000-8000-000000000099',
+      clock_timestamp(),
+      '{"gold":999999}'::jsonb,
+      '{"kind":"forbidden"}'::jsonb
+    );
+    raise exception 'COMMAND TEST FAIL: authenticated client invoked privileged RPC';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $;
+
+set local role service_role;
+select set_config('request.jwt.claim.role', 'service_role', true);
 
 insert into public.player_saves (user_id, game_state)
 values ('00000000-0000-0000-0000-00000000000a', '{"gold":10,"inventory":[]}')
@@ -30,6 +49,7 @@ begin
    where user_id = '00000000-0000-0000-0000-00000000000a';
 
   v_first := public.commit_player_command(
+    '00000000-0000-0000-0000-00000000000a',
     '10000000-0000-0000-0000-000000000001',
     v_expected,
     '{"gold":20,"inventory":[]}'::jsonb,
@@ -65,6 +85,7 @@ begin
   end if;
 
   v_conflict := public.commit_player_command(
+    '00000000-0000-0000-0000-00000000000a',
     '10000000-0000-0000-0000-000000000002',
     v_expected,
     '{"gold":30,"inventory":[]}'::jsonb,
@@ -74,10 +95,10 @@ begin
     raise exception 'COMMAND TEST FAIL: stale version was not rejected';
   end if;
 
-  -- A different authenticated player cannot commit against A's save.
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', true);
+  -- The privileged RPC only accepts a target user ID from the trusted server role.
   begin
     perform public.commit_player_command(
+      '00000000-0000-0000-0000-00000000000b',
       '10000000-0000-0000-0000-000000000003',
       v_after,
       '{"gold":999999}'::jsonb,
@@ -88,6 +109,6 @@ begin
     null;
   end;
 end
-$$;
+$;
 
 rollback;
