@@ -18,7 +18,7 @@ export type GameCommand =
   | { type: "importSave"; state: GameState }
   | { type: "resetSave" };
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  if (!FPS_API_URL) throw new Error("واجهة الخادم غير مهيأة.");
+  if (!FPS_API_URL) throw new Error("تعذر الاتصال بخدمة اللعبة. حاول لاحقًا.");
   const response = await fetch(`${FPS_API_URL}${path}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...init.headers } });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error ?? `تعذر الاتصال بالخادم (${response.status}).`);
