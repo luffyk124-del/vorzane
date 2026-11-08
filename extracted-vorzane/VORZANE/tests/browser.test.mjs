@@ -105,6 +105,18 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(session.user) });
       return;
     }
+    if (request.method() === "OPTIONS" && url.pathname.endsWith("/functions/v1/game-state")) {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+        },
+        body: "",
+      });
+      return;
+    }
     if (request.method() === "GET" && url.pathname.endsWith("/functions/v1/game-state")) {
       reads.push(url.pathname);
       if (failGameState) {
