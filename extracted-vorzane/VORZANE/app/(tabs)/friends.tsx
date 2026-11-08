@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Alert, StyleSheet, TextInput, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { useAuth } from "../../src/contexts/AuthContext";
 import {
@@ -78,7 +78,7 @@ export default function FriendsScreen() {
   };
 
   return <AppScreen>
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <View style={styles.content}>
       <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء" subtitle="ابحث عن لاعبين، وأدر طلبات الصداقة وقائمتك." />
       {notice ? <Card style={styles.notice}><Icon name="information-circle-outline" color={palette.gold} size={18} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
 
@@ -118,7 +118,7 @@ export default function FriendsScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 18, paddingBottom: 120, gap: 13, width: "100%", maxWidth: 560, alignSelf: "center" },
+  content: { gap: 13, width: "100%" },
   panel: { gap: 10, backgroundColor: "#13242C" },
   input: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 12, color: palette.text, textAlign: "right", backgroundColor: "#0B171D" },
   fieldLabel: { fontSize: 11, fontWeight: "800", textAlign: "right" },
