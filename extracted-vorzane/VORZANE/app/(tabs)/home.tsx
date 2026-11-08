@@ -15,6 +15,7 @@ import { createItemInstance } from "../../src/game/dungeonItems";
 
 const CLASSES: ClassId[] = ["Warrior", "Mage", "Assassin", "Archer"];
 const APPEARANCE_COLORS = ["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"];
+const APPEARANCE_COLORS = ["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"];
 const STAT_LABELS: Record<StatKey, string> = { str: "القوة", def: "الدفاع", vit: "الحيوية", agi: "الرشاقة", luck: "الحظ" };
 const STAT_KEYS: StatKey[] = ["str", "def", "vit", "agi", "luck"];
 const formatTime = (milliseconds: number) => {
@@ -32,6 +33,8 @@ export default function CampScreen() {
   const [selectedClass, setSelectedClass] = useState<ClassId>("Warrior");
   const [selectedGender, setSelectedGender] = useState<"male" | "female">("male");
   const [selectedAppearance, setSelectedAppearance] = useState<0 | 1 | 2 | 3>(0);
+  const [selectedGender, setSelectedGender] = useState<"male" | "female">("male");
+  const [selectedAppearance, setSelectedAppearance] = useState<0 | 1 | 2 | 3>(0);
   const [battleSequence, setBattleSequence] = useState<BattleSequence | null>(null);
   const [now, setNow] = useState(Date.now());
   const hero = state.hero;
@@ -46,6 +49,7 @@ export default function CampScreen() {
     if (heroName.trim().length < 2) return;
     if (fpsMode) { void command({ type: "createHero", name: heroName.trim(), className: selectedClass }).then((created) => { if (created) update((current) => ({ ...current, characterStyle: { gender: selectedGender, appearance: selectedAppearance } })); }); return; }
     const next = createHeroState(heroName, selectedClass);
+    next.characterStyle = { gender: selectedGender, appearance: selectedAppearance };
     next.characterStyle = { gender: selectedGender, appearance: selectedAppearance };
     const firstSword = createItemInstance(STARTER_ITEMS[0], "starter");
     const firstBoots = createItemInstance(STARTER_ITEMS[3], "starter");
@@ -83,6 +87,32 @@ export default function CampScreen() {
             </ImageBackground>
           </Pressable>;
         })}
+      </View>
+      <View style={styles.creatorPreview}>
+        <View style={[styles.creatorPortrait, { borderColor: APPEARANCE_COLORS[selectedAppearance] }]}>
+          <Image source={{ uri: CLASS_ART[selectedClass] }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: APPEARANCE_COLORS[selectedAppearance], opacity: 0.22 }]} />
+          <View style={styles.previewGender}><Txt style={styles.previewGenderText}>{selectedGender === "male" ? "ذكر" : "أنثى"}</Txt></View>
+        </View>
+        <View style={styles.creatorPreviewText}>
+          <Txt style={styles.creatorPreviewTitle}>معاينة شخصيتك</Txt>
+          <Txt muted style={styles.creatorPreviewCopy}>مظهر ثنائي الأبعاد قابل للتخصيص، ويمكنك تغييره لاحقًا.</Txt>
+        </View>
+      </View>
+      <SectionTitle title="اختيار الشخصية" icon="person-circle-outline" />
+      <View style={styles.choiceRow}>
+        {([{ id: "male", label: "ذكر", icon: "male" }, { id: "female", label: "أنثى", icon: "female" }] as const).map((option) => <Pressable key={option.id} onPress={() => setSelectedGender(option.id)} style={[styles.choiceButton, selectedGender === option.id && styles.choiceButtonActive]}>
+          <Icon name={option.icon as never} size={18} color={selectedGender === option.id ? palette.ink : palette.jade} />
+          <Txt style={[styles.choiceLabel, selectedGender === option.id && styles.choiceLabelActive]}>{option.label}</Txt>
+        </Pressable>)}
+      </View>
+      <Txt style={styles.appearanceHeading}>المظهر</Txt>
+      <View style={styles.appearanceRow}>
+        {APPEARANCE_COLORS.map((color, index) => <Pressable key={index} onPress={() => setSelectedAppearance(index as 0 | 1 | 2 | 3)} style={[styles.appearanceOption, { borderColor: selectedAppearance === index ? palette.gold : palette.line }]}>
+          <View style={[styles.appearanceSwatch, { backgroundColor: color }]} />
+          <Txt style={styles.appearanceLabel}>مظهر {index + 1}</Txt>
+          {selectedAppearance === index ? <Icon name="checkmark-circle" size={15} color={palette.gold} /> : null}
+        </Pressable>)}
       </View>
       <View style={styles.creatorPreview}>
         <View style={[styles.creatorPortrait, { borderColor: APPEARANCE_COLORS[selectedAppearance] }]}>
@@ -273,6 +303,23 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 10 },
   summaryDivider: { width: 1, height: 28, backgroundColor: palette.line },
   createHero: { gap: 15, marginTop: 8 },
+  creatorPreview: { flexDirection: "row", alignItems: "center", gap: 14, padding: 12, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.035)" },
+  creatorPortrait: { width: 92, height: 112, borderWidth: 2, borderRadius: 22, overflow: "hidden", backgroundColor: palette.panelRaised },
+  previewGender: { position: "absolute", bottom: 6, right: 6, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, backgroundColor: "rgba(8,12,18,0.82)" },
+  previewGenderText: { fontSize: 10, fontWeight: "900", color: palette.text },
+  creatorPreviewText: { flex: 1, alignItems: "flex-end", gap: 5 },
+  creatorPreviewTitle: { fontSize: 15, fontWeight: "900" },
+  creatorPreviewCopy: { fontSize: 11, lineHeight: 17, textAlign: "right" },
+  choiceRow: { flexDirection: "row", gap: 9 },
+  choiceButton: { flex: 1, minHeight: 48, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, borderWidth: 1, borderColor: palette.line, borderRadius: 13, backgroundColor: palette.panel },
+  choiceButtonActive: { backgroundColor: palette.gold, borderColor: palette.gold },
+  choiceLabel: { color: palette.text, fontSize: 13, fontWeight: "800" },
+  choiceLabelActive: { color: palette.ink },
+  appearanceHeading: { fontSize: 12, color: palette.muted, fontWeight: "800", textAlign: "right" },
+  appearanceRow: { flexDirection: "row", gap: 7 },
+  appearanceOption: { flex: 1, minHeight: 78, alignItems: "center", justifyContent: "center", gap: 5, borderWidth: 1, borderRadius: 12, backgroundColor: palette.panel, padding: 6 },
+  appearanceSwatch: { width: 24, height: 24, borderRadius: 12 },
+  appearanceLabel: { fontSize: 9, fontWeight: "800", color: palette.text },
   creatorPreview: { flexDirection: "row", alignItems: "center", gap: 14, padding: 12, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.035)" },
   creatorPortrait: { width: 92, height: 112, borderWidth: 2, borderRadius: 22, overflow: "hidden", backgroundColor: palette.panelRaised },
   previewGender: { position: "absolute", bottom: 6, right: 6, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, backgroundColor: "rgba(8,12,18,0.82)" },
