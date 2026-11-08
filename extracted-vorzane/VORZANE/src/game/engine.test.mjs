@@ -24,6 +24,15 @@ test("shop rejects unknown items without changing the save", () => {
   assert.equal(state.inventory.length, 0);
 });
 
+test("weapon-category items are not purchasable from the store", () => {
+  const state = createHeroState("اختبار", "Warrior");
+  const result = buyItem(state, "sword1");
+  assert.ok(result.error);
+  assert.equal(result.state, state);
+  assert.equal(state.gold, 500);
+  assert.equal(state.inventory.length, 0);
+});
+
 test("players can buy high-level armor early but cannot equip it before its level", () => {
   const state = createHeroState("اختبار", "Mage");
   state.gold = 1_000_000;
