@@ -55,7 +55,7 @@ test("players can buy high-level armor early but cannot equip it before its leve
 
 test("equipment can be purchased early and only its player-level requirement gates equipping", () => {
   const state = createHeroState("اختبار", "Mage");
-  state.gold = 10_000;
+  state.gold = 100_000_000;
 
   const purchased = buyItem(state, "dun-2-mythic-1");
   assert.equal(purchased.error, undefined);
