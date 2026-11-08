@@ -295,6 +295,7 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   await page.getByPlaceholder("اسم اللاعب...").waitFor({ timeout: 15_000 });
   const createProfileButton = page.getByRole("button", { name: "إنشاء ملف اللاعب" });
   if (await createProfileButton.isVisible().catch(() => false)) {
+    await page.getByPlaceholder("اسم اللاعب (3–24 حرفًا)").fill("لاعب تجريبي");
     await createProfileButton.click();
     await page.getByText("تم حفظ ملف اللاعب.", { exact: true }).waitFor({ timeout: 10_000 });
   }
