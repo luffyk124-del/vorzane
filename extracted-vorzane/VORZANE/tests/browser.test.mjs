@@ -124,8 +124,18 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
     if (social && request.method() === "POST" && url.pathname.includes("/rest/v1/rpc/")) {
       const rpc = url.pathname.split("/").at(-1);
       const args = request.postDataJSON() ?? {};
+      if (rpc === "upsert_my_profile") {
+        mockedPlayerProfile = {
+          user_id: playerId,
+          display_name: args.p_display_name,
+          avatar_id: args.p_avatar_id,
+          is_searchable: true,
+          created_at: new Date().toISOString(),
+        };
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockedPlayerProfile) });
+        return;
+      }
       const responses = {
-        upsert_my_profile: (mockedPlayerProfile = { user_id: playerId, display_name: args.p_display_name, avatar_id: args.p_avatar_id, is_searchable: true, created_at: new Date().toISOString() }),
         set_my_profile_searchable: null,
         list_my_friends: [],
         list_incoming_friend_requests: [],
@@ -136,9 +146,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
         await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ message: "Unknown social RPC" }) });
         return;
       }
-      const response = responses[rpc];
-      const value = typeof response === "function" ? response() : response;
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(value) });
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(responses[rpc]) });
       return;
     }
 
