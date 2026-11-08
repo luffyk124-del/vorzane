@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
-import type { PropsWithChildren, ReactNode } from "react";
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { useState, type PropsWithChildren, type ReactNode } from "react";
+import { usePathname, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { palette, layout, shared } from "../theme";
 
@@ -19,13 +20,60 @@ export function Txt({ children, style, muted = false, numberOfLines }: PropsWith
   return <Text numberOfLines={numberOfLines} style={[styles.text, fontFamily ? { fontFamily } : undefined, muted && { color: palette.muted }, style]}>{children}</Text>;
 }
 
+const gameMenuItems = [
+  { label: "المخيم", href: "/(tabs)/home" as const, icon: "home-outline" as const },
+  { label: "الرحلات", href: "/(tabs)/expeditions" as const, icon: "compass-outline" as const },
+  { label: "العتاد والسوق", href: "/(tabs)/gear" as const, icon: "shield-outline" as const },
+  { label: "المهام والإنجازات", href: "/(tabs)/quests" as const, icon: "trophy-outline" as const },
+  { label: "الملف الشخصي", href: "/(tabs)/profile" as const, icon: "person-circle-outline" as const },
+  { label: "الأصدقاء", href: "/(tabs)/friends" as const, icon: "people-outline" as const },
+  { label: "الإعدادات", href: "/(tabs)/settings" as const, icon: "settings-outline" as const },
+];
+
 export function AppScreen({ children, scroll = true, contentStyle, safe = true }: PropsWithChildren<{ scroll?: boolean; contentStyle?: StyleProp<ViewStyle>; safe?: boolean }>) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const showGameNavigation = pathname !== "/login" && pathname !== "/migration" && pathname !== "/";
+  const currentTitle = gameMenuItems.find((item) => pathname.endsWith(item.href.split("/").at(-1) ?? ""))?.label ?? "عالم VORZANE";
   const body = scroll ? (
     <ScrollView contentContainerStyle={[shared.content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       {children}
     </ScrollView>
   ) : <View style={[shared.content, { flex: 1 }, contentStyle]}>{children}</View>;
-  return <View style={shared.screen}>{safe ? <SafeAreaView style={styles.safe}>{body}</SafeAreaView> : body}</View>;
+  const content = <>
+    {showGameNavigation ? <View style={styles.gameHeader}>
+      <Pressable accessibilityRole="button" accessibilityLabel="فتح القائمة" onPress={() => setMenuOpen(true)} style={styles.menuButton}>
+        <Icon name="menu" size={23} color={palette.gold} />
+        <Txt style={styles.menuButtonText}>القائمة</Txt>
+      </Pressable>
+      <View style={styles.headerBrand}>
+        <Txt style={styles.headerWordmark}>VORZANE</Txt>
+        <Txt muted style={styles.headerPage}>{currentTitle}</Txt>
+      </View>
+      {pathname.endsWith("/home") ? <View style={styles.headerBackPlaceholder} /> : <Pressable accessibilityRole="button" accessibilityLabel="رجوع" onPress={() => router.back()} style={styles.backButton}><Icon name="arrow-forward" size={21} color={palette.text} /></Pressable>}
+    </View> : null}
+    {body}
+    <Modal transparent visible={menuOpen} animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+      <View style={styles.drawerRoot}>
+        <Pressable style={styles.drawerScrim} accessibilityRole="button" accessibilityLabel="إغلاق القائمة" onPress={() => setMenuOpen(false)} />
+        <View style={styles.drawerPanel}>
+          <View style={styles.drawerHeading}>
+            <View><Txt style={styles.drawerWordmark}>VORZANE</Txt><Txt muted style={styles.drawerSubtitle}>بوابتك إلى العالم</Txt></View>
+            <Pressable accessibilityRole="button" accessibilityLabel="إغلاق" onPress={() => setMenuOpen(false)} style={styles.drawerClose}><Icon name="close" size={21} color={palette.text} /></Pressable>
+          </View>
+          {gameMenuItems.map((item) => {
+            const active = pathname.endsWith(item.href.split("/").at(-1) ?? "");
+            return <Pressable key={item.href} accessibilityRole="button" onPress={() => { setMenuOpen(false); if (!active) router.push(item.href); }} style={[styles.drawerItem, active && styles.drawerItemActive]}>
+              <Icon name={item.icon} size={19} color={active ? palette.ink : palette.jade} />
+              <Txt style={[styles.drawerItemText, active && styles.drawerItemTextActive]}>{item.label}</Txt>
+            </Pressable>;
+          })}
+        </View>
+      </View>
+    </Modal>
+  </>;
+  return <View style={shared.screen}>{safe ? <SafeAreaView style={styles.safe}>{content}</SafeAreaView> : content}</View>;
 }
 
 export function Card({ children, style, padded = true }: PropsWithChildren<{ style?: StyleProp<ViewStyle>; padded?: boolean }>) {
@@ -138,6 +186,25 @@ export function StatCard({ label, value, icon, color = palette.gold }: { label: 
 
 const styles = StyleSheet.create({
   safe: { flex: 1, width: "100%", alignItems: "center" },
+  gameHeader: { width: "100%", maxWidth: 560, minHeight: 62, paddingHorizontal: 17, flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: palette.line, backgroundColor: "#0D141E" },
+  menuButton: { minWidth: 74, minHeight: 44, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 5 },
+  menuButtonText: { color: palette.gold, fontSize: 12, fontWeight: "900" },
+  headerBrand: { flex: 1, alignItems: "center", gap: 1 },
+  headerWordmark: { color: palette.gold, fontSize: 15, fontWeight: "900", letterSpacing: 2 },
+  headerPage: { fontSize: 10 },
+  headerBackPlaceholder: { width: 74, height: 44 },
+  backButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  drawerRoot: { flex: 1, flexDirection: "row-reverse" },
+  drawerScrim: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.68)" },
+  drawerPanel: { width: "82%", maxWidth: 340, height: "100%", paddingTop: 54, paddingHorizontal: 18, paddingBottom: 24, backgroundColor: "#101A24", borderLeftWidth: 1, borderLeftColor: palette.line, gap: 8, elevation: 24 },
+  drawerHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: palette.line },
+  drawerWordmark: { color: palette.gold, fontSize: 20, fontWeight: "900", letterSpacing: 2 },
+  drawerSubtitle: { fontSize: 11, marginTop: 3 },
+  drawerClose: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: palette.panelRaised },
+  drawerItem: { minHeight: 52, borderRadius: 14, paddingHorizontal: 14, flexDirection: "row-reverse", alignItems: "center", gap: 12, backgroundColor: "rgba(255,255,255,0.025)" },
+  drawerItemActive: { backgroundColor: palette.gold },
+  drawerItemText: { fontSize: 14, fontWeight: "800", color: palette.text },
+  drawerItemTextActive: { color: palette.ink },
   text: { color: palette.text, fontSize: 15, writingDirection: "rtl", textAlign: "right" },
   card: { borderColor: palette.line, borderWidth: 1, borderRadius: layout.radius, backgroundColor: palette.panel, overflow: "hidden" },
   cardPadded: { padding: 17 },
@@ -165,7 +232,7 @@ const styles = StyleSheet.create({
   inputLabel: { color: palette.muted, fontSize: 12, fontWeight: "800" },
   inputWrap: { minHeight: 50, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 13, borderWidth: 1, borderColor: palette.line, borderRadius: 14, backgroundColor: palette.midnight },
   input: { flex: 1, minHeight: 44, color: palette.text, fontSize: 15, writingDirection: "rtl" },
-  statCard: { flex: 1, minWidth: 82, padding: 12, borderRadius: 17, backgroundColor: palette.panel, borderWidth: 1, borderColor: palette.line, alignItems: "flex-end", gap: 5 },
+  statCard: { flex: 1, minWidth: 0, padding: 9, borderRadius: 17, backgroundColor: palette.panel, borderWidth: 1, borderColor: palette.line, alignItems: "flex-end", gap: 5 },
   statIcon: { borderWidth: 1, width: 31, height: 31, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   statValue: { fontSize: 19, fontWeight: "900", color: palette.text },
   statLabel: { fontSize: 11, fontWeight: "700" },

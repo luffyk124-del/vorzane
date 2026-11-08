@@ -1,8 +1,8 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, Meter, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { QUESTS } from "../../src/game/catalog";
-import { canClaimQuest, claimQuest, createBattleSequence, getQuestProgress, EXPLORATION_ACHIEVEMENTS, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, EXPEDITION_TASKS, canClaimExpeditionTask, claimExpeditionTask, type BattleResult, type BattleSequence, type BattleMode } from "../../src/game/engine";
+import { canClaimQuest, claimQuest, createBattleSequence, getQuestProgress, EXPLORATION_ACHIEVEMENTS, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, EXPEDITION_TASKS, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, type MissionScope, type BattleResult, type BattleSequence, type BattleMode } from "../../src/game/engine";
 import { BattleArena } from "../../src/components/BattleArena";
 import { useGame } from "../../src/contexts/GameContext";
 import { palette } from "../../src/theme";
@@ -16,6 +16,12 @@ const achievementRows = [
 export default function QuestsScreen() {
   const { state, update, fpsMode, command } = useGame();
   const [sequence, setSequence] = useState<BattleSequence | null>(null);
+  useEffect(() => { update((current) => ensureMissionPeriods(current)); }, [update]);
+  const recurringGroups: { scope: MissionScope; title: string; subtitle: string; icon: string; missions: ReturnType<typeof getRecurringMissions> }[] = [
+    { scope: "daily", title: "المهام اليومية", subtitle: "تتجدد كل يوم", icon: "sunny", missions: getRecurringMissions(state, "daily") },
+    { scope: "weekly", title: "المهام الأسبوعية", subtitle: "تتجدد مع بداية الأسبوع", icon: "calendar", missions: getRecurringMissions(state, "weekly") },
+    { scope: "season", title: "تحديات الموسم", subtitle: "موسم جديد كل شهر", icon: "trophy", missions: getRecurringMissions(state, "season") },
+  ];
   const quests = QUESTS.map((quest) => ({
     ...quest,
     progress: Math.min(getQuestProgress(state, quest.id), quest.target),
@@ -55,6 +61,32 @@ export default function QuestsScreen() {
       </View>
       <Txt muted style={styles.modeHint}>لكل ميدان خصوم وخصائص مختلفة؛ عتاد الزنزانة لا يسقط من هذه المعارك.</Txt>
     </Card>
+
+    <SectionTitle title="المهام المتجددة" icon="calendar-outline" action={<Pill label="مكافآت متجددة" tone="gold" />} />
+    {recurringGroups.map((group) => <View key={group.scope} style={styles.recurringGroup}>
+      <View style={styles.recurringHeading}>
+        <View style={styles.recurringHeadingText}><Txt style={styles.recurringTitle}>{group.title}</Txt><Txt muted style={styles.recurringSubtitle}>{group.subtitle}</Txt></View>
+        <Icon name={group.icon as never} color={palette.gold} size={21} />
+      </View>
+      {group.missions.map((mission) => <Card key={mission.id} style={styles.questCard}>
+        <AppButton
+          label={mission.claimed ? "استُلمت" : mission.available ? "استلام" : "تابع التقدم"}
+          icon={mission.claimed ? "checkmark" : "gift-outline"}
+          onPress={() => update((current) => claimRecurringMission(current, group.scope, mission.id))}
+          variant={mission.available ? "jade" : "secondary"}
+          small
+          disabled={!mission.available || mission.claimed || fpsMode}
+        />
+        <View style={styles.questBody}>
+          <View style={styles.questHeading}><Pill label={group.scope === "daily" ? "يومي" : group.scope === "weekly" ? "أسبوعي" : "موسمي"} tone={group.scope === "season" ? "gold" : "jade"} /><Pill label={"+" + mission.rewardGold + " ذهب"} tone="gold" /></View>
+          <Txt style={styles.questTitle}>{mission.title}</Txt>
+          <Txt muted style={styles.questCopy}>{mission.description}</Txt>
+          <View style={styles.questProgress}><Txt muted style={styles.progressLabel}>{mission.progress} / {mission.target}</Txt><Meter value={mission.progress} max={mission.target} color={mission.claimed ? palette.dim : palette.jade} height={6} /></View>
+        </View>
+        <View style={styles.questIcon}><Icon name={mission.icon as never} color={mission.claimed ? palette.dim : palette.gold} size={20} /></View>
+      </Card>)}
+    </View>)}
+    {fpsMode ? <Txt muted style={styles.recurringNote}>المهام المتجددة متاحة عند استخدام الحفظ السحابي الحالي.</Txt> : null}
 
     <SectionTitle title="مهام اللاعب" icon="list-circle-outline" action={<Pill label={`${quests.filter((quest) => quest.available).length} جاهزة`} tone="jade" />} />
     {quests.map((quest) => {
@@ -160,6 +192,12 @@ const styles = StyleSheet.create({
   modeTitle: { fontSize: 13, fontWeight: "900" },
   modeButtons: { flexDirection: "row", gap: 8 },
   modeHint: { fontSize: 10, lineHeight: 15, textAlign: "right" },
+  recurringGroup: { gap: 8, marginBottom: 5 },
+  recurringHeading: { flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: 10, paddingHorizontal: 3, paddingVertical: 4 },
+  recurringHeadingText: { flex: 1, alignItems: "flex-end", gap: 2 },
+  recurringTitle: { fontSize: 15, fontWeight: "900" },
+  recurringSubtitle: { fontSize: 10 },
+  recurringNote: { fontSize: 10, textAlign: "right", lineHeight: 16 },
   questCard: { padding: 12, flexDirection: "row", alignItems: "center", gap: 9 },
   questBody: { flex: 1, alignItems: "flex-end", gap: 5 },
   questHeading: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },

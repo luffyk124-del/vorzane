@@ -3,21 +3,35 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, StatCard, Txt } from "../../src/components/ui";
 import { DUNGEON_ITEM_POOL_SIZE, PETS, RARITY_LABELS, STARTER_ITEMS } from "../../src/game/catalog";
 import { buyItem, buyPet, combatStats, equipItem, sellItem, setPet, unequipItem } from "../../src/game/engine";
-import { findEquipmentTemplate, getEquipmentSellPrice } from "../../src/game/dungeonItems";
+import { DUNGEON_ITEMS, findEquipmentTemplate, getEquipmentSellPrice } from "../../src/game/dungeonItems";
 import { SLOT_NAMES } from "../../src/game/model";
 import { rarityColor, palette } from "../../src/theme";
 import { useGame } from "../../src/contexts/GameContext";
 
-type Tab = "equipment" | "shop" | "market" | "companions";
+type Tab = "equipment" | "shop" | "market";
+type ShopCategory = "all" | "armor" | "accessories" | "companions";
+const SHOP_CATEGORIES: { id: ShopCategory; label: string }[] = [
+  { id: "all", label: "الكل" },
+  { id: "armor", label: "الدروع" },
+  { id: "accessories", label: "الإكسسوارات" },
+  { id: "companions", label: "الرفقاء" },
+];
 const slotIcons: Record<string, string> = { "سلاح": "flash", "درع": "shield", "خوذة": "skull", "قفازات": "hand-left", "حذاء": "footsteps", "قلادة": "diamond", "خاتم أول": "ellipse", "خاتم ثانٍ": "ellipse" };
 
 export default function GearScreen() {
   const { state, update, fpsMode, command } = useGame();
   const [tab, setTab] = useState<Tab>("equipment");
+  const [shopCategory, setShopCategory] = useState<ShopCategory>("all");
   const [notice, setNotice] = useState("");
   const stats = combatStats(state);
   const heroLevel = state.hero?.level ?? 0;
   const equippedCount = useMemo(() => Object.values(state.equipped).filter(Boolean).length, [state.equipped]);
+  const shopItems = useMemo(() => [...STARTER_ITEMS, ...DUNGEON_ITEMS].filter((item) => item.slot !== "سلاح"), []);
+  const visibleShopItems = useMemo(() => {
+    if (shopCategory === "all" || shopCategory === "companions") return shopCategory === "all" ? shopItems : [];
+    if (shopCategory === "armor") return shopItems.filter((item) => item.slot === "درع" || item.slot === "خوذة");
+    return shopItems.filter((item) => !["سلاح", "درع", "خوذة"].includes(item.slot));
+  }, [shopCategory, shopItems]);
   const marketItems = useMemo(() => [
     ...state.inventory.map((item) => ({ item, equipped: false })),
     ...Object.entries(state.equipped).flatMap(([slot, item]) => item ? [{ item, equipped: true, slot }] : []),
@@ -50,7 +64,6 @@ export default function GearScreen() {
     { id: "equipment", label: "عتادي", icon: "shield-checkmark" },
     { id: "shop", label: "المتجر", icon: "storefront-outline" },
     { id: "market", label: "السوق", icon: "cash-outline" },
-    { id: "companions", label: "رفقاء", icon: "paw-outline" },
   ];
 
   return <AppScreen>
@@ -96,25 +109,44 @@ export default function GearScreen() {
           <View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt><Txt muted style={styles.itemBonus}>{shown.slot} • {Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>يتطلب {required}</Txt></View>
           <Icon name={(shown.icon ?? "ellipse") as never} color={rarityColor[shown.rarity]} size={20} />
         </Card>;
-      }) : <Card style={styles.empty}><Icon name="file-tray-outline" color={palette.dim} size={22} /><Txt muted>حقيبتك فارغة. اكسب عتادًا من الزنزانة أو ابدأ بمتجر الحدود.</Txt></Card>}
+      }) : <Card style={styles.empty}><Icon name="file-tray-outline" color={palette.dim} size={22} /><Txt muted>حقيبتك فارغة. اختر أول قطعة من متجر العالم.</Txt></Card>}
     </> : null}
 
     {tab === "shop" ? <>
-      <SectionTitle title="متجر الحدود" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("ar-EG")} ذهب`} icon="cash-outline" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>عتاد البداية</Txt><Txt muted style={styles.shopCopy}>متجر محدود بقطع البداية فقط؛ القطع النادرة المولدة لا تُشترى وتُكتسب من الزنزانة.</Txt></Card>
-      {STARTER_ITEMS.map((item) => {
-        const locked = !state.hero || heroLevel < (item.requiredLevel ?? 1);
+      <SectionTitle title="متجر العالم" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("ar-EG")} ذهب`} icon="cash-outline" tone="gold" />} />
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>الدروع والخوذ والقفازات والأحذية والإكسسوارات وقطع الزنزانة والرفقاء ظاهرة مع أسعارها. تستطيع الشراء بأي مستوى؛ التجهيز والتفعيل يظلان مرتبطين بمتطلبات المستوى والطابق.</Txt><Txt style={styles.poolNote}>{shopItems.length.toLocaleString("ar-EG")} قطعة عتاد • {PETS.length} رفقاء</Txt></Card>
+      <View style={styles.shopFilters}>
+        {SHOP_CATEGORIES.map((category) => <Pressable key={category.id} onPress={() => setShopCategory(category.id)} style={[styles.shopFilter, shopCategory === category.id && styles.shopFilterActive]}>
+          <Txt style={[styles.shopFilterText, shopCategory === category.id && styles.shopFilterTextActive]}>{category.label}</Txt>
+        </Pressable>)}
+      </View>
+      {visibleShopItems.map((item) => {
+        const canAfford = state.gold >= item.price;
         return <Card key={item.id} style={styles.itemRow}>
-        <AppButton label={locked ? `يتطلب المستوى ${item.requiredLevel ?? 1}` : `${item.price} ذهب`} onPress={() => purchaseItem(item.id)} variant={locked ? "secondary" : "jade"} small icon={locked ? "lock-closed-outline" : "cart-outline"} disabled={locked} />
-        <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>يفتح من المستوى {item.requiredLevel ?? 1}</Txt></View>
-        <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
-      </Card>;
+          <AppButton label={canAfford ? `شراء ${item.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => purchaseItem(item.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التجهيز: مستوى {item.requiredLevel ?? 1}{(item.requiredDungeonFloor ?? 1) > 1 ? ` • طابق ${item.requiredDungeonFloor}` : ""}</Txt></View>
+          <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
+        </Card>;
       })}
+      {shopCategory === "all" || shopCategory === "companions" ? <>
+      <SectionTitle title="رفقاء العالم" icon="paw-outline" action={<Pill label={`${state.pets.length}/${PETS.length}`} tone="jade" />} />
+      {PETS.map((pet) => {
+        const owned = state.pets.includes(pet.id);
+        const locked = !state.hero || heroLevel < pet.requiredLevel;
+        const active = state.activePet === pet.id && !locked;
+        const canAfford = state.gold >= pet.price;
+        return <Card key={pet.id} style={styles.petCard}>
+          <View style={styles.petBadge}><Icon name={pet.icon as never} color={active ? palette.gold : palette.jade} size={23} /></View>
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : locked ? <Pill label={`تفعيل مستوى ${pet.requiredLevel}`} tone="muted" /> : null}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التفعيل من المستوى {pet.requiredLevel}</Txt></View>
+          {owned ? <AppButton label={locked ? `مستوى ${pet.requiredLevel}` : active ? "النشط" : "تفعيل"} onPress={() => fpsMode ? void command({ type: "setPet", petId: pet.id }) : update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active || locked} /> : <AppButton label={canAfford ? `شراء ${pet.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => purchasePet(pet.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />}
+        </Card>;
+      })}
+      </> : null}
     </> : null}
 
     {tab === "market" ? <>
       <SectionTitle title={`سوق اللاعب (${marketItems.length})`} icon="cash-outline" action={<Pill label="50% من السعر المرجعي" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>أسعار مرجعية واضحة</Txt><Txt muted style={styles.shopCopy}>يعرض السوق القطع الموجودة في حقيبتك أو المجهزة فقط. تُحسب قيمة البيع كنصف سعر الكتالوج، وتبقى غنائم الزنزانة خارج متجر الشراء.</Txt><Txt style={styles.poolNote}>كتالوج الزنزانة: {DUNGEON_ITEM_POOL_SIZE} قطعة • لا تُشترى من المتجر.</Txt></Card>
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>أسعار مرجعية واضحة</Txt><Txt muted style={styles.shopCopy}>يعرض السوق القطع الموجودة في حقيبتك أو المجهزة فقط. تُحسب قيمة البيع كنصف سعر الكتالوج، وتبقى غنائم الزنزانة خارج متجر الشراء.</Txt><Txt style={styles.poolNote}>كتالوج الزنزانة: {DUNGEON_ITEM_POOL_SIZE} قطعة • متاحة للشراء.</Txt></Card>
       {marketItems.length ? marketItems.map(({ item, equipped }) => {
         const shown = findEquipmentTemplate(item) ?? item;
         const sellPrice = getEquipmentSellPrice(item);
@@ -126,26 +158,18 @@ export default function GearScreen() {
       }) : <Card style={styles.empty}><Icon name="pricetag-outline" color={palette.dim} size={22} /><Txt muted>لا توجد قطع للبيع الآن. انتصر في الزنزانة لتحصل على غنائم جديدة.</Txt></Card>}
     </> : null}
 
-    {tab === "companions" ? <>
-      <SectionTitle title="رفقاء الرحلة" icon="paw-outline" action={<Pill label={`${state.pets.length}/${PETS.length}`} tone="jade" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>لا تسافر وحيدًا</Txt><Txt muted style={styles.shopCopy}>كل رفيق يمنحك سمة مختلفة. رفيق واحد نشط في الوقت نفسه.</Txt></Card>
-      {PETS.map((pet) => {
-        const owned = state.pets.includes(pet.id);
-        const locked = !state.hero || heroLevel < pet.requiredLevel;
-        const active = state.activePet === pet.id && !locked;
-        return <Card key={pet.id} style={styles.petCard}>
-          <View style={styles.petBadge}><Icon name={pet.icon as never} color={active ? palette.gold : palette.jade} size={23} /></View>
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : locked ? <Pill label={`مستوى ${pet.requiredLevel}`} tone="muted" /> : null}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>يفتح من المستوى {pet.requiredLevel}</Txt></View>
-          {owned ? <AppButton label={locked ? `مستوى ${pet.requiredLevel}` : active ? "النشط" : "اختر"} onPress={() => fpsMode ? void command({ type: "setPet", petId: pet.id }) : update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active || locked} /> : <AppButton label={locked ? `يفتح مستوى ${pet.requiredLevel}` : `${pet.price} ذهب`} onPress={() => purchasePet(pet.id)} variant={locked ? "secondary" : "jade"} small icon={locked ? "lock-closed-outline" : "cart-outline"} disabled={locked} />}
-        </Card>;
-      })}
-    </> : null}
+
   </AppScreen>;
 }
 
 const styles = StyleSheet.create({
   statRow: { flexDirection: "row", gap: 8 },
   tabsCard: { padding: 5, flexDirection: "row", gap: 3, borderRadius: 17 },
+  shopFilters: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 7 },
+  shopFilter: { paddingHorizontal: 13, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.panel },
+  shopFilterActive: { backgroundColor: palette.gold, borderColor: palette.gold },
+  shopFilterText: { color: palette.muted, fontSize: 11, fontWeight: "800" },
+  shopFilterTextActive: { color: palette.ink },
   tab: { flex: 1, minHeight: 43, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 4 },
   tabActive: { backgroundColor: palette.gold },
   tabText: { fontSize: 10, fontWeight: "800", color: palette.muted },

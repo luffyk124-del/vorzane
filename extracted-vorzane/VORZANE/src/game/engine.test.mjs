@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { advanceExpeditions, allocateStatPoint, buyItem, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask } from "./engine.ts";
-import { createFreshState } from "./model.ts";
+import { advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission } from "./engine.ts";
+import { createFreshState, normalizeGameState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
   const state = createHeroState("اختبار", "Warrior");
@@ -22,6 +22,73 @@ test("shop rejects unknown items without changing the save", () => {
   assert.equal(result.state, state);
   assert.equal(state.gold, 500);
   assert.equal(state.inventory.length, 0);
+});
+
+test("weapon-category items are not purchasable from the store", () => {
+  const state = createHeroState("اختبار", "Warrior");
+  const result = buyItem(state, "sword1");
+  assert.ok(result.error);
+  assert.equal(result.state, state);
+  assert.equal(state.gold, 500);
+  assert.equal(state.inventory.length, 0);
+});
+
+test("players can buy high-level armor early but cannot equip it before its level", () => {
+  const state = createHeroState("اختبار", "Mage");
+  state.gold = 1_000_000;
+
+  const purchased = buyItem(state, "armor30");
+  assert.equal(purchased.error, undefined);
+  assert.equal(purchased.state.gold, 680_000);
+  assert.equal(purchased.state.inventory.length, 1);
+  const ownedItem = purchased.state.inventory[0];
+  assert.equal(ownedItem.catalogId, "armor30");
+
+  const blocked = equipItem(purchased.state, ownedItem.id);
+  assert.equal(blocked, purchased.state, "level requirement must block equipping");
+  assert.equal(blocked.equipped["درع"], undefined);
+
+  const eligible = { ...purchased.state, hero: { ...purchased.state.hero, level: 30 } };
+  const equipped = equipItem(eligible, ownedItem.id);
+  assert.equal(equipped.equipped["درع"]?.catalogId, "armor30");
+  assert.equal(equipped.inventory.length, 0);
+});
+
+test("non-weapon dungeon equipment can be purchased early but remains level and floor gated", () => {
+  const state = createHeroState("اختبار", "Mage");
+  state.gold = 10_000;
+
+  const purchased = buyItem(state, "dun-2-mythic-1");
+  assert.equal(purchased.error, undefined);
+  assert.equal(purchased.state.inventory.length, 1);
+  const owned = purchased.state.inventory[0];
+  assert.equal(owned.catalogId, "dun-2-mythic-1");
+
+  const earlyEquip = equipItem(purchased.state, owned.id);
+  assert.equal(earlyEquip, purchased.state);
+
+  const levelReady = { ...purchased.state, hero: { ...purchased.state.hero, level: 35 } };
+  assert.equal(equipItem(levelReady, owned.id), levelReady, "dungeon floor requirement must still apply");
+
+  const floorReady = { ...levelReady, dungeonFloor: 40 };
+  assert.equal(equipItem(floorReady, owned.id).equipped["درع"]?.catalogId, "dun-2-mythic-1");
+});
+
+test("players can buy high-level companions early but cannot activate them early", () => {
+  const state = createHeroState("اختبار", "Warrior");
+  state.gold = 500_000;
+
+  const purchased = buyPet(state, "star-drake");
+  assert.equal(purchased.error, undefined);
+  assert.equal(purchased.state.gold, 50_000);
+  assert.ok(purchased.state.pets.includes("star-drake"));
+  assert.equal(purchased.state.activePet, null);
+
+  const blocked = setPet(purchased.state, "star-drake");
+  assert.equal(blocked.activePet, null);
+
+  const eligible = { ...purchased.state, hero: { ...purchased.state.hero, level: 45 } };
+  assert.equal(setPet(eligible, "star-drake").activePet, "star-drake");
 });
 
 test("level-up stat points can be spent exactly once per point", () => {
@@ -53,7 +120,7 @@ test("stat allocation requires a hero and respects the stat ceiling", () => {
 
 test("winning a dungeon battle advances the floor and grants catalog loot", () => {
   const state = createHeroState("اختبار", "Warrior");
-  const battle = createBattleSequence(state, "dungeon", () => 0.99);
+  const battle = createBattleSequence(state, "dungeon", () => 0.01);
 
   assert.ok(battle);
   assert.equal(battle.result.won, true);
@@ -63,6 +130,16 @@ test("winning a dungeon battle advances the floor and grants catalog loot", () =
   assert.equal(battle.result.state.inventory.length, 1);
   assert.ok(battle.result.gold > 0);
   assert.ok(battle.result.xp > 0);
+});
+
+test("dungeon victories can yield no item when the random drop roll fails", () => {
+  const state = createHeroState("اختبار", "Warrior");
+  const battle = createBattleSequence(state, "dungeon", () => 0.99);
+
+  assert.ok(battle);
+  assert.equal(battle.result.won, true);
+  assert.equal(battle.result.dropped, null);
+  assert.equal(battle.result.state.inventory.length, 0);
 });
 
 test("completed expedition pays its reward once and clears the active slot", () => {
@@ -121,4 +198,52 @@ test("expedition tasks require their threshold and grant a one-time reward", () 
   assert.equal(claimed.quests.expedition_task_one, true);
   assert.equal(claimExpeditionTask(claimed, "expedition_task_one").gold, claimed.gold);
   assert.equal(state.gold, 500);
+});
+
+
+test("2D character appearance choices persist and old saves receive safe defaults", () => {
+  const fresh = createFreshState();
+  assert.deepEqual(fresh.characterStyle, { gender: "male", appearance: 0 });
+
+  const customized = normalizeGameState({
+    ...fresh,
+    hero: createHeroState("مغامر", "Mage").hero,
+    characterStyle: { gender: "female", appearance: 3 },
+  });
+  assert.deepEqual(customized.characterStyle, { gender: "female", appearance: 3 });
+
+  const legacy = normalizeGameState({ hero: createHeroState("قديم", "Warrior").hero });
+  assert.deepEqual(legacy.characterStyle, { gender: "male", appearance: 0 });
+});
+
+
+test("daily missions reset by date and rewards can only be claimed once", () => {
+  const start = Date.UTC(2026, 0, 1, 12);
+  let state = ensureMissionPeriods(createHeroState("مهمات", "Mage"), start);
+  state.wins = 2;
+  const daily = getRecurringMissions(state, "daily", start).find((mission) => mission.id === "daily-wins");
+  assert.equal(daily?.available, true);
+
+  const claimed = claimRecurringMission(state, "daily", "daily-wins", start);
+  assert.equal(claimed.gold, state.gold + 120);
+  assert.equal(claimRecurringMission(claimed, "daily", "daily-wins", start).gold, claimed.gold);
+
+  const nextDay = ensureMissionPeriods(claimed, start + 86_400_000);
+  assert.equal(getRecurringMissions(nextDay, "daily", start + 86_400_000).find((mission) => mission.id === "daily-wins")?.progress, 0);
+  assert.equal(getRecurringMissions(nextDay, "weekly", start + 86_400_000).find((mission) => mission.id === "weekly-wins")?.progress, 2, "weekly progress must continue across days");
+});
+
+test("weekly and seasonal mission progress uses period baselines", () => {
+  const start = Date.UTC(2026, 0, 5, 12);
+  let state = ensureMissionPeriods(createHeroState("مهمات", "Warrior"), start);
+  state.wins = 10;
+  state.expeditionsCompleted = 4;
+  state.hero.level = 3;
+  const weekly = getRecurringMissions(state, "weekly", start);
+  assert.equal(weekly.find((mission) => mission.id === "weekly-wins")?.available, true);
+  assert.equal(weekly.find((mission) => mission.id === "weekly-expeditions")?.available, true);
+  assert.equal(weekly.find((mission) => mission.id === "weekly-levels")?.available, true);
+
+  const nextMonth = ensureMissionPeriods(state, Date.UTC(2026, 1, 1, 12));
+  assert.equal(getRecurringMissions(nextMonth, "season", Date.UTC(2026, 1, 1, 12)).find((mission) => mission.id === "season-wins")?.progress, 0);
 });

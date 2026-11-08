@@ -13,7 +13,6 @@ export type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<{ error: string | null; confirmation: boolean }>;
   continueAsGuest: () => Promise<string | null>;
-  signInWithGoogle: (linkCurrentUser?: boolean) => Promise<string | null>;
   upgradeGuestWithEmail: (email: string, password: string) => Promise<{ error: string | null; confirmation: boolean }>;
   signOut: () => Promise<string | null>;
 };
@@ -95,22 +94,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       try {
         const { error: guestError } = await supabase.auth.signInAnonymously();
         const friendly = guestError ? friendlyAuthError(guestError) : null;
-        if (friendly) setError(friendly);
-        return friendly;
-      } catch (caught) {
-        const friendly = friendlyAuthError(caught);
-        setError(friendly);
-        return friendly;
-      }
-    },
-    signInWithGoogle: async (linkCurrentUser = false) => {
-      setError("");
-      try {
-        const options = { redirectTo: redirectUrl(), skipBrowserRedirect: false };
-        const { error: googleError } = linkCurrentUser
-          ? await supabase.auth.linkIdentity({ provider: "google", options })
-          : await supabase.auth.signInWithOAuth({ provider: "google", options });
-        const friendly = googleError ? friendlyAuthError(googleError) : null;
         if (friendly) setError(friendly);
         return friendly;
       } catch (caught) {

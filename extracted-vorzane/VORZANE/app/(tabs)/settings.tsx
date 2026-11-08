@@ -51,16 +51,6 @@ export default function SettingsScreen() {
     } finally { setBusy(false); }
   };
 
-  const linkGoogle = async () => {
-    setMessage("");
-    setBusy(true);
-    try {
-      if (auth.user && !(await game.flushNow())) { setMessage("تعذر تأكيد الحفظ؛ لم يبدأ ربط Google."); return; }
-      const error = await auth.signInWithGoogle(!!auth.user);
-      if (error) setMessage(error);
-    } finally { setBusy(false); }
-  };
-
   const signOut = async () => {
     setMessage("");
     setBusy(true);
@@ -175,8 +165,6 @@ export default function SettingsScreen() {
         <InputField label="كلمة مرور للحساب" value={password} onChangeText={setPassword} placeholder="8 أحرف على الأقل" secureTextEntry icon="key-outline" />
         <AppButton label="ربط البريد بالضيف" icon="link-outline" onPress={linkEmail} loading={busy} disabled={busy} />
       </> : null}
-      <AppButton label="ربط Google أو تسجيل الدخول به" icon="logo-google" variant="secondary" onPress={linkGoogle} disabled={busy || game.status !== "ready"} />
-      <Txt muted style={styles.googleNote}>يلزم تفعيل Google OAuth وبيانات Google Cloud في Google Identity Services والخادم قبل اكتمال هذا الخيار.</Txt>
       {game.status === "offline" ? <AppButton label="إعادة محاولة المزامنة" icon="cloud-upload-outline" variant="jade" onPress={() => game.reloadCloud()} disabled={busy} /> : null}
       <AppButton label="تصدير نسخة JSON" icon="download-outline" variant="secondary" onPress={exportSave} disabled={busy} />
       <AppButton label="استيراد نسخة JSON" icon="cloud-upload-outline" variant="secondary" onPress={chooseImport} disabled={busy} />
@@ -188,7 +176,7 @@ export default function SettingsScreen() {
     <SectionTitle title="إدارة الحفظ" icon="cloud-done-outline" />
     <Card style={styles.cloudCard}>
       <View style={styles.cloudTop}><Pill label={game.status === "ready" ? "مرتبط بالسحابة" : game.status === "offline" ? "محلي مؤقت" : "جارٍ الفحص"} tone={game.status === "ready" ? "jade" : game.status === "offline" ? "red" : "muted"} icon={game.status === "ready" ? "cloud-done-outline" : "cloud-outline"} /><Txt style={styles.settingTitle}>حفظ خاص بهذا اللاعب</Txt></View>
-      <Txt muted style={styles.accountNote}>يُخزَّن صف الحفظ تحت معرّف حساب Supabase؛ سياسات RLS تمنع حسابًا آخر من قراءته أو تعديله. الحذف أدناه يطال حسابك وحده.</Txt>
+      <Txt muted style={styles.accountNote}>تقدمك مرتبط بحسابك وحدك، ولا يستطيع لاعب آخر الوصول إليه. الحذف أدناه يطال تقدمك فقط.</Txt>
       <AppButton label="حذف حفظ حسابي والبدء من جديد" icon="trash-outline" variant="danger" onPress={() => setConfirmReset(true)} disabled={busy || game.status !== "ready"} />
     </Card>
 
@@ -255,7 +243,6 @@ const styles = StyleSheet.create({
   accountIdentity: { flexDirection: "row", alignItems: "center", gap: 10 },
   accountIcon: { width: 43, height: 43, borderRadius: 15, backgroundColor: "rgba(98,216,195,0.10)", alignItems: "center", justifyContent: "center" },
   accountNote: { fontSize: 12, lineHeight: 20 },
-  googleNote: { fontSize: 10, lineHeight: 16, textAlign: "center", marginTop: -7 },
   message: { flexDirection: "row", alignItems: "center", gap: 8, padding: 11, borderColor: "rgba(230,199,124,0.24)" },
   messageText: { flex: 1, fontSize: 12, lineHeight: 19 },
   cloudCard: { gap: 11 },

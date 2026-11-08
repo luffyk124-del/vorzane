@@ -48,8 +48,15 @@ export type OfflineReport = {
   failure?: string;
 };
 
+export type CharacterStyle = { gender: "male" | "female"; appearance: 0 | 1 | 2 | 3 };
+export type MissionSnapshot = { wins: number; expeditions: number; level: number };
+export type MissionPeriod = { key: string; baseline: MissionSnapshot; claimed: Record<string, boolean> };
+export type MissionPeriods = { daily: MissionPeriod; weekly: MissionPeriod; season: MissionPeriod };
+
 export type GameState = {
   hero: Hero | null;
+  characterStyle: CharacterStyle;
+  missionPeriods: MissionPeriods;
   profileAvatarId: ClassId | "brand";
   gold: number;
   gems: number;
@@ -102,9 +109,21 @@ export const CLASS_DESCRIPTIONS: Record<ClassId, string> = {
 
 export const SLOT_NAMES = ["سلاح", "درع", "خوذة", "قفازات", "حذاء", "قلادة", "خاتم أول", "خاتم ثانٍ"];
 
+function missionWeekKey(date = new Date()) {
+  const day = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+  return day.toISOString().slice(0, 10);
+}
+
 export function createFreshState(): GameState {
   return {
     hero: null,
+    characterStyle: { gender: "male", appearance: 0 },
+    missionPeriods: {
+      daily: { key: new Date().toISOString().slice(0, 10), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+      weekly: { key: missionWeekKey(), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+      season: { key: new Date().toISOString().slice(0, 7), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+    },
     profileAvatarId: "brand",
     gold: 500,
     gems: 50,
@@ -163,6 +182,41 @@ function normalizeExpedition(value: unknown): ActiveExpedition | null {
   return { queueId: typeof item.queueId === "string" ? item.queueId : `${item.planId}-${startedAt}`, planId: item.planId, startedAt, endsAt };
 }
 
+function normalizeMissionPeriods(value: unknown, wins: number, expeditions: number, level: number): MissionPeriods {
+  const current = createFreshState().missionPeriods;
+  const baseline = { wins, expeditions, level };
+  if (!value || typeof value !== "object") {
+    return {
+      daily: { ...current.daily, baseline },
+      weekly: { ...current.weekly, baseline },
+      season: { ...current.season, baseline },
+    };
+  }
+  const source = value as Partial<MissionPeriods>;
+  const clean = (period: unknown, fallback: MissionPeriod): MissionPeriod => {
+    if (!period || typeof period !== "object") return { ...fallback, baseline, claimed: {} };
+    const item = period as Partial<MissionPeriod>;
+    const saved = (item.baseline && typeof item.baseline === "object" ? item.baseline : {}) as Partial<MissionSnapshot>;
+    const claimed = item.claimed && typeof item.claimed === "object"
+      ? Object.fromEntries(Object.entries(item.claimed).filter(([, flag]) => flag === true))
+      : {};
+    return {
+      key: typeof item.key === "string" ? item.key : fallback.key,
+      baseline: {
+        wins: finite(saved.wins, wins, 0, 1_000_000_000),
+        expeditions: finite(saved.expeditions, expeditions, 0, 1_000_000_000),
+        level: finite(saved.level, level, 1, 999),
+      },
+      claimed,
+    };
+  };
+  return {
+    daily: clean(source.daily, current.daily),
+    weekly: clean(source.weekly, current.weekly),
+    season: clean(source.season, current.season),
+  };
+}
+
 export function normalizeGameState(value: unknown): GameState | null {
   if (!value || typeof value !== "object" || Array.isArray(value) || !("hero" in value)) return null;
   const source = value as Partial<GameState> & { hero?: unknown };
@@ -202,6 +256,11 @@ export function normalizeGameState(value: unknown): GameState | null {
     ...fresh,
     ...source,
     hero,
+    characterStyle: {
+      gender: source.characterStyle?.gender === "female" ? "female" : "male",
+      appearance: ([0, 1, 2, 3].includes(Number(source.characterStyle?.appearance)) ? Number(source.characterStyle?.appearance) : 0) as 0 | 1 | 2 | 3,
+    },
+    missionPeriods: normalizeMissionPeriods(source.missionPeriods, finite(source.wins, 0), finite(source.expeditionsCompleted, 0), hero?.level ?? 1),
     profileAvatarId: ["brand", "Warrior", "Mage", "Assassin", "Archer"].includes(String(source.profileAvatarId)) ? source.profileAvatarId as ClassId | "brand" : "brand",
     gold: finite(source.gold, fresh.gold, 0, 1_000_000_000),
     gems: finite(source.gems, fresh.gems, 0, 1_000_000_000),

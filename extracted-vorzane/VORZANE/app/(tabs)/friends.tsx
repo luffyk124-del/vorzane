@@ -1,59 +1,37 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Alert, StyleSheet, TextInput, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { useAuth } from "../../src/contexts/AuthContext";
 import {
-  getMyProfile,
   listIncomingFriendRequests,
   listMyFriends,
   removeFriend,
   respondToFriendRequest,
-  saveMyProfile,
   searchPlayers,
   sendFriendRequest,
-  setMyProfileSearchable,
   type FriendSummary,
   type IncomingFriendRequest,
   type PlayerSearchResult,
 } from "../../src/lib/social";
 import { palette } from "../../src/theme";
 
-const AVATARS = [
-  { id: "brand", label: "الشعار", icon: "sparkles" },
-  { id: "Warrior", label: "المحارب", icon: "shield-half" },
-  { id: "Mage", label: "الساحر", icon: "sparkles" },
-  { id: "Assassin", label: "المغتال", icon: "eye-off" },
-  { id: "Archer", label: "رامي السهام", icon: "navigate" },
-] as const;
-
 export default function FriendsScreen() {
   const { user } = useAuth();
-  const [displayName, setDisplayName] = useState("");
-  const [avatarId, setAvatarId] = useState("brand");
-  const [isSearchable, setIsSearchable] = useState(true);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PlayerSearchResult[]>([]);
   const [friends, setFriends] = useState<FriendSummary[]>([]);
   const [incoming, setIncoming] = useState<IncomingFriendRequest[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  const [configured, setConfigured] = useState(true);
 
   const refresh = async () => {
     if (!user) return;
-    const [profile, friendRows, requestRows] = await Promise.all([
-      getMyProfile(user.id),
+    const [friendRows, requestRows] = await Promise.all([
       listMyFriends(),
       listIncomingFriendRequests(),
     ]);
-    if (profile) {
-      setDisplayName(profile.display_name);
-      setAvatarId(profile.avatar_id);
-      setIsSearchable(profile.is_searchable);
-    }
     setFriends(friendRows);
     setIncoming(requestRows);
-    setConfigured(true);
   };
 
   useEffect(() => {
@@ -61,8 +39,7 @@ export default function FriendsScreen() {
     if (user?.id) {
       void refresh().catch((error) => {
         if (!active) return;
-        setConfigured(false);
-        setNotice(error instanceof Error ? error.message : "تعذر تحميل الخدمات الاجتماعية.");
+        setNotice(error instanceof Error ? error.message : "تعذر تحديث قائمة الأصدقاء. حاول مجددًا.");
       });
     }
     return () => { active = false; };
@@ -101,31 +78,9 @@ export default function FriendsScreen() {
   };
 
   return <AppScreen>
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء والملف" subtitle="أنشئ هويتك داخل العالم، وابحث عن لاعبين وأدر علاقاتك." />
+    <View style={styles.content}>
+      <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء" subtitle="ابحث عن لاعبين، وأدر طلبات الصداقة وقائمتك." />
       {notice ? <Card style={styles.notice}><Icon name="information-circle-outline" color={palette.gold} size={18} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
-      {!configured ? <Card style={styles.warning}><Txt style={styles.warningTitle}>خدمة المجتمع تحتاج إعداد قاعدة البيانات</Txt><Txt muted>واجهة الأصدقاء جاهزة، لكن يجب مراجعة migration الاجتماعية وتطبيقها على مشروع Supabase تجريبي قبل تفعيلها للاعبين.</Txt></Card> : null}
-
-      <SectionTitle title="ملفي داخل العالم" icon="person-circle-outline" />
-      <Card style={styles.panel}>
-        <Txt muted style={styles.fieldLabel}>اسم اللاعب (3 إلى 24 حرفًا)</Txt>
-        <TextInput value={displayName} onChangeText={setDisplayName} maxLength={24} placeholder="اكتب اسمك داخل VORZANE" placeholderTextColor={palette.muted} style={styles.input} />
-        <Txt muted style={styles.fieldLabel}>الصورة الرمزية</Txt>
-        <View style={styles.avatarRow}>
-          {AVATARS.map((avatar) => <Pressable key={avatar.id} onPress={() => setAvatarId(avatar.id)} style={[styles.avatarOption, avatarId === avatar.id && styles.avatarSelected]}>
-            <Icon name={avatar.icon as never} color={avatarId === avatar.id ? palette.ink : palette.jade} size={18} />
-            <Txt style={[styles.avatarText, avatarId === avatar.id && styles.avatarTextSelected]}>{avatar.label}</Txt>
-          </Pressable>)}
-        </View>
-        <Pressable style={styles.privacyRow} accessibilityRole="button" accessibilityLabel="تغيير ظهور الملف في البحث" onPress={() => setIsSearchable((value) => !value)}>
-          <Pill label={isSearchable ? "ظاهر في البحث" : "مخفي من البحث"} tone={isSearchable ? "jade" : "muted"} />
-          <Txt>السماح للاعبين بالعثور على ملفي</Txt>
-        </Pressable>
-        <AppButton label="حفظ الملف الشخصي" onPress={() => run(async () => {
-          await saveMyProfile(displayName, avatarId);
-          await setMyProfileSearchable(isSearchable);
-        }, "تم حفظ ملفك الشخصي.")} loading={busy} disabled={busy || !user} icon="save-outline" />
-      </Card>
 
       <SectionTitle title={`طلبات الصداقة الواردة (${incoming.length})`} icon="mail-unread-outline" />
       {incoming.length ? incoming.map((request) => <Card key={request.request_id} style={styles.playerRow}>
@@ -158,12 +113,12 @@ export default function FriendsScreen() {
         <Icon name="person-outline" color={palette.jade} size={22} />
       </Card>)}
       <AppButton label="تحديث البيانات" onPress={() => run(refresh, "تم تحديث بيانات المجتمع.")} variant="ghost" disabled={busy} icon="refresh-outline" />
-    </ScrollView>
+    </View>
   </AppScreen>;
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 18, paddingBottom: 120, gap: 13, width: "100%", maxWidth: 560, alignSelf: "center" },
+  content: { gap: 13, width: "100%" },
   panel: { gap: 10, backgroundColor: "#13242C" },
   input: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 12, color: palette.text, textAlign: "right", backgroundColor: "#0B171D" },
   fieldLabel: { fontSize: 11, fontWeight: "800", textAlign: "right" },
@@ -181,6 +136,4 @@ const styles = StyleSheet.create({
   empty: { padding: 16, alignItems: "center" },
   notice: { padding: 11, flexDirection: "row", alignItems: "center", gap: 8 },
   noticeText: { flex: 1, fontSize: 11 },
-  warning: { padding: 14, gap: 6, borderColor: "rgba(230,199,124,0.35)" },
-  warningTitle: { fontSize: 13, fontWeight: "900", color: palette.gold },
 });

@@ -57,7 +57,7 @@ export default function MigrationScreen() {
       <AppButton label="نقل هذا الحفظ إلى حسابي" icon="cloud-upload-outline" onPress={() => choose("import")} loading={busy} disabled={busy} />
       <AppButton label="ابدأ بحفظ جديد" icon="refresh-outline" variant="secondary" onPress={() => choose("fresh")} disabled={busy} />
       {busy ? <View style={styles.busy}><ActivityIndicator color={palette.jade} /><Txt muted>ننتظر تأكيد الحفظ السحابي…</Txt></View> : null}
-      <Txt muted style={styles.footnote}>سيتم تأكيد النقل إلى قاعدة البيانات قبل إغلاق هذه الشاشة.</Txt>
+      <Txt muted style={styles.footnote}>لن نغلق هذه الشاشة قبل التأكد من حفظ تقدمك.</Txt>
     </Card>
   </AppScreen>;
 }
