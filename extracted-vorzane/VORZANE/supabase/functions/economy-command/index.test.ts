@@ -22,7 +22,8 @@ function fixture(options: {
   const calls: Record<string, unknown> = {};
   const builder = {
     select(columns: string) {
-      (calls.columnsByTable ??= {})[String(calls.table)] = columns;
+      const columnsByTable = (calls.columnsByTable ??= {}) as Record<string, string>;
+      columnsByTable[String(calls.table)] = columns;
       return this;
     },
     eq(column: string, value: string) {
