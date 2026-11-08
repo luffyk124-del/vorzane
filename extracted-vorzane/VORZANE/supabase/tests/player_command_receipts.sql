@@ -13,7 +13,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
 
-do $ begin
+do $test$ begin
   begin
     perform public.commit_player_command(
       '00000000-0000-0000-0000-00000000000a',
@@ -26,7 +26,7 @@ do $ begin
   exception when insufficient_privilege then
     null;
   end;
-end $;
+end $test$;
 
 set local role service_role;
 select set_config('request.jwt.claim.role', 'service_role', true);
@@ -67,6 +67,7 @@ begin
   end if;
 
   v_replay := public.commit_player_command(
+    '00000000-0000-0000-0000-00000000000a',
     '10000000-0000-0000-0000-000000000001',
     v_expected,
     '{"gold":999999,"inventory":[]}'::jsonb,
