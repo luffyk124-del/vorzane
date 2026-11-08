@@ -144,3 +144,16 @@ Updated: 2026-11-07
 - The earlier run `42431556804` validated build/browser/typecheck/export only and did not include the later `social-db` job. Do not conflate the two runs.
 - The social migration remains unapplied to the configured Supabase project. No production data, auth users, credentials, or player saves were changed.
 - The PR remains a draft. GitHub Pages production deployment remains unchanged.
+
+
+## 2026-11-08: Friends mobile UX and exploration achievements
+
+- Improved the friends screen's refresh error propagation so a failed refresh cannot be reported as a successful action.
+- Added cleanup for the initial profile load, clearing stale player-search results when the query changes, a confirmation prompt before removing a friend, and clearer accessibility labels / minimum touch target sizing for mobile controls.
+- Added a narrow 360px mobile browser test for the friends profile-save and player-search flow using mocked Supabase responses; no production API calls are made by this test.
+- Added a non-combat exploration achievement track using existing save fields only: completed expeditions and player level.
+- Added one-time gold rewards for exploration milestones. Claims are recorded in the existing claimed-reward map; no new database columns or migration are required.
+- Added unit tests for threshold unlocks, one-time claims, reward amounts, and immutability of the original state.
+- The social database integration job passed in workflow run `42433056348`, including the literal player-search handling for underscore characters.
+- That run also passed browser tests, TypeScript, and began the web export, but it was triggered before the latest mobile UX and achievement commits. The latest commits still require a fresh full CI run before these additions can be called verified.
+- No production database changes, merge, or deployment were performed.
