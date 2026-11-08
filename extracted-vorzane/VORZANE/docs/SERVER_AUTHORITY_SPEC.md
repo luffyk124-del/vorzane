@@ -37,3 +37,16 @@ Each slice needs tests: rejected invalid command, rejected command for another u
 
 - Multiplayer, clans, trading between players, realtime events. These need a separate spec.
 - Any change to the production database. Every migration goes to a test project first.
+
+
+## Economy command execution (implementation in progress)
+
+The additive migration `20261108230000_create_player_command_receipts.sql` introduces a per-player command receipt table and a transaction-safe `commit_player_command` function. It serializes commits by locking the target player's save row, returns the original receipt for a repeated command ID, and rejects stale `updated_at` versions. The RPC is executable only by the Supabase `service_role`; authenticated clients cannot submit arbitrary state directly through it.
+
+The new `supabase/functions/economy-command/index.ts` authenticates the caller with their JWT, reads only that caller's save, applies the canonical game-engine rules for `buyItem`, `sellItem`, `equipItem`, and `unequipItem`, then uses the server-only service-role key to call the atomic RPC. Game modules use explicit TypeScript extensions so Deno can import the same canonical engine instead of duplicating shop prices and equipment rules.
+
+The SQL tests cover first commit, replay, stale-version rejection, and denial of direct authenticated-client RPC execution. Edge Function tests cover auth, malformed commands, canonical purchase pricing, insufficient funds, and stale-version conflicts.
+
+**Not yet complete:** the existing `GameContext` still writes full save snapshots directly from the client. The new endpoint is not wired into the client yet, and client writes have not been revoked. Do not treat the current app as protected against client-side save tampering until every supported mutation is server-backed and the cutover is separately reviewed.
+
+The migration and Edge Function are tested through CI only; neither has been applied or deployed to the production Supabase project.

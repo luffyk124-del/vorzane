@@ -1,6 +1,6 @@
-import { PETS } from "./catalog";
-import { findEquipmentTemplate } from "./dungeonItems";
-import type { GameState, StatBlock, StatKey } from "./model";
+import { PETS } from "./catalog.ts";
+import { findEquipmentTemplate } from "./dungeonItems.ts";
+import type { GameState, StatBlock, StatKey } from "./model.ts";
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 

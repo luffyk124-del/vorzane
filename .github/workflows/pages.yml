@@ -50,16 +50,22 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
           CREATE ROLE anon NOLOGIN;
           CREATE ROLE authenticated NOLOGIN;
-          GRANT USAGE ON SCHEMA public TO anon, authenticated;
+          CREATE ROLE service_role NOLOGIN BYPASSRLS;
+          GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
           CREATE SCHEMA auth;
           CREATE TABLE auth.users (id uuid PRIMARY KEY);
           CREATE FUNCTION auth.uid() RETURNS uuid
           LANGUAGE sql STABLE
-          AS $$
+          AS $auth$
             SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-          $$;
-          GRANT USAGE ON SCHEMA auth TO authenticated;
-          GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
+          $auth$;
+          CREATE FUNCTION auth.role() RETURNS text
+          LANGUAGE sql STABLE
+          AS $auth$
+            SELECT nullif(current_setting('request.jwt.claim.role', true), '')
+          $auth$;
+          GRANT USAGE ON SCHEMA auth TO authenticated, service_role;
+          GRANT EXECUTE ON FUNCTION auth.uid(), auth.role() TO authenticated, service_role;
           SQL
       - name: Apply social migration and run database integration tests
         env:
@@ -72,6 +78,9 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261106080400_restrict_player_save_privileges.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261108220000_player_saves_size_limit.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/tests/player_saves_rls.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261108230000_create_player_command_receipts.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "GRANT SELECT ON public.player_saves TO service_role"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/tests/player_command_receipts.sql
 
   build:
     runs-on: ubuntu-latest
@@ -114,10 +123,10 @@ jobs:
           deno-version: v2.x
       - name: Typecheck Supabase Edge Functions
         working-directory: extracted-vorzane/VORZANE
-        run: deno check supabase/functions/game-state/index.ts supabase/functions/game-state/index.test.ts
+        run: deno check supabase/functions/game-state/index.ts supabase/functions/game-state/index.test.ts supabase/functions/economy-command/index.ts supabase/functions/economy-command/index.test.ts
       - name: Test Supabase Edge Functions
         working-directory: extracted-vorzane/VORZANE
-        run: deno test supabase/functions/game-state/index.test.ts
+        run: deno test supabase/functions/game-state/index.test.ts supabase/functions/economy-command/index.test.ts
       - name: Build web export
         working-directory: extracted-vorzane/VORZANE
         env:
