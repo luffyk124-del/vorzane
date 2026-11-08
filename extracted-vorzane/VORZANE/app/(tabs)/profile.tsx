@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Linking, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { ProfileAvatar } from "../../src/components/ProfileAvatar";
+import { CharacterModelViewer } from "../../src/components/CharacterModelViewer";
 import { useAuth } from "../../src/contexts/AuthContext";
 import { useGame } from "../../src/contexts/GameContext";
 import { CLASS_NAMES, type CharacterStyle, type ClassId } from "../../src/game/model";
@@ -59,14 +60,6 @@ export default function ProfileScreen() {
     return () => { active = false; };
   }, [user?.id]);
 
-  const openModelPreview = async () => {
-    setNotice("");
-    try {
-      await Linking.openURL("https://higgsfield.ai/3d-jutsu/33b883b0-edbe-4adf-9ae9-ee5d9960c402");
-    } catch {
-      setNotice("تعذر فتح عارض المجسم. تحقق من اتصالك بالإنترنت ثم حاول مجددًا.");
-    }
-  };
 
   const save = async () => {
     setBusy(true);
@@ -101,7 +94,7 @@ export default function ProfileScreen() {
 
     <SectionTitle title="مظهر الشخصية" icon="color-palette-outline" />
     <Card style={styles.panel}>
-      <Txt muted style={styles.hint}>تُحفظ اختيارات المظهر ضمن تقدم اللاعب. تنبيه: ربط هذه الاختيارات بالمجسم الحي داخل اللعبة ينتظر إدخال ملف الشخصية ثلاثي الأبعاد إلى التطبيق؛ النماذج والهيكل الحركي الأولي موجودة حاليًا في مشروع المعاينة الخارجي.</Txt>
+      <Txt muted style={styles.hint}>تم إدخال ملف المجسم إلى المشروع. يمكنك تدوير المشهد بالسحب أو اللمس؛ الملف الحالي يعرض النموذجين معًا، أما فصل الذكر والأنثى وتطبيق بدائل الشعر والوجه والملابس على المجسم فيحتاج تجهيز نسخ مستقلة أو أجزاء قابلة للتبديل.</Txt>
       <View style={styles.avatarGrid}>
         {([{ id: "male", label: "ذكر" }, { id: "female", label: "أنثى" }] as const).map((option) => {
           const selected = state.characterStyle.gender === option.id;
@@ -111,14 +104,7 @@ export default function ProfileScreen() {
           </Pressable>;
         })}
       </View>
-      <Pressable accessibilityRole="link" accessibilityHint="يفتح عارضًا خارجيًا لمعاينة النموذجين الأوليين" onPress={() => { void openModelPreview(); }} style={styles.modelPreviewLink}>
-        <Icon name="cube-outline" color={palette.gold} size={20} />
-        <View style={{ flex: 1, alignItems: "flex-end", gap: 3 }}>
-          <Txt style={styles.modelPreviewTitle}>معاينة المجسم ثلاثي الأبعاد</Txt>
-          <Txt muted style={styles.modelPreviewHint}>معاينة النموذجين بعد تجهيز هيكل العظام وحركتي الوقوف والمشي؛ لم يُدمجا داخل اللعبة بعد.</Txt>
-        </View>
-        <Icon name="open-outline" color={palette.muted} size={17} />
-      </Pressable>
+      <CharacterModelViewer />
       <View style={styles.avatarGrid}>
         {["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"].map((color, index) => {
           const selected = state.characterStyle.appearance === index;
