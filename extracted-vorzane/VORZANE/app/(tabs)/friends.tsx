@@ -166,7 +166,7 @@ export default function FriendsScreen() {
         </> : <>
           <Txt style={styles.playerName}>أنشئ ملفك داخل مجتمع VORZANE</Txt>
           <Txt muted style={styles.playerMeta}>اسم الملف مستقل عن بريدك الإلكتروني. يمكنك إخفاؤه من البحث لاحقًا.</Txt>
-          <TextInput value={displayName} onChangeText={setDisplayName} maxLength={24} placeholder="اسم اللاعب (3–24 حرفًا)" placeholderTextColor={palette.muted} style={styles.input} />
+          <TextInput value={typeof displayName === "string" ? displayName : ""} onChangeText={setDisplayName} maxLength={24} placeholder="اسم اللاعب (3–24 حرفًا)" placeholderTextColor={palette.muted} style={styles.input} />
           <AppButton label="إنشاء ملف اللاعب" icon="person-add-outline" onPress={saveProfile} loading={busy} disabled={busy || (typeof displayName === "string" ? displayName.trim().length : 0) < 3} />
         </>}
       </Card>
