@@ -211,7 +211,8 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await page.getByRole("button", { name: "الملف الشخصي", exact: true }).waitFor();
       await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
       await page.waitForURL("**/profile", { timeout: 10_000 });
-      await page.getByText("الملف الشخصي", { exact: true }).last().waitFor({ timeout: 10_000 });
+      await page.getByTestId("page-title").waitFor({ timeout: 10_000 });
+      await page.getByTestId("page-title").getByText("الملف الشخصي", { exact: true }).waitFor({ timeout: 10_000 });
       await page.getByRole("button", { name: "رجوع" }).click();
       await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
 
@@ -291,7 +292,8 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   await page.getByRole("button", { name: "فتح القائمة" }).click();
   await page.getByRole("button", { name: "الأصدقاء", exact: true }).click();
   await page.waitForURL("**/friends", { timeout: 10_000 });
-  await page.getByText("الأصدقاء", { exact: true }).last().waitFor({ timeout: 10_000 });
+  await page.getByTestId("page-title").waitFor({ timeout: 10_000 });
+  await page.getByTestId("page-title").getByText("الأصدقاء", { exact: true }).waitFor({ timeout: 10_000 });
   await page.getByPlaceholder("اسم اللاعب...").waitFor({ timeout: 15_000 });
   const createProfileButton = page.getByRole("button", { name: "إنشاء ملف اللاعب" });
   if (await createProfileButton.isVisible().catch(() => false)) {
