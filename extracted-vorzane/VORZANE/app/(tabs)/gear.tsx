@@ -101,7 +101,7 @@ export default function GearScreen() {
 
     {tab === "shop" ? <>
       <SectionTitle title="متجر الحدود" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("ar-EG")} ذهب`} icon="cash-outline" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>اختر من 192 قطعة موزعة على ثمانية أماكن تجهيز وأربع درجات ندرة. العتاد الأسطوري والخرافي يبقى حكرًا على الزنزانات.</Txt></Card>
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>اختر من 199 قطعة، منها 192 قطعة جديدة، موزعة على ثمانية أماكن تجهيز وأربع درجات ندرة. العتاد الأسطوري والخرافي يبقى حكرًا على الزنزانات.</Txt></Card>
       {SHOP_ITEMS.map((item) => {
         const locked = !state.hero || heroLevel < (item.requiredLevel ?? 1);
         return <Card key={item.id} style={styles.itemRow}>
