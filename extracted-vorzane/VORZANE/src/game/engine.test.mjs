@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { advanceExpeditions, allocateStatPoint, buyItem, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask } from "./engine.ts";
+import { advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask } from "./engine.ts";
 import { createFreshState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
@@ -22,6 +22,44 @@ test("shop rejects unknown items without changing the save", () => {
   assert.equal(result.state, state);
   assert.equal(state.gold, 500);
   assert.equal(state.inventory.length, 0);
+});
+
+test("players can buy high-level gear early but cannot equip it before its level", () => {
+  const state = createHeroState("اختبار", "Mage");
+  state.gold = 2_000_000;
+
+  const purchased = buyItem(state, "eclipse-bow50");
+  assert.equal(purchased.error, undefined);
+  assert.equal(purchased.state.gold, 500_000);
+  assert.equal(purchased.state.inventory.length, 1);
+  const ownedItem = purchased.state.inventory[0];
+  assert.equal(ownedItem.catalogId, "eclipse-bow50");
+
+  const blocked = equipItem(purchased.state, ownedItem.id);
+  assert.equal(blocked, purchased.state, "level requirement must block equipping");
+  assert.equal(blocked.equipped["سلاح"], undefined);
+
+  const eligible = { ...purchased.state, hero: { ...purchased.state.hero, level: 50 } };
+  const equipped = equipItem(eligible, ownedItem.id);
+  assert.equal(equipped.equipped["سلاح"]?.catalogId, "eclipse-bow50");
+  assert.equal(equipped.inventory.length, 0);
+});
+
+test("players can buy high-level companions early but cannot activate them early", () => {
+  const state = createHeroState("اختبار", "Warrior");
+  state.gold = 500_000;
+
+  const purchased = buyPet(state, "star-drake");
+  assert.equal(purchased.error, undefined);
+  assert.equal(purchased.state.gold, 50_000);
+  assert.ok(purchased.state.pets.includes("star-drake"));
+  assert.equal(purchased.state.activePet, null);
+
+  const blocked = setPet(purchased.state, "star-drake");
+  assert.equal(blocked.activePet, null);
+
+  const eligible = { ...purchased.state, hero: { ...purchased.state.hero, level: 45 } };
+  assert.equal(setPet(eligible, "star-drake").activePet, "star-drake");
 });
 
 test("level-up stat points can be spent exactly once per point", () => {
