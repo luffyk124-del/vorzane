@@ -255,7 +255,7 @@ export function createEconomyCommandHandler(
       next = result.state;
     } else if (body.command.type === "advanceExpeditions") {
       const result = advanceExpeditions(state, Date.now());
-      if (!result.reports.length) return json({ state, updatedAt: save.updated_at, replayed: false, reports: [] });
+      if (result.state === state) return json({ state, updatedAt: save.updated_at, replayed: false, reports: [] });
       next = result.state;
     } else if (body.command.type === "claimQuest") {
       next = claimQuest(state, body.command.questId);
