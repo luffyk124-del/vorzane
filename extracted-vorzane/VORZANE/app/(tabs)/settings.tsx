@@ -32,10 +32,14 @@ export default function SettingsScreen() {
   const identity = auth.user?.email ?? (isGuest ? "حساب ضيف" : "غير مسجّل");
   const canEditProfile = game.status === "ready" || game.status === "offline";
 
-  const setMusic = (patch: Partial<typeof game.state.settings>) => game.update((current) => ({ ...current, settings: { ...current.settings, ...patch } }));
+  const setMusic = (patch: Partial<typeof game.state.settings>) => {
+    if (game.serverEconomyCommandsEnabled) { void game.executeEconomyCommand({ type: "updateSettings", settings: patch }); return; }
+    game.update((current) => ({ ...current, settings: { ...current.settings, ...patch } }));
+  };
   const chooseProfileAvatar = (avatarId: (typeof PROFILE_AVATAR_OPTIONS)[number]["id"]) => {
     if (!canEditProfile) return;
-    game.update((current) => ({ ...current, profileAvatarId: avatarId }));
+    if (game.serverEconomyCommandsEnabled) void game.executeEconomyCommand({ type: "setProfileAvatar", avatarId });
+    else game.update((current) => ({ ...current, profileAvatarId: avatarId }));
     setAvatarPickerOpen(false);
     setMessage("تم تغيير الصورة الشخصية؛ سيُحفظ اختيارك مع تقدمك.");
   };
