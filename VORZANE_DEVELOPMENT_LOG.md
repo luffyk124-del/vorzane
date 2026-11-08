@@ -93,8 +93,8 @@ Updated: 2026-11-07
 - Added RPCs for profile creation/update, profile search (minimum three-character query, maximum 20 results), privacy visibility, sending/responding to/removing friend relationships, listing friends, and listing incoming requests.
 - Added server-side anti-spam quotas for friend requests: at most 20 pending requests and 40 total requests per rolling day, serialized per sender profile.
 - Added typed client wrappers in `src/lib/social.ts` and an Arabic friends/profile screen, then added it to the app tab navigation.
-- **Status:** social UI and client integration are implemented in source. The database migration has **not** been applied to Supabase and has not yet been exercised against a dedicated test project. Therefore profile saving, search, requests, acceptance, and removal are not yet verified as live features.
-- **Not implemented yet:** online presence/last-seen, push or realtime notifications, public combat statistics, profile privacy controls beyond search visibility, and account moderation/rate limiting.
+- **Status:** social UI and client integration are implemented in source. The migration and SQL integration tests have now passed in an isolated PostgreSQL 16 CI database (workflow run `42432270531`). This verifies the migration and tested database behavior in that disposable environment only; it does not verify the configured Supabase project or production auth/RLS settings.
+- **Not implemented yet:** online presence/last-seen, push or realtime notifications, public player statistics, profile privacy controls beyond search visibility, and account moderation.
 - No production database changes, migrations, player-save writes, or auth-user changes were performed.
 
 ## Prioritized Roadmap
@@ -135,4 +135,12 @@ Updated: 2026-11-07
 - Added a dedicated GitHub Actions job using a disposable PostgreSQL 16 service. It creates a minimal local `auth.users` table and `auth.uid()` shim, then applies the social migration and runs SQL integration checks.
 - The integration checks cover private-profile visibility, searchable-profile lookup, rejection of wildcard search input, requester/recipient authorization, accepting a friend request, listing the relationship for both participants, and removing the relationship.
 - This is an isolated CI database only. It does not connect to the configured Supabase project, and it does not change production data or player saves.
-- The latest PR workflow run is pending; the SQL integration result must be confirmed before describing the social database layer as tested.
+- GitHub Actions run `42432270531` completed successfully: isolated PostgreSQL migration/integration job, unit tests, desktop/mobile browser tests, TypeScript check, web export, and Pages artifact validation all passed. The deploy job was skipped because this was a pull request.
+
+
+## 2026-11-08: Verification follow-up
+
+- Confirmed workflow run `42432270531`: `social-db` and `build` jobs succeeded; `deploy` was skipped as intended for pull requests.
+- The earlier run `42431556804` validated build/browser/typecheck/export only and did not include the later `social-db` job. Do not conflate the two runs.
+- The social migration remains unapplied to the configured Supabase project. No production data, auth users, credentials, or player saves were changed.
+- The PR remains a draft. GitHub Pages production deployment remains unchanged.
