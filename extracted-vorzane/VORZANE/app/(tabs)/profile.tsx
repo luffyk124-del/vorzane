@@ -28,7 +28,7 @@ function StyleChoiceGroup({ title, value, options, onChange }: { title: string; 
     <View style={styles.avatarGrid}>
       {options.map((option) => {
         const selected = value === option.id;
-        return <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={`${title}: ${option.label}`} accessibilityState={{ checked: selected }} onPress={() => onChange(option.id)} style={[styles.styleOption, selected && styles.avatarSelected]}>
+        return <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={`${title}: ${option.label}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => onChange(option.id)} style={[styles.styleOption, selected && styles.avatarSelected]}>
           <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>{option.label}</Txt>
           {selected ? <Icon name="checkmark-circle" size={15} color={palette.jade} /> : <View style={styles.checkPlaceholder} />}
         </Pressable>;
@@ -98,7 +98,7 @@ export default function ProfileScreen() {
       <View style={styles.avatarGrid}>
         {([{ id: "male", label: "ذكر" }, { id: "female", label: "أنثى" }] as const).map((option) => {
           const selected = state.characterStyle.gender === option.id;
-          return <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={`تفضيل الشخصية: ${option.label}`} accessibilityState={{ checked: selected }} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, gender: option.id } }))} style={[styles.avatarOption, selected && styles.avatarSelected]}>
+          return <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={`تفضيل الشخصية: ${option.label}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, gender: option.id } }))} style={[styles.avatarOption, selected && styles.avatarSelected]}>
             <Icon name={option.id === "male" ? "male" : "female"} size={21} color={selected ? palette.gold : palette.jade} />
             <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>{option.label}</Txt>
           </Pressable>;
@@ -108,7 +108,7 @@ export default function ProfileScreen() {
       <View style={styles.avatarGrid}>
         {["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"].map((color, index) => {
           const selected = state.characterStyle.appearance === index;
-          return <Pressable key={color} accessibilityRole="radio" accessibilityLabel={`درجة اللون ${index + 1}`} accessibilityState={{ checked: selected }} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, appearance: index as 0 | 1 | 2 | 3 } }))} style={[styles.appearanceChoice, selected && styles.avatarSelected]}>
+          return <Pressable key={color} accessibilityRole="radio" accessibilityLabel={`درجة اللون ${index + 1}`} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={() => update((current) => ({ ...current, characterStyle: { ...current.characterStyle, appearance: index as 0 | 1 | 2 | 3 } }))} style={[styles.appearanceChoice, selected && styles.avatarSelected]}>
             <View style={[styles.appearanceSwatch, { backgroundColor: color }]} />
             <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>درجة اللون {index + 1}</Txt>
           </Pressable>;
@@ -131,7 +131,7 @@ export default function ProfileScreen() {
       <View style={styles.avatarGrid}>
         {AVATARS.map((avatar) => {
           const selected = avatarId === avatar.id;
-          return <Pressable key={avatar.id} onPress={() => setAvatarId(avatar.id)} accessibilityRole="radio" accessibilityState={{ checked: selected }} style={[styles.avatarOption, selected && styles.avatarSelected]}>
+          return <Pressable key={avatar.id} onPress={() => setAvatarId(avatar.id)} accessibilityRole="radio" accessibilityState={{ checked: selected }} aria-checked={selected} style={[styles.avatarOption, selected && styles.avatarSelected]}>
             <ProfileAvatar avatarId={avatar.id} size={52} />
             <Txt style={[styles.avatarLabel, selected && styles.avatarLabelSelected]}>{avatar.label}</Txt>
             {selected ? <Icon name="checkmark-circle" size={17} color={palette.jade} /> : <View style={styles.checkPlaceholder} />}
