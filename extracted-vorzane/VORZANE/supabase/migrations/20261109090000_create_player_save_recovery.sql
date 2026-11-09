@@ -35,7 +35,7 @@ create policy players_select_own_save_recovery
 -- A lifetime per-owner quota prevents authenticated callers from filling storage
 -- with arbitrarily many distinct recovery keys. The counter is private and can
 -- only be changed by this trigger function.
-create schema if not exists private;
+create schema if not exists vorzane_internal;
 
 create table vorzane_internal.player_save_recovery_quotas (
   user_id uuid primary key references auth.users(id) on delete cascade,
