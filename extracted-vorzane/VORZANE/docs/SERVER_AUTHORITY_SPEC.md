@@ -72,3 +72,25 @@ The SQL tests cover first commit, replay, stale-version rejection, and denial of
 **Not yet complete:** the existing `GameContext` still writes full save snapshots directly from the client. The new endpoint is not wired into the client yet, and client writes have not been revoked. Do not treat the current app as protected against client-side save tampering until every supported mutation is server-backed and the cutover is separately reviewed.
 
 The migration and Edge Function are tested through CI only; neither has been applied or deployed to the production Supabase project.
+
+
+## Untrusted save recovery — staged quarantine slice (2026-11-09)
+
+The next recovery slice introduces an append-only quarantine, not a restore path:
+
+- `stage-save-recovery` accepts an authenticated owner's `legacy` or `offline` JSON snapshot and writes it only to `player_save_recovery`.
+- A caller-provided UUID recovery key makes retries idempotent. A duplicate key returns the first stored record; it never replaces the first payload.
+- The endpoint enforces a bounded request/snapshot size, rejects unknown payload fields, verifies the caller JWT, and uses the service role only after authentication.
+- RLS permits an owner to read only their own staged records. Client roles have no insert, update, or delete privilege. The database also enforces JSON-object, size, and per-owner idempotency constraints.
+- A database trigger enforces a lifetime limit of five records per owner using a dedicated internal counter table and an atomic `INSERT ... ON CONFLICT ... DO UPDATE ... WHERE record_count < 5`. The trigger runs after the recovery row's unique-key check, so duplicate retries do not consume quota; quota failure rolls back the inserted row. The counter and trigger function are not accessible to client roles or `service_role` directly.
+- The Edge Function returns HTTP 429 when the database rejects a sixth record. CI also launches eight concurrent `service_role` inserts for one test owner and asserts exactly five rows/counter increments succeed.
+- This slice does not read or mutate `player_saves`, does not select a winning copy, and does not grant the staged snapshot authority.
+
+### Resolution policy required before client integration
+
+1. When a cloud save exists, it remains authoritative for all economic and progression fields.
+2. A local/legacy snapshot may be retained in quarantine for recovery review, but never written back as a complete `GameState`.
+3. A future safe import may copy only allowlisted presentation preferences (character appearance, profile avatar, audio settings) and, only when the cloud account has no hero, the legacy hero's bounded display name and valid class. The server must construct the hero and starter state from canonical rules.
+4. Never import gold, gems, level, XP, stat points, stats, inventory, equipment, pets, battle counters, wins, quest/achievement claims, missions, story/tower/dungeon progress, expedition timers/queues, or offline rewards from the client snapshot.
+5. Keep the quarantine record until a separate explicit retention/deletion policy is implemented. A recovery operation must be idempotent and version-checked; it must not overwrite a newer cloud save.
+6. Do not wire the client to this endpoint or deploy its migration/function until isolated DB and Edge Function tests pass, then separately verify deployment and owner-scoped reads. This does not authorize revoking existing client writes; that remains blocked by the full cutover gates above.

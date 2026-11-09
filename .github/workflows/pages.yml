@@ -78,6 +78,8 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261106080400_restrict_player_save_privileges.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261108220000_player_saves_size_limit.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/tests/player_saves_rls.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261109090000_create_player_save_recovery.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/tests/player_save_recovery.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261108230000_create_player_command_receipts.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "GRANT SELECT ON public.player_saves TO service_role"
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/tests/player_command_receipts.sql
@@ -123,10 +125,10 @@ jobs:
           deno-version: v2.x
       - name: Typecheck Supabase Edge Functions
         working-directory: extracted-vorzane/VORZANE
-        run: deno check supabase/functions/game-state/index.ts supabase/functions/game-state/index.test.ts supabase/functions/economy-command/index.ts supabase/functions/economy-command/index.test.ts
+        run: deno check supabase/functions/game-state/index.ts supabase/functions/game-state/index.test.ts supabase/functions/economy-command/index.ts supabase/functions/economy-command/index.test.ts supabase/functions/stage-save-recovery/index.ts supabase/functions/stage-save-recovery/index.test.ts
       - name: Test Supabase Edge Functions
         working-directory: extracted-vorzane/VORZANE
-        run: deno test supabase/functions/game-state/index.test.ts supabase/functions/economy-command/index.test.ts
+        run: deno test supabase/functions/game-state/index.test.ts supabase/functions/economy-command/index.test.ts supabase/functions/stage-save-recovery/index.test.ts
       - name: Build web export
         working-directory: extracted-vorzane/VORZANE
         env:
