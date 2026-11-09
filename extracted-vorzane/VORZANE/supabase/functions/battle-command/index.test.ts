@@ -1,4 +1,5 @@
 import { createHeroState } from "../../../src/game/engine.ts";
+import { createFreshState } from "../../../src/game/model.ts";
 import { createBattleCommandHandler } from "./index.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -11,6 +12,8 @@ async function readJson(response: Response): Promise<Record<string, unknown>> {
 
 function fixture(options: {
   state?: ReturnType<typeof createHeroState>;
+  saveMissing?: boolean;
+  readError?: unknown;
   user?: { id: string } | null;
   authError?: unknown;
   readError?: unknown;
@@ -32,7 +35,7 @@ function fixture(options: {
         return { data: options.receipt ?? null, error: null };
       }
       return {
-        data: options.readError ? null : { game_state: state, updated_at: "2026-11-09T06:00:00.000Z" },
+        data: options.saveMissing || options.readError ? null : { game_state: state, updated_at: "2026-11-09T06:00:00.000Z" },
         error: options.readError ?? null,
       };
     },
@@ -155,16 +158,19 @@ Deno.test("a replay returns the stored battle display without committing again",
   assert(calls.rpc === undefined, "replay must not commit again");
 });
 
-Deno.test("stale versions and missing saves fail without committing", async () => {
+Deno.test("stale versions, missing saves, and saves without a hero fail without committing", async () => {
   const stale = fixture();
   const staleResponse = await stale.handler(battleRequest({ expectedUpdatedAt: "2026-11-09T05:00:00.000Z" }));
   assert(staleResponse.status === 409, "stale version must be rejected");
   assert(stale.calls.rpc === undefined, "stale version must not commit");
 
-  const missing = fixture({ state: undefined });
-  // The fixture's default save exists; a malformed/empty hero is rejected instead.
-  const noHero = fixture({ state: createHeroState("No Hero", "Warrior") });
+  const missing = fixture({ saveMissing: true });
+  const missingResponse = await missing.handler(battleRequest());
+  assert(missingResponse.status === 404, "missing save must be rejected");
+  assert(missing.calls.rpc === undefined, "missing save must not commit");
+
+  const noHero = fixture({ state: createFreshState() });
   const noHeroResponse = await noHero.handler(battleRequest());
-  assert(noHeroResponse.status === 200, "a valid created hero state should be allowed");
-  assert(missing.calls.rpc === undefined, "unused fixture must not have committed");
+  assert(noHeroResponse.status === 409, "save without a hero must be rejected");
+  assert(noHero.calls.rpc === undefined, "save without a hero must not commit");
 });
