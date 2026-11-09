@@ -71,7 +71,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Review progression, rewards, inventory, and economy flows for integrity and abuse resistance. PR #16 wires a gated command path for several non-combat operations, but is not yet a complete anti-tampering boundary.
 - Improve mobile usability and verify responsive behavior on real devices.
 - Maintain clear release notes and deployment verification for each production update.
-- The project owner explicitly authorized necessary production Supabase changes. Still back up/export where supported, review every migration, keep changes additive and reversible, verify against isolated/test data first, and never drop or overwrite player data as a shortcut.
+- This continuation does not authorize production Supabase changes. Any production migration, Edge Function deployment, Auth/RLS change, feature-flag change, or player-save mutation requires separate explicit approval and a reviewed rollback plan. Verify against isolated/test data first; never drop or overwrite player data as a shortcut.
 
 ## In progress — server-authoritative non-combat command expansion (2026-11-09)
 
