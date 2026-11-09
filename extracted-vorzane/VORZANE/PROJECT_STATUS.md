@@ -75,6 +75,15 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Code review confirmed the handler authenticates the caller, reads only the caller's save, validates command payloads against canonical game rules, and commits through the atomic receipt RPC. The PR remains server-side only: no client wiring, feature-gate activation, migration, production deployment, RLS/Auth change, or player-save write.
 - Important rollout dependency: reward commands that inspect battle counters must remain disabled until battle settlement is server-owned and generic client snapshot writes are removed. This PR does not complete save authority: autosave/full-snapshot writes, offline conflict resolution, legacy import, reset, and battle settlement remain client-owned/outstanding.
 
+## In progress — non-destructive server-side save reset
+
+- Branch: `feat/server-authoritative-save-reset`, based on current `main`.
+- Extended `economy-command` with a strict `resetSave` command. The server replaces the caller's existing save row with `createFreshState()` and commits through the existing atomic, idempotent command-receipt RPC.
+- Reset accepts no client-supplied state or extra fields and is allowed even when the save has no hero. It does not delete the `player_saves` row or accept client-provided replacement progress.
+- Added Deno coverage for canonical reset state, current-version commit, idempotency receipt, malformed reset payload rejection, and resetting a no-hero save.
+- Client reset UI remains unchanged and still uses the legacy direct-delete path. Do not enable or wire this command until the client migration is reviewed and the production function/migration are separately deployed and verified.
+- CI for this branch is pending. No production migration/function deployment, no production player-save mutation, and no Manus changes.
+
 ## Production audit — 2026-11-09
 
 - Read-only verification confirms exactly three rows remain in public.player_saves. No rows were inserted, updated, or deleted during this audit.
