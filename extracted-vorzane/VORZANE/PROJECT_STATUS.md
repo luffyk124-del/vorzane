@@ -3,7 +3,7 @@
 > Last updated: 2026-11-09
 > Main branch: `main`
 > Latest main documentation commit: this file's current revision on `main` (see GitHub file history for its SHA)
-> Latest merged application commit: `5949ed038f1f5965ce871ce2ff7595ef1e3443db`
+> Latest merged application commit: `29b25592bdc831a739216f967f0c7a3bc55dd4cf`
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
 
@@ -71,7 +71,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Review progression, rewards, inventory, and economy flows for integrity and abuse resistance. PR #16 wires a gated command path for several non-combat operations, but is not yet a complete anti-tampering boundary.
 - Improve mobile usability and verify responsive behavior on real devices.
 - Maintain clear release notes and deployment verification for each production update.
-- The project owner explicitly authorized necessary production Supabase changes. Still back up/export where supported, review every migration, keep changes additive and reversible, verify against isolated/test data first, and never drop or overwrite player data as a shortcut.
+- This continuation does not authorize production Supabase changes. Any production migration, Edge Function deployment, Auth/RLS change, feature-flag change, or player-save mutation requires separate explicit approval and a reviewed rollback plan. Verify against isolated/test data first; never drop or overwrite player data as a shortcut.
 
 ## In progress — server-authoritative non-combat command expansion (2026-11-09)
 
@@ -167,3 +167,19 @@ After every meaningful development batch, update the relevant sections above wit
 - Tests actually run and their results.
 - Commit SHA and deployment link, when available.
 - Any remaining issue or follow-up task.
+
+
+## Scope cleanup merged — 2026-11-09
+
+- PR #25 merged into `main` as `29b25592bdc831a739216f967f0c7a3bc55dd4cf`.
+- Removed the cancelled FPS.ms migration roadmap and obsolete alternative-backend references from active project documentation.
+- Removed Google sign-in and Google account-link controls/handlers from the archived legacy web authentication flow. The current Expo authentication flow already supports only anonymous guest and email/password.
+- Approved sign-in methods remain guest and email/password only. Supabase and the original Manus deployment are retained.
+- CI for PR #25 passed: workflow `42595452385` completed successfully (build and isolated social DB jobs). Main push workflow `42597112620` is the separate post-merge build/deploy verification and must be checked before claiming Pages deployment.
+
+## Client save mutation audit — 2026-11-09
+
+- Added `SAVE_MUTATION_AUDIT.md` on a branch based on current main, carrying forward the source-only audit from the earlier documentation PR.
+- The audit confirms that generic full-state client upsert, direct-delete reset, import/recovery, offline conflict resolution, and mission-period initialization still block safe server-authoritative cutover.
+- Existing typed non-combat commands are candidates for isolated client wiring; they are not yet evidence of production behavior.
+- No runtime code, production Supabase schema/configuration, player saves, feature flags, or Manus deployment changed in this documentation update.
