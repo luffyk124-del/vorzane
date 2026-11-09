@@ -75,6 +75,16 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Code review confirmed the handler authenticates the caller, reads only the caller's save, validates command payloads against canonical game rules, and commits through the atomic receipt RPC. The PR remains server-side only: no client wiring, feature-gate activation, migration, production deployment, RLS/Auth change, or player-save write.
 - Important rollout dependency: reward commands that inspect battle counters must remain disabled until battle settlement is server-owned and generic client snapshot writes are removed. This PR does not complete save authority: autosave/full-snapshot writes, offline conflict resolution, legacy import, reset, and battle settlement remain client-owned/outstanding.
 
+## In progress — server-authoritative battle settlement
+
+- Branch: `feat/server-authoritative-battles`, based on current `main` after PR #20 merge.
+- Added an authenticated `battle-command` Edge Function. The client submits only a command UUID and one of four allowed battle modes; it cannot submit a GameState, battle result, rewards, enemy stats, turn log, or RNG outcome.
+- The function authenticates the caller, reads only that caller's save under RLS, checks the caller-scoped command receipt, runs the canonical `createBattleSequence` game engine on the server, and commits the resulting state through the atomic `commit_player_command` RPC.
+- The returned battle presentation omits the resulting GameState. The full authoritative state is returned separately for client display/state refresh; the idempotency receipt stores only the sanitized presentation. Replays return the original animation and the current save, not an old snapshot.
+- Added bounded request streaming, strict UUID/mode/payload validation, authentication, no-hero, conflict, replay, no-client-state, and server-commit Deno tests. Added the function to the Deno typecheck/test CI commands.
+- Client integration is not yet wired. Existing local battle generation and full-save snapshot upserts remain active. Do not enable any battle/server-economy feature flag or revoke client writes until the entire save mutation lifecycle is migrated and reviewed.
+- Fresh CI for this branch is pending. No production migration or function deployment, no production player-save mutation, and no Manus changes.
+
 ## Production audit — 2026-11-09
 
 - Read-only verification confirms exactly three rows remain in public.player_saves. No rows were inserted, updated, or deleted during this audit.
