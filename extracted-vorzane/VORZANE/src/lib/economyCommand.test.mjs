@@ -7,7 +7,7 @@ test("command IDs are valid UUIDs", () => {
 });
 
 test("reset sends a typed command with the expected save version", async () => {
-  let received: unknown;
+  let received;
   const result = await invokeResetSave(async (body) => {
     received = body;
     return {
