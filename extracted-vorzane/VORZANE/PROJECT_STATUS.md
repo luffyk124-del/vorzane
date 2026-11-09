@@ -159,3 +159,15 @@ After every meaningful development batch, update the relevant sections above wit
 - Tests actually run and their results.
 - Commit SHA and deployment link, when available.
 - Any remaining issue or follow-up task.
+
+
+## Client save mutation audit — 2026-11-09
+
+- Added `SAVE_MUTATION_AUDIT.md` in commit `7091a913c090efaf247a7b48ee12eeb26097f4eb`, auditing `GameContext` and all current tab-level save mutation callsites.
+- Confirmed the client is not ready for server-authoritative cutover: autosave/flush, cloud progression, offline conflict resolution, legacy/JSON import, and reset still rely on generic full-state upsert or direct row deletion.
+- Confirmed the existing `economy-command` source already defines typed commands for expedition start/advancement, quest/mission/task/achievement claims, report dismissal, profile appearance/avatar, and settings, in addition to economy commands and `resetSave`. The UI still invokes many of these through generic `update`; they are candidates for isolated client wiring, not evidence of a completed cutover.
+- Identified `ensureMissionPeriods` as a separate client-side mutation without a matching command, and import/recovery as requiring a validated restore flow rather than a generic state upload.
+- Battle settlement and battle-derived state transitions are explicitly excluded from this non-combat audit slice.
+- No runtime code, schema, production Supabase configuration/data, feature flags, RLS/Auth privileges, deployed functions, or Manus deployment changed.
+- At audit time, main was `65df6dfd65454cff53c331c4e5bb4ea4aaad8b53`. The documentation branch is `docs/save-mutation-audit`; this audit is pending PR review and exact-head CI.
+- CI observations at audit time: run `42593717955` had `social-db` success while `build` was running desktop/mobile tests; run `42593528486` had game/browser, TypeScript, Deno checks/tests passed and web export still running; run `42593479495` had build, Deno, and Pages export steps passed, with final workflow/deployment state still to be rechecked. Do not infer Pages deployment from artifact upload alone.
