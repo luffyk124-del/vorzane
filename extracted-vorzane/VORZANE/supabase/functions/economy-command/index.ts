@@ -243,7 +243,9 @@ export function createEconomyCommandHandler(
       next = createHeroState(body.command.name, body.command.className);
       next.characterStyle = { ...next.characterStyle, gender: body.command.gender, appearance: body.command.appearance };
       const firstSword = createItemInstance(STARTER_ITEMS[0], "starter");
-      const firstBoots = createItemInstance(STARTER_ITEMS[3], "starter");
+      const starterBoots = STARTER_ITEMS.find((item) => item.id === "boots1");
+      if (!starterBoots) return json({ error: "Starter equipment configuration is incomplete" }, 500);
+      const firstBoots = createItemInstance(starterBoots, "starter");
       next.equipped[firstSword.slot] = firstSword;
       next.inventory.push(firstBoots);
     } else if (body.command.type === "allocateStatPoint") {
