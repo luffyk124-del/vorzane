@@ -1,8 +1,8 @@
 # VORZANE — Project Status
 
-> Last updated: 2026-11-08
+> Last updated: 2026-11-09
 > Main branch: `main`
-> Latest verified application commit: `43a65774f81ac88b6ba941cf962ef0e39cd43c26`
+> Latest merged application commit: `741126b48c0831f2353987d7cc94267f7e52f15b`
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
 
@@ -10,7 +10,8 @@ This file records the actual state of the VORZANE project. Update it after each 
 
 - The web application is deployed on GitHub Pages.
 - The original Manus version is preserved and has not been modified.
-- The existing Supabase project remains the application's database; no production migration or destructive database change was performed as part of the recent work.
+- The existing Supabase project remains the application's database. Production audit confirmed three player-save rows, RLS enabled on the three public game/social tables, and no economy-command migration applied.
+- Deployed the authenticated read-only `game-state` Edge Function to production (version 1, `verify_jwt=true`). The function forwards the caller JWT and queries only that caller's save under existing RLS. No database migration or player-data write was performed.
 - Development continues from the existing application and its current architecture.
 
 ## Completed work
@@ -31,6 +32,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Fixed duplicated hero-creator UI on the new-player screen: the character preview, character choice, and appearance controls now render once. Added a mobile browser regression test for a fresh account. PR #12 merged as `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a`; game-system, desktop/mobile browser, TypeScript, Edge Function, web export, and isolated social DB checks passed.
 - Merged PR #13: prevented unequipping gear when the 500-item inventory limit is reached; added engine regression coverage and disabled the UI action while full. Merge commit: `43a65774f81ac88b6ba941cf962ef0e39cd43c26`.
 - GitHub Pages deployment succeeded for commit `3ddb226a59f78356038180575e7641e02648a981`.
+- Merged PR #14 (`Use authenticated game-state read endpoint`) as `741126b48c0831f2353987d7cc94267f7e52f15b`. Its compatibility fallback remains in place.
 
 ## Current links
 
@@ -41,12 +43,13 @@ This file records the actual state of the VORZANE project. Update it after each 
 ## Remaining work
 
 - GitHub Pages deployment for PR #13's merge commit was verified successful (workflow run `42527315821`).
-- Finish CI verification and review for draft PR #15 (atomic command receipts plus the authenticated economy-command Edge Function).
-- Integrate the economy endpoint into GameContext and migrate every save mutation before considering any client-write privilege revocation. The existing client upsert path remains active and must not be mistaken for server-authoritative security.
+- PR #15 (atomic command receipts plus `economy-command`) is merged as `a36ae7cad7f46feb17242f170fcc7227c72a8128`; its migration and command function are not deployed to production.
+- PR #16 remains draft and unmerged. Its latest observed branch is 38 commits ahead and 1 commit behind `main`; the current CI run `42543270696` passed, but branch synchronization and full end-to-end review remain necessary.
+- Server authority is not complete: battle results are still client-computed and the generic full-save client upsert remains active. Do not enable the economy feature gate or revoke client writes until battle settlement, save initialization, import/migration, reset, offline progression, and every other save mutation are server-owned and tested.
 - Continue reviewing and improving existing gameplay and application flows.
 - Verify each change with relevant automated tests before merging.
 - Review authentication, authorization, player data ownership, and server-side validation in the existing architecture.
-- Review progression, rewards, inventory, and economy flows for integrity and abuse resistance. The draft PR #15 endpoint currently covers buy/sell/equip/unequip server-side rules but is not yet wired into the client save lifecycle.
+- Review progression, rewards, inventory, and economy flows for integrity and abuse resistance. PR #16 wires a gated command path for several non-combat operations, but is not yet a complete anti-tampering boundary.
 - Improve mobile usability and verify responsive behavior on real devices.
 - Maintain clear release notes and deployment verification for each production update.
 - Keep database changes additive, reviewed, backed up, and reversible; do not run production migrations without explicit approval.
@@ -55,7 +58,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 
 - Preserve the original Manus version unless the project owner explicitly requests a change.
 - Do not perform destructive operations on the existing Supabase project.
-- Do not run production database migrations without explicit approval.
+- Production migrations and Edge Function deployments are permitted under the project owner's explicit authorization; keep changes additive, tested, and reversible.
 - Never commit real credentials, tokens, or private keys.
 - Do not claim a feature or deployment is complete without test or deployment evidence.
 - Keep a verified rollback path for production changes.
@@ -70,6 +73,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 | 2026-11-08 | `a507b530f77f806c9330324aa113c9d25d3ae902` | PR #11 merged: authenticated read-only game-state function; Deno typecheck and tests passed. |
 | 2026-11-08 | `cdc25cc64d941276ca9e8f03de6bd316f5b77738` | PR #6 merged: game tests, desktop/mobile browser flows, TypeScript, Edge Function checks/tests, web build, and social DB tests passed. |
 | 2026-11-08 | `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a` | PR #12 merged: duplicate new-hero creator controls removed; fresh-account mobile browser regression test, game tests, TypeScript, Edge Function checks/tests, web export, and social DB tests passed. |
+| 2026-11-09 | `741126b48c0831f2353987d7cc94267f7e52f15b` | PR #14 merged. Production `game-state` Edge Function deployed and confirmed ACTIVE v1 with JWT verification enabled; production migration history unchanged. |
 
 ## Update policy
 
