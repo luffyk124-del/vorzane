@@ -22,6 +22,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
+async function readBoundedText(request: Request, maxBytes: number): Promise<string | null> {
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) return null;
+  if (!request.body) return "";
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      return null;
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 export function createStageSaveRecoveryHandler(
   makeClient: typeof createClient = createClient,
   getEnv: (name: string) => string | undefined = (name) => Deno.env.get(name),
@@ -42,10 +70,8 @@ export function createStageSaveRecoveryHandler(
     let source: RecoverySource;
     let snapshot: Record<string, unknown>;
     try {
-      const raw = await request.text();
-      if (new TextEncoder().encode(raw).byteLength > MAX_REQUEST_BYTES) {
-        return json({ error: "Recovery snapshot is too large" }, 413);
-      }
+      const raw = await readBoundedText(request, MAX_REQUEST_BYTES);
+      if (raw === null) return json({ error: "Recovery snapshot is too large" }, 413);
       const parsed: unknown = JSON.parse(raw);
       if (!isRecord(parsed) ||
           Object.keys(parsed).some((key) => !["recoveryKey", "source", "snapshot"].includes(key)) ||
