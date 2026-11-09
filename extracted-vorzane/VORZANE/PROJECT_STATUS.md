@@ -3,7 +3,7 @@
 > Last updated: 2026-11-09
 > Main branch: `main`
 > Latest main documentation commit: this file's current revision on `main` (see GitHub file history for its SHA)
-> Latest merged application commit: `946e7f6ae64b0a56f9a38947a36c760e78d5037e`
+> Latest merged application commit: `5949ed038f1f5965ce871ce2ff7595ef1e3443db`
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
 
@@ -75,14 +75,14 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Code review confirmed the handler authenticates the caller, reads only the caller's save, validates command payloads against canonical game rules, and commits through the atomic receipt RPC. The PR remains server-side only: no client wiring, feature-gate activation, migration, production deployment, RLS/Auth change, or player-save write.
 - Important rollout dependency: reward commands that inspect battle counters must remain disabled until battle settlement is server-owned and generic client snapshot writes are removed. This PR does not complete save authority: autosave/full-snapshot writes, offline conflict resolution, legacy import, reset, and battle settlement remain client-owned/outstanding.
 
-## In progress — non-destructive server-side save reset
+## Completed — non-destructive server-side save reset (2026-11-09)
 
-- Branch: `feat/server-authoritative-save-reset`, based on current `main`.
-- Extended `economy-command` with a strict `resetSave` command. The server replaces the caller's existing save row with `createFreshState()` and commits through the existing atomic, idempotent command-receipt RPC.
-- Reset accepts no client-supplied state or extra fields and is allowed even when the save has no hero. It does not delete the `player_saves` row or accept client-provided replacement progress.
-- Added Deno coverage for canonical reset state, current-version commit, idempotency receipt, malformed reset payload rejection, and resetting a no-hero save.
-- Client reset UI remains unchanged and still uses the legacy direct-delete path. Do not enable or wire this command until the client migration is reviewed and the production function/migration are separately deployed and verified.
-- CI for this branch is pending. No production migration/function deployment, no production player-save mutation, and no Manus changes.
+- PR #23 was squash-merged into `main` as `5949ed038f1f5965ce871ce2ff7595ef1e3443db` from reviewed head `82b72f366cba26d55adf39eb41fdba0a0c295420`.
+- Added a strict `resetSave` command to `economy-command`. The server constructs canonical `createFreshState()` and commits through the existing atomic, idempotent command-receipt RPC. It preserves the existing `player_saves` row.
+- The command accepts no client-supplied state or extra fields and works when the save has no hero. Deno tests cover canonical reset state, current-version commit, receipt, malformed payload rejection, and no-hero reset.
+- Exact-head CI passed: build workflow `42592611623` (game systems, desktop/mobile browser flows, character preview artifact, TypeScript, Deno typecheck/tests, web export and Pages export verification) and isolated social DB workflow `42592611556`.
+- PR validation's Pages deploy job was skipped as expected. A separate push deployment for merge commit `5949ed038f1f5965ce871ce2ff7595ef1e3443db` was triggered; deployment status must be verified separately.
+- Client reset UI remains on the legacy direct-delete path. The server command is not client-wired, the feature gate is unchanged, and no production migration/function deployment or production player-save mutation was performed. Manus remains untouched.
 
 ## Production audit — 2026-11-09
 
@@ -128,6 +128,7 @@ Production Supabase project ref: `incidgigfqyjbqfegukg`. The authenticated read-
 | 2026-11-09 | `c5759d5d18f661bb772391db4ab2f0f4add14f70` | PR #18 merged. New-player save initialization passed game/browser, TypeScript, Deno, web-export, and isolated DB CI. `initialize-save` is not yet deployed to production; no production player data changed. |
 | 2026-11-09 | `039a73897c380f9cd947f2cdaa04f7fc51a5d8bf` | PR #19 squash-merged after all CI passed: workflow `42578020613` (game systems, desktop/mobile browser, TypeScript, Deno typecheck/tests, web export, Pages export verification, isolated social DB) and workflow `42578020638` (isolated social DB). Deployment job skipped; no Supabase deployment/migration, client wiring, feature enablement, RLS/Auth change, or player-save mutation. |
 | 2026-11-09 | `946e7f6ae64b0a56f9a38947a36c760e78d5037e` | PR #20 squash-merged after fresh CI passed on head `749838cf768fcf1267567966c85bf916b4caaa0b`: build/Pages workflow `42586714454` and dedicated social DB workflow `42586714743` passed, including recovery privacy/quota tests and 8-way concurrency (5 accepted, 3 rejected). Deploy skipped; no Supabase production migration/function deployment or player-save mutation. |
+| 2026-11-09 | `5949ed038f1f5965ce871ce2ff7595ef1e3443db` | PR #23 squash-merged after exact-head CI passed on `82b72f366cba26d55adf39eb41fdba0a0c295420`: workflow `42592611623` (game/browser, TypeScript, Deno typecheck/tests, web export) and isolated DB workflow `42592611556` passed. Reset endpoint remains server-only; no Supabase production deployment, client cutover, player-save mutation, or Manus change. GitHub Pages push deployment pending verification. |
 
 ## Current recovery slice — PR #20 preparation (2026-11-09)
 
