@@ -1,8 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { advanceExpeditions, allocateStatPoint, beginOrQueueExpedition, buyItem, buyPet, claimExplorationAchievement, claimExpeditionTask, claimQuest, claimRecurringMission, createFreshState, createHeroState, dismissOfflineReport, equipItem, sellItem, setPet, unequipItem } from "../../../src/game/engine.ts";
+import { advanceExpeditions, allocateStatPoint, beginOrQueueExpedition, buyItem, buyPet, claimExplorationAchievement, claimExpeditionTask, claimQuest, claimRecurringMission, createHeroState, dismissOfflineReport, equipItem, sellItem, setPet, unequipItem } from "../../../src/game/engine.ts";
 import { createItemInstance } from "../../../src/game/dungeonItems.ts";
 import { STARTER_ITEMS } from "../../../src/game/catalog.ts";
-import { normalizeGameState, type CharacterStyle, type ClassId, type GameState, type StatKey } from "../../../src/game/model.ts";
+import { createFreshState, normalizeGameState, type CharacterStyle, type ClassId, type GameState, type StatKey } from "../../../src/game/model.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
