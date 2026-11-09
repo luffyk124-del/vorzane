@@ -11,7 +11,7 @@ async function readJson(response: Response): Promise<Record<string, unknown>> {
 function fixture(options: {
   user?: { id: string } | null;
   authError?: unknown;
-  insertError?: { code?: string } | null;
+  insertError?: { code?: string; message?: string } | null;
   inserted?: { recovery_id: string; status: string } | null;
   existing?: { recovery_id: string; status: string } | null;
   readError?: unknown;
