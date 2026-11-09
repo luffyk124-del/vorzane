@@ -47,6 +47,20 @@ function saveFixture() {
   };
 }
 
+function newPlayerFixture() {
+  const state = saveFixture();
+  state.hero = null;
+  state.characterStyle = { gender: "male", appearance: 0, hairstyle: "short", hairColor: "obsidian", face: "classic", outfit: "adventurer", body: "balanced" };
+  state.missionPeriods = {
+    daily: { key: new Date().toISOString().slice(0, 10), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+    weekly: { key: "test-week", baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+    season: { key: new Date().toISOString().slice(0, 7), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+  };
+  state.quests = { first: false, battles: false, level: false };
+  state.settings.musicEnabled = true;
+  return state;
+}
+
 function mockSession() {
   const user = {
     id: playerId,
@@ -123,7 +137,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
         await route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "Initialization accepts an empty payload only" }) });
         return;
       }
-      if (!store.state) store.state = saveFixture();
+      if (!store.state) store.state = newPlayerFixture();
       await route.fulfill({
         status: 200,
         contentType: "application/json",
