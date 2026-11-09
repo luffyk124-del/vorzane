@@ -41,7 +41,6 @@ export function createBattleCommandHandler(
   makeClient: typeof createClient = createClient,
   getEnv: (name: string) => string | undefined = (name) => Deno.env.get(name),
   random: () => number = Math.random,
-  now: () => number = Date.now,
 ) {
   return async (request: Request): Promise<Response> => {
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
