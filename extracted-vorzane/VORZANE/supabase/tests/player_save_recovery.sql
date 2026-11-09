@@ -18,6 +18,25 @@ values (
   '{"gold":999999999,"hero":{"level":999},"inventory":[{"id":"untrusted"}]}'::jsonb
 );
 
+-- A recovery key is unique per owner; a duplicate cannot replace the first snapshot.
+set local role service_role;
+do $idempotency$
+begin
+  begin
+    insert into public.player_save_recovery (user_id, recovery_key, source, snapshot)
+    values (
+      '00000000-0000-0000-0000-00000000000a',
+      '10000000-0000-4000-8000-000000000001',
+      'offline',
+      '{"gold":1}'::jsonb
+    );
+    raise exception 'RECOVERY IDEMPOTENCY FAIL: duplicate recovery key accepted';
+  exception when unique_violation then
+    null;
+  end;
+end
+$idempotency$;
+
 -- Same owner can inspect the quarantined record.
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', true);
