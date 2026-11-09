@@ -176,6 +176,17 @@ Deno.test("duplicate recovery key is idempotent and does not replace the first s
   assert((calls.tables as string[]).length === 2, "duplicate path should read only the existing quarantine row");
 });
 
+Deno.test("per-user recovery quota returns a bounded client error", async () => {
+  const { handler, calls } = fixture({
+    insertError: { code: "23514", message: "Per-user recovery quota reached" },
+  });
+  const response = await handler(request());
+  const body = await readJson(response);
+  assert(response.status === 429, "quota exhaustion must return 429");
+  assert(body.maxRecords === 5, "quota response must report the configured limit");
+  assert((calls.inserts as unknown[]).length === 1, "quota rejection must not retry or replace data");
+});
+
 Deno.test("database errors fail closed", async () => {
   const { handler } = fixture({ insertError: { code: "XX000" } });
   const response = await handler(request());
