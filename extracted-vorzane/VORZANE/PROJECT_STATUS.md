@@ -41,19 +41,21 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Live web application: https://luffyk124-del.github.io/vorzane/
 - Preserved Manus version: https://vorzane-ebvt9uxg.manus.space/home
 
-## In progress — server-side first-save initialization (2026-11-09)
+## Completed — server-side first-save initialization (2026-11-09)
 
+- PR #18 merged into `main` as commit `c5759d5d18f661bb772391db4ab2f0f4add14f70` after all required CI checks passed.
 - Added an authenticated `initialize-save` Edge Function that validates the caller JWT, returns an existing owner-scoped save unchanged, or creates a canonical fresh save on the server when none exists.
 - The endpoint accepts an empty payload only; it never accepts a client-provided game-state snapshot. It uses the server-only service-role key for an insert with conflict-ignore semantics, then re-reads through the caller JWT/RLS to verify owner visibility.
-- Integrated the new-account path in `GameContext`. If the function is not deployed yet, the existing compatibility fallback remains in place; existing local/legacy/offline recovery flows are unchanged.
+- Integrated the new-account path in `GameContext`. Until the function is deployed, the existing compatibility fallback remains in place; existing local/legacy/offline recovery flows are unchanged.
 - Added Deno tests for authentication, payload rejection, preserving existing saves, fresh initialization, RLS-scoped verification, and database failures.
-- This work is on branch `feat/server-initialize-player-save`; awaiting CI. It has not been merged or deployed. No production schema, player-save rows, or Manus deployment were changed.
+- CI run `42575607077`: game tests, desktop/mobile browser tests, TypeScript, Deno Edge Function typecheck/tests, web export, Pages export verification, and isolated social DB tests all passed. Separate isolated social DB run `42575607143` also passed.
+- Not deployed to Supabase production. No production schema or player-save rows were changed; Manus remains untouched.
 
 ## Remaining work
 
 - GitHub Pages deployment for PR #13's merge commit was verified successful (workflow run `42527315821`).
 - PR #15 (atomic command receipts plus `economy-command`) is merged as `a36ae7cad7f46feb17242f170fcc7227c72a8128`; its migration and command function are not deployed to production.
-- PR #16 remains draft and unmerged: https://github.com/luffyk124-del/vorzane/pull/16. Last inspected head was `80b90be86ed6b8a6874d17166314c55d99276194`; comparison against then-current `main` showed 38 commits ahead and 2 behind. Re-fetch the PR head and CI before acting; prior CI does not validate newer commits.
+- PR #16 remains draft and unmerged: https://github.com/luffyk124-del/vorzane/pull/16. Current head is `80b90be86ed6b8a6874d17166314c55d99276194`; it is 38 commits ahead and 4 behind current `main`, with GitHub reporting `mergeable=false`. Do not merge as-is. Reconcile its branch with current `main`, inspect the complete diff and latest CI, then re-run all required checks.
 - Server authority is not complete: battle results are still client-computed and the generic full-save client upsert remains active. Do not enable the economy feature gate or revoke client writes until battle settlement, save initialization, import/migration, reset, offline progression, and every other save mutation are server-owned and tested.
 - Continue reviewing and improving existing gameplay and application flows.
 - Verify each change with relevant automated tests before merging.
@@ -96,6 +98,7 @@ Production Supabase project ref: `incidgigfqyjbqfegukg`. The authenticated read-
 | 2026-11-08 | `cdc25cc64d941276ca9e8f03de6bd316f5b77738` | PR #6 merged: game tests, desktop/mobile browser flows, TypeScript, Edge Function checks/tests, web build, and social DB tests passed. |
 | 2026-11-08 | `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a` | PR #12 merged: duplicate new-hero creator controls removed; fresh-account mobile browser regression test, game tests, TypeScript, Edge Function checks/tests, web export, and social DB tests passed. |
 | 2026-11-09 | `741126b48c0831f2353987d7cc94267f7e52f15b` | PR #14 merged. Production `game-state` Edge Function deployed and confirmed ACTIVE v1 with JWT verification enabled; production migration history unchanged. |
+| 2026-11-09 | `c5759d5d18f661bb772391db4ab2f0f4add14f70` | PR #18 merged. New-player save initialization passed game/browser, TypeScript, Deno, web-export, and isolated DB CI. `initialize-save` is not yet deployed to production; no production player data changed. |
 
 ## Update policy
 
