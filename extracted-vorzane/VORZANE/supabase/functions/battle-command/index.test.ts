@@ -171,6 +171,18 @@ Deno.test("save version conflict is rejected without returning a generated battl
   assert(body.sequence === undefined, "conflicted battle must not be presented as committed");
 });
 
+Deno.test("oversized battle request is rejected before database access", async () => {
+  const { handler, calls } = fixture();
+  const oversized = new Request("https://local.test/battle-command", {
+    method: "POST",
+    headers: { Authorization: "Bearer valid", "Content-Type": "application/json" },
+    body: JSON.stringify({ commandId, mode: "cave", padding: "x".repeat(5000) }),
+  });
+  const response = await handler(oversized);
+  assert(response.status === 413, "oversized request must be rejected");
+  assert((calls.clients as unknown[] | undefined) === undefined, "oversized request must not contact Supabase");
+});
+
 Deno.test("new account without a hero cannot start battle", async () => {
   const { handler, calls } = fixture({ state: createFreshState() });
   const response = await handler(request());
