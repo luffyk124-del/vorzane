@@ -2,7 +2,7 @@
 
 > Last updated: 2026-11-09
 > Main branch: `main`
-> Latest main documentation commit: `28b5ed310f145a7724fa18c1560236b2701963a0`
+> Latest main documentation commit: `9f55cb384af8d6319daab730a70116cf35e22b1f`
 > Latest merged application commit: `741126b48c0831f2353987d7cc94267f7e52f15b`
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
