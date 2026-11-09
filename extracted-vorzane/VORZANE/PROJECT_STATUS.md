@@ -3,7 +3,7 @@
 > Last updated: 2026-11-09
 > Main branch: `main`
 > Latest main documentation commit: this file's current revision on `main` (see GitHub file history for its SHA)
-> Latest merged application commit: `039a73897c380f9cd947f2cdaa04f7fc51a5d8bf`
+> Latest merged application commit: `946e7f6ae64b0a56f9a38947a36c760e78d5037e`
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
 
@@ -55,7 +55,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 
 - GitHub Pages deployment for PR #13's merge commit was verified successful (workflow run `42527315821`).
 - PR #15 (atomic command receipts plus `economy-command`) is merged as `a36ae7cad7f46feb17242f170fcc7227c72a8128`; its migration and command function are not deployed to production.
-- PR #16 remains draft and unmerged; it is not part of the active implementation path. Do not merge it without a fresh reconciliation against current `main` and full review.
+- PR #16 remains draft and unmerged. Its base is stale relative to current `main`; do not merge it. Reconcile its client changes against the now-merged server command/recovery work and review every save mutation path before reusing any code.
 - Server authority is not complete: battle results are still client-computed and the generic full-save client upsert remains active. Do not enable the economy feature gate or revoke client writes until battle settlement, save initialization, import/migration, reset, offline progression, and every other save mutation are server-owned and tested.
 - Continue reviewing and improving existing gameplay and application flows.
 - Verify each change with relevant automated tests before merging.
@@ -71,7 +71,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Ported the server-side command validation and canonical state transitions from the reviewed PR #16 implementation into `economy-command`, together with its Deno tests. This expands the server handler for pet ownership/activation, hero creation and starter state, stat allocation, expeditions, quest/achievement/recurring rewards, report dismissal, settings, and character/profile appearance.
 - The change is server-side only at this stage. It does not wire the client, change the feature gate, alter the `player_saves` RLS policies, deploy an Edge Function, run a migration, or change production player data.
 - PR #19 merged into `main` as `039a73897c380f9cd947f2cdaa04f7fc51a5d8bf` after all checks passed on head `d4d2a996e67bdc789278d39ce331f52320591355` (workflow `42578020613`; separate social DB run `42578020638`). The server-side non-combat command expansion is not deployed, not wired to the client, and not enabled.
-- PR #20 preparation: added an additive `player_save_recovery` quarantine migration, an authenticated `stage-save-recovery` Edge Function, Deno tests, an isolated SQL privacy/size test, and an explicit safe-import policy. This stores untrusted snapshots separately and never writes to `player_saves`. Not deployed or client-wired.
+- PR #20 merged into `main` as `946e7f6ae64b0a56f9a38947a36c760e78d5037e` after fresh CI passed on head `749838cf768fcf1267567966c85bf916b4caaa0b`. The additive `player_save_recovery` quarantine migration, authenticated `stage-save-recovery` Edge Function, Deno tests, isolated SQL privacy/quota tests, and safe-import policy are now in `main`. This stores untrusted snapshots separately and never writes to `player_saves`. Not deployed or client-wired.
 - Code review confirmed the handler authenticates the caller, reads only the caller's save, validates command payloads against canonical game rules, and commits through the atomic receipt RPC. The PR remains server-side only: no client wiring, feature-gate activation, migration, production deployment, RLS/Auth change, or player-save write.
 - Important rollout dependency: reward commands that inspect battle counters must remain disabled until battle settlement is server-owned and generic client snapshot writes are removed. This PR does not complete save authority: autosave/full-snapshot writes, offline conflict resolution, legacy import, reset, and battle settlement remain client-owned/outstanding.
 
@@ -118,6 +118,7 @@ Production Supabase project ref: `incidgigfqyjbqfegukg`. The authenticated read-
 | 2026-11-09 | `741126b48c0831f2353987d7cc94267f7e52f15b` | PR #14 merged. Production `game-state` Edge Function deployed and confirmed ACTIVE v1 with JWT verification enabled; production migration history unchanged. |
 | 2026-11-09 | `c5759d5d18f661bb772391db4ab2f0f4add14f70` | PR #18 merged. New-player save initialization passed game/browser, TypeScript, Deno, web-export, and isolated DB CI. `initialize-save` is not yet deployed to production; no production player data changed. |
 | 2026-11-09 | `039a73897c380f9cd947f2cdaa04f7fc51a5d8bf` | PR #19 squash-merged after all CI passed: workflow `42578020613` (game systems, desktop/mobile browser, TypeScript, Deno typecheck/tests, web export, Pages export verification, isolated social DB) and workflow `42578020638` (isolated social DB). Deployment job skipped; no Supabase deployment/migration, client wiring, feature enablement, RLS/Auth change, or player-save mutation. |
+| 2026-11-09 | `946e7f6ae64b0a56f9a38947a36c760e78d5037e` | PR #20 squash-merged after fresh CI passed on head `749838cf768fcf1267567966c85bf916b4caaa0b`: build/Pages workflow `42586714454` and dedicated social DB workflow `42586714743` passed, including recovery privacy/quota tests and 8-way concurrency (5 accepted, 3 rejected). Deploy skipped; no Supabase production migration/function deployment or player-save mutation. |
 
 ## Current recovery slice — PR #20 preparation (2026-11-09)
 
@@ -129,8 +130,8 @@ Production Supabase project ref: `incidgigfqyjbqfegukg`. The authenticated read-
 - Review blocker addressed in the branch: a private database counter and `AFTER INSERT` trigger enforce a lifetime maximum of five staged records per owner through an atomic upsert. Duplicate recovery keys do not consume quota, quota rejection rolls back the staged row, and the counter internals are inaccessible to client roles and `service_role` directly. The Edge Function returns HTTP 429 when the limit is reached.
 - Added isolated SQL coverage for the five-record cap, duplicate-key non-consumption, and private-counter permissions. The dedicated social DB workflow now applies the migration, runs the SQL privacy/quota tests, and submits eight concurrent privileged inserts; it requires exactly five successes, three rejections, and a counter/row total of five. Added Deno coverage for the HTTP 429 quota response.
 - The last substantive PR build run (`42581572966`, head `94ed13f831242750c9edc35bf248fdbfe9400cf4`) passed game tests, desktop/mobile browser tests, and application TypeScript. Deno typecheck then exposed a test-fixture type mismatch (`message` missing from its declared error shape); this was corrected in commit `ac609c1c8a209de5b71a7889848f4cea0e00cafa`. The isolated SQL test exposed a permission mistake in the test itself (reading the dedicated internal counter as `service_role`); this was corrected in commit `d95ef55fd0f7dc15be8213bf035505b6409ee624`, with an additional duplicate-quota assertion in `0ccf19ec046a7d95afe24dd8efca6c9c829c5d97`.
-- The latest head is `837dbd815282a2b80c6860330ae24015d6fc8340`. A fresh full PR CI run for this exact head has not been obtained; feature-branch push runs returned no jobs, so they do not count as verification. PR #20 is ready for review but remains unmerged pending a fresh successful SQL/concurrency and Deno/build run.
-- Client integration, restore/merge logic, production migration, and deployment remain out of scope. No production migration/function was deployed, no player-save row was changed, and Manus remains untouched.
+- Final PR #20 verification passed on head `749838cf768fcf1267567966c85bf916b4caaa0b`: build/Pages workflow `42586714454` passed build and isolated DB jobs (game tests, desktop/mobile browser tests, TypeScript, Deno checks/tests, web export, Pages export validation, existing `player_saves_rls.sql`, recovery SQL tests, and command-receipt tests); dedicated social DB workflow `42586714743` passed the recovery privacy/quota SQL tests and eight concurrent privileged inserts, with exactly five successes, three rejections, and counter/row totals of five. The deploy job was skipped. PR #20 was squash-merged as `946e7f6ae64b0a56f9a38947a36c760e78d5037e`.
+- Client integration and restore/merge logic remain outstanding. The migration and function are merged to GitHub only; neither was applied/deployed to Supabase production. No production player-save row was changed, and Manus remains untouched.
 
 ## Update policy
 
