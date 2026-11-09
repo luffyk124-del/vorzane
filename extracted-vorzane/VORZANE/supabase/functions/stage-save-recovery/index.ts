@@ -5,8 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const MAX_REQUEST_BYTES = 280 * 1024;
-const MAX_SNAPSHOT_BYTES = 256 * 1024;
+const MAX_REQUEST_BYTES = 260 * 1024;
+const MAX_SNAPSHOT_BYTES = 240 * 1024;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type RecoverySource = "legacy" | "offline";
