@@ -2,6 +2,7 @@
 
 > Last updated: 2026-11-09
 > Main branch: `main`
+> Latest main documentation commit: `6d546b2ca5c764bee8d847db0c3d91645a328d9d`
 > Latest merged application commit: `741126b48c0831f2353987d7cc94267f7e52f15b`
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
@@ -44,7 +45,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 
 - GitHub Pages deployment for PR #13's merge commit was verified successful (workflow run `42527315821`).
 - PR #15 (atomic command receipts plus `economy-command`) is merged as `a36ae7cad7f46feb17242f170fcc7227c72a8128`; its migration and command function are not deployed to production.
-- PR #16 remains draft and unmerged. Its latest observed branch is 38 commits ahead and 1 commit behind `main`; the current CI run `42543270696` passed, but branch synchronization and full end-to-end review remain necessary.
+- PR #16 remains draft and unmerged: https://github.com/luffyk124-del/vorzane/pull/16. Last inspected head was `80b90be86ed6b8a6874d17166314c55d99276194`; comparison against then-current `main` showed 38 commits ahead and 2 behind. Re-fetch the PR head and CI before acting; prior CI does not validate newer commits.
 - Server authority is not complete: battle results are still client-computed and the generic full-save client upsert remains active. Do not enable the economy feature gate or revoke client writes until battle settlement, save initialization, import/migration, reset, offline progression, and every other save mutation are server-owned and tested.
 - Continue reviewing and improving existing gameplay and application flows.
 - Verify each change with relevant automated tests before merging.
@@ -52,7 +53,20 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Review progression, rewards, inventory, and economy flows for integrity and abuse resistance. PR #16 wires a gated command path for several non-combat operations, but is not yet a complete anti-tampering boundary.
 - Improve mobile usability and verify responsive behavior on real devices.
 - Maintain clear release notes and deployment verification for each production update.
-- Keep database changes additive, reviewed, backed up, and reversible; do not run production migrations without explicit approval.
+- The project owner explicitly authorized necessary production Supabase changes. Still back up/export where supported, review every migration, keep changes additive and reversible, verify against isolated/test data first, and never drop or overwrite player data as a shortcut.
+
+## Replit handoff — current work order
+
+The project owner authorized continued VORZANE development, including necessary production Supabase changes. Continue from the latest `main`; do not assume prior CI applies to newer commits.
+
+1. Re-fetch `main`, PR #16, its source branch, and latest GitHub Actions runs. Reconcile the branch with current `main` without overwriting newer changes.
+2. Complete server-authoritative gameplay before enabling `SERVER_ECONOMY_COMMANDS_ENABLED`: move battle generation and settlement to a server command; client only animates a sanitized display sequence and never submits `result.state`; remove generic client `player_saves` snapshot upserts and pre-command full snapshot flush; implement safe server-side first-save initialization; review import/migration, save reset, offline progression, autosave, mission-period updates, and every other save mutation.
+3. Add tests for ownership, validation, replay/idempotency, stale versions, malformed payloads, and battle reward/state integrity. Run game tests, desktop/mobile browser tests, TypeScript, Deno Edge Function checks/tests, web export, and isolated DB tests.
+4. Only after client write paths are removed and all mutations are server-owned, apply reviewed additive production migrations and deploy required Edge Functions. Verify deployed versions, JWT settings, RLS behavior, and authenticated read/write flows with a test account before enabling the feature gate.
+5. Never expose service-role credentials to the client, commit secrets, or delete/reset existing player saves. Preserve the Manus deployment untouched.
+6. Update this file after each meaningful batch with exact commits, test runs, deployment versions, and blockers. Merge and publish only after relevant checks pass.
+
+Production Supabase project ref: `incidgigfqyjbqfegukg`. The authenticated read-only `game-state` Edge Function is active (v1, `verify_jwt=true`). The `economy-command` function and receipt migration from PR #15 are not deployed. Three existing player-save rows were observed during the last audit; preserve them.
 
 ## Project safety rules
 
