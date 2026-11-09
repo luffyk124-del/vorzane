@@ -71,6 +71,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Ported the server-side command validation and canonical state transitions from the reviewed PR #16 implementation into `economy-command`, together with its Deno tests. This expands the server handler for pet ownership/activation, hero creation and starter state, stat allocation, expeditions, quest/achievement/recurring rewards, report dismissal, settings, and character/profile appearance.
 - The change is server-side only at this stage. It does not wire the client, change the feature gate, alter the `player_saves` RLS policies, deploy an Edge Function, run a migration, or change production player data.
 - PR #19 merged into `main` as `039a73897c380f9cd947f2cdaa04f7fc51a5d8bf` after all checks passed on head `d4d2a996e67bdc789278d39ce331f52320591355` (workflow `42578020613`; separate social DB run `42578020638`). The server-side non-combat command expansion is not deployed, not wired to the client, and not enabled.
+- PR #20 preparation: added an additive `player_save_recovery` quarantine migration, an authenticated `stage-save-recovery` Edge Function, Deno tests, an isolated SQL privacy/size test, and an explicit safe-import policy. This stores untrusted snapshots separately and never writes to `player_saves`. Not deployed or client-wired.
 - Code review confirmed the handler authenticates the caller, reads only the caller's save, validates command payloads against canonical game rules, and commits through the atomic receipt RPC. The PR remains server-side only: no client wiring, feature-gate activation, migration, production deployment, RLS/Auth change, or player-save write.
 - Important rollout dependency: reward commands that inspect battle counters must remain disabled until battle settlement is server-owned and generic client snapshot writes are removed. This PR does not complete save authority: autosave/full-snapshot writes, offline conflict resolution, legacy import, reset, and battle settlement remain client-owned/outstanding.
 
@@ -117,6 +118,14 @@ Production Supabase project ref: `incidgigfqyjbqfegukg`. The authenticated read-
 | 2026-11-09 | `741126b48c0831f2353987d7cc94267f7e52f15b` | PR #14 merged. Production `game-state` Edge Function deployed and confirmed ACTIVE v1 with JWT verification enabled; production migration history unchanged. |
 | 2026-11-09 | `c5759d5d18f661bb772391db4ab2f0f4add14f70` | PR #18 merged. New-player save initialization passed game/browser, TypeScript, Deno, web-export, and isolated DB CI. `initialize-save` is not yet deployed to production; no production player data changed. |
 | 2026-11-09 | `039a73897c380f9cd947f2cdaa04f7fc51a5d8bf` | PR #19 squash-merged after all CI passed: workflow `42578020613` (game systems, desktop/mobile browser, TypeScript, Deno typecheck/tests, web export, Pages export verification, isolated social DB) and workflow `42578020638` (isolated social DB). Deployment job skipped; no Supabase deployment/migration, client wiring, feature enablement, RLS/Auth change, or player-save mutation. |
+
+## Current recovery slice — PR #20 preparation (2026-11-09)
+
+- Branch: `feat/stage-untrusted-save-recovery`.
+- New migration: `20261109090000_create_player_save_recovery.sql` creates an owner-readable, server-write-only quarantine table with payload size and idempotency constraints.
+- New Edge Function: `stage-save-recovery` verifies the caller, bounds the payload, stores the original JSON under a caller-scoped recovery key, and returns the existing record on retry without replacing it.
+- Added Deno handler tests and SQL tests for owner isolation, forbidden client writes, duplicate keys, and oversized payloads.
+- CI workflow is being extended to run the new migration/tests and Edge Function checks. Client integration, restore/merge logic, production migration, and deployment are deliberately out of scope until these checks pass.
 
 ## Update policy
 
