@@ -100,12 +100,19 @@ begin
     null;
   end;
 
-  if (select record_count from private.player_save_recovery_quotas
-      where user_id = '00000000-0000-0000-0000-00000000000b') <> 5 then
+end
+$quota$;
+
+-- Inspect the private counter as the migration owner, not as service_role.
+reset role;
+do $quota_counter$
+begin
+  if coalesce((select record_count from private.player_save_recovery_quotas
+      where user_id = '00000000-0000-0000-0000-00000000000b'), 0) <> 5 then
     raise exception 'RECOVERY QUOTA FAIL: stored quota counter is incorrect';
   end if;
 end
-$quota$;
+$quota_counter$;
 
 -- Clients cannot inspect or manipulate the private quota counter or trigger function.
 do $private$
