@@ -37,15 +37,15 @@ create policy players_select_own_save_recovery
 -- only be changed by this trigger function.
 create schema if not exists private;
 
-create table private.player_save_recovery_quotas (
+create table vorzane_internal.player_save_recovery_quotas (
   user_id uuid primary key references auth.users(id) on delete cascade,
   record_count smallint not null check (record_count between 1 and 5)
 );
 
-revoke all on schema private from public, anon, authenticated, service_role;
-revoke all on table private.player_save_recovery_quotas from public, anon, authenticated, service_role;
+revoke all on schema vorzane_internal from public, anon, authenticated, service_role;
+revoke all on table vorzane_internal.player_save_recovery_quotas from public, anon, authenticated, service_role;
 
-create or replace function private.enforce_player_save_recovery_quota()
+create or replace function vorzane_internal.enforce_player_save_recovery_quota()
 returns trigger
 language plpgsql
 security definer
@@ -57,11 +57,11 @@ begin
   -- ON CONFLICT serializes concurrent inserts on the same owner's counter row.
   -- This is AFTER INSERT, so duplicate-key attempts rejected by the unique index
   -- do not consume quota. Raising here rolls back the just-inserted recovery row.
-  insert into private.player_save_recovery_quotas (user_id, record_count)
+  insert into vorzane_internal.player_save_recovery_quotas (user_id, record_count)
   values (new.user_id, 1)
   on conflict (user_id) do update
-    set record_count = private.player_save_recovery_quotas.record_count + 1
-    where private.player_save_recovery_quotas.record_count < 5
+    set record_count = vorzane_internal.player_save_recovery_quotas.record_count + 1
+    where vorzane_internal.player_save_recovery_quotas.record_count < 5
   returning record_count into v_record_count;
 
   if not found then
@@ -74,10 +74,10 @@ begin
 end
 $quota$;
 
-revoke all on function private.enforce_player_save_recovery_quota()
+revoke all on function vorzane_internal.enforce_player_save_recovery_quota()
   from public, anon, authenticated, service_role;
 
 create trigger player_save_recovery_enforce_quota
   after insert on public.player_save_recovery
   for each row
-  execute function private.enforce_player_save_recovery_quota();
+  execute function vorzane_internal.enforce_player_save_recovery_quota();
