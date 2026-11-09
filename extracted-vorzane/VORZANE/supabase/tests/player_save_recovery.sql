@@ -121,8 +121,8 @@ $quota_counter$;
 -- Clients cannot inspect or manipulate the dedicated internal quota counter or trigger function.
 do $private$
 begin
-  if has_schema_privilege('authenticated', 'private', 'USAGE')
-     or has_schema_privilege('service_role', 'private', 'USAGE')
+  if has_schema_privilege('authenticated', 'vorzane_internal', 'USAGE')
+     or has_schema_privilege('service_role', 'vorzane_internal', 'USAGE')
      or has_table_privilege('service_role', 'vorzane_internal.player_save_recovery_quotas', 'INSERT')
      or has_table_privilege('service_role', 'vorzane_internal.player_save_recovery_quotas', 'UPDATE')
      or has_function_privilege('service_role', 'vorzane_internal.enforce_player_save_recovery_quota()', 'EXECUTE') then
