@@ -25,6 +25,32 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
+async function readBoundedText(request: Request, maxBytes: number): Promise<string | null> {
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) return null;
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 function parseBody(value: unknown): { commandId: string; mode: BattleMode } | null {
   if (!isRecord(value) || Object.keys(value).some((key) => !["commandId", "mode"].includes(key))) return null;
   if (typeof value.commandId !== "string" || !UUID_PATTERN.test(value.commandId)) return null;
@@ -56,8 +82,8 @@ export function createBattleCommandHandler(
 
     let body: { commandId: string; mode: BattleMode };
     try {
-      const raw = await request.text();
-      if (new TextEncoder().encode(raw).byteLength > 4096) return json({ error: "Request is too large" }, 413);
+      const raw = await readBoundedText(request, 4096);
+      if (raw === null) return json({ error: "Request is too large" }, 413);
       const parsed = parseBody(JSON.parse(raw));
       if (!parsed) return json({ error: "Invalid battle command" }, 400);
       body = parsed;
