@@ -39,24 +39,33 @@ function fixture(options: {
       };
     },
   };
+  let inserted = false;
+  const adminBuilder = {
+    upsert(row: Record<string, unknown>, config: Record<string, unknown>) {
+      calls.inserts = Number(calls.inserts) + 1;
+      calls.insertedRow = row;
+      calls.insertConfig = config;
+      if (!options.insertError && !save) {
+        save = {
+          game_state: row.game_state,
+          updated_at: "2026-11-09T06:30:00.000Z",
+        };
+        inserted = true;
+      }
+      return this;
+    },
+    select(columns: string) { calls.adminColumns = columns; return this; },
+    async maybeSingle() {
+      return {
+        data: inserted ? { user_id: "user-a" } : null,
+        error: options.insertError ?? null,
+      };
+    },
+  };
   const admin = {
     from(table: string) {
       calls.adminTable = table;
-      return {
-        async upsert(row: Record<string, unknown>, config: Record<string, unknown>) {
-          calls.inserts = Number(calls.inserts) + 1;
-          calls.insertedRow = row;
-          calls.insertConfig = config;
-          if (options.insertError) return { error: options.insertError };
-          if (!save) {
-            save = {
-              game_state: row.game_state,
-              updated_at: "2026-11-09T06:30:00.000Z",
-            };
-          }
-          return { error: null };
-        },
-      };
+      return adminBuilder;
     },
   };
   const factory = ((url: string, key: string, config: unknown) => {
