@@ -103,30 +103,30 @@ begin
 end
 $quota$;
 
--- Inspect the private counter as the migration owner, not as service_role.
+-- Inspect the dedicated internal counter as the migration owner, not as service_role.
 reset role;
 do $quota_counter$
 begin
-  if coalesce((select record_count from private.player_save_recovery_quotas
+  if coalesce((select record_count from vorzane_internal.player_save_recovery_quotas
       where user_id = '00000000-0000-0000-0000-00000000000a'), 0) <> 1 then
     raise exception 'RECOVERY IDEMPOTENCY FAIL: duplicate key consumed quota';
   end if;
-  if coalesce((select record_count from private.player_save_recovery_quotas
+  if coalesce((select record_count from vorzane_internal.player_save_recovery_quotas
       where user_id = '00000000-0000-0000-0000-00000000000b'), 0) <> 5 then
     raise exception 'RECOVERY QUOTA FAIL: stored quota counter is incorrect';
   end if;
 end
 $quota_counter$;
 
--- Clients cannot inspect or manipulate the private quota counter or trigger function.
+-- Clients cannot inspect or manipulate the dedicated internal quota counter or trigger function.
 do $private$
 begin
   if has_schema_privilege('authenticated', 'private', 'USAGE')
      or has_schema_privilege('service_role', 'private', 'USAGE')
-     or has_table_privilege('service_role', 'private.player_save_recovery_quotas', 'INSERT')
-     or has_table_privilege('service_role', 'private.player_save_recovery_quotas', 'UPDATE')
-     or has_function_privilege('service_role', 'private.enforce_player_save_recovery_quota()', 'EXECUTE') then
-    raise exception 'RECOVERY QUOTA PRIVILEGE FAIL: private quota internals are exposed';
+     or has_table_privilege('service_role', 'vorzane_internal.player_save_recovery_quotas', 'INSERT')
+     or has_table_privilege('service_role', 'vorzane_internal.player_save_recovery_quotas', 'UPDATE')
+     or has_function_privilege('service_role', 'vorzane_internal.enforce_player_save_recovery_quota()', 'EXECUTE') then
+    raise exception 'RECOVERY QUOTA PRIVILEGE FAIL: dedicated internal quota internals are exposed';
   end if;
 end
 $private$;
