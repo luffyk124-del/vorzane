@@ -77,6 +77,7 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261106075800_create_player_saves.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261106080400_restrict_player_save_privileges.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261108220000_player_saves_size_limit.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/tests/player_saves_rls.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261109090000_create_player_save_recovery.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/tests/player_save_recovery.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261108230000_create_player_command_receipts.sql
