@@ -2,7 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { advanceExpeditions, allocateStatPoint, beginOrQueueExpedition, buyItem, buyPet, claimExplorationAchievement, claimExpeditionTask, claimQuest, claimRecurringMission, createHeroState, dismissOfflineReport, equipItem, sellItem, setPet, unequipItem } from "../../../src/game/engine.ts";
 import { createItemInstance } from "../../../src/game/dungeonItems.ts";
 import { STARTER_ITEMS } from "../../../src/game/catalog.ts";
-import { normalizeGameState, type CharacterStyle, type ClassId, type GameState, type StatKey } from "../../../src/game/model.ts";
+import { createFreshState, normalizeGameState, type CharacterStyle, type ClassId, type GameState, type StatKey } from "../../../src/game/model.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +11,7 @@ const corsHeaders = {
 };
 
 type EconomyCommand =
+  | { type: "resetSave" }
   | { type: "buyItem"; itemId: string }
   | { type: "sellItem"; itemId: string }
   | { type: "equipItem"; itemId: string }
@@ -46,6 +47,7 @@ function json(body: unknown, status = 200): Response {
 function parseCommand(value: unknown): EconomyCommand | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const command = value as Record<string, unknown>;
+  if (command.type === "resetSave") return Object.keys(command).length === 1 ? { type: "resetSave" } : null;
   if (command.type === "buyItem" || command.type === "sellItem" || command.type === "equipItem") {
     if (typeof command.itemId !== "string" || !command.itemId.trim() || command.itemId.length > 160) return null;
     return { type: command.type, itemId: command.itemId };
@@ -208,7 +210,7 @@ export function createEconomyCommandHandler(
       });
     }
 
-    if (!state.hero && body.command.type !== "createHero") return json({ error: "Create a hero first" }, 409);
+    if (!state.hero && body.command.type !== "createHero" && body.command.type !== "resetSave") return json({ error: "Create a hero first" }, 409);
     if (state.hero && body.command.type === "createHero") return json({ error: "Hero already exists" }, 409);
 
     if (body.expectedUpdatedAt !== save.updated_at) {
@@ -217,7 +219,10 @@ export function createEconomyCommandHandler(
 
     let next = state;
     let soldPrice: number | null = null;
-    if (body.command.type === "buyItem") {
+    if (body.command.type === "resetSave") {
+      // Reset the existing row to a canonical fresh state. Never delete the row.
+      next = createFreshState();
+    } else if (body.command.type === "buyItem") {
       const result = buyItem(state, body.command.itemId);
       if (result.error) return json({ error: result.error }, 400);
       next = result.state;
