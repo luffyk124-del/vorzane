@@ -125,7 +125,9 @@ Production Supabase project ref: `incidgigfqyjbqfegukg`. The authenticated read-
 - New migration: `20261109090000_create_player_save_recovery.sql` creates an owner-readable, server-write-only quarantine table with payload size and idempotency constraints.
 - New Edge Function: `stage-save-recovery` verifies the caller, bounds the payload, stores the original JSON under a caller-scoped recovery key, and returns the existing record on retry without replacing it.
 - Added Deno handler tests and SQL tests for owner isolation, forbidden client writes, duplicate keys, and oversized payloads.
-- CI workflow is being extended to run the new migration/tests and Edge Function checks. Client integration, restore/merge logic, production migration, and deployment are deliberately out of scope until these checks pass.
+- CI verification completed successfully on PR head `d491c471d5c3e2a6c1889086f7bdd15e1ab95bf7`: build/test workflow `42580700081` passed (game tests, desktop/mobile browser tests, TypeScript, Deno checks/tests, web export, Pages export); isolated social DB workflow `42580700088` passed. Deploy job was skipped.
+- Review blocker before merge: the authenticated staging endpoint currently permits an unbounded number of distinct recovery keys per user, each up to 240 KiB. A review comment requests a concurrency-safe database-enforced per-user quota and isolated SQL coverage. PR #20 remains draft until this is addressed and CI reruns.
+- Client integration, restore/merge logic, production migration, and deployment remain out of scope. No production migration/function was deployed, no player-save row was changed, and Manus remains untouched.
 
 ## Update policy
 
