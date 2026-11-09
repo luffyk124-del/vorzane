@@ -65,6 +65,13 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Maintain clear release notes and deployment verification for each production update.
 - The project owner explicitly authorized necessary production Supabase changes. Still back up/export where supported, review every migration, keep changes additive and reversible, verify against isolated/test data first, and never drop or overwrite player data as a shortcut.
 
+## In progress — server-authoritative non-combat command expansion (2026-11-09)
+
+- Created branch `feat/server-authority-command-expansion` from current `main` after leaving stale PR #16 untouched.
+- Ported the server-side command validation and canonical state transitions from the reviewed PR #16 implementation into `economy-command`, together with its Deno tests. This expands the server handler for pet ownership/activation, hero creation and starter state, stat allocation, expeditions, quest/achievement/recurring rewards, report dismissal, settings, and character/profile appearance.
+- The change is server-side only at this stage. It does not wire the client, change the feature gate, alter the `player_saves` RLS policies, deploy an Edge Function, run a migration, or change production player data.
+- Still requires fresh CI and security review. This does not complete save authority: autosave/full-snapshot writes, offline conflict resolution, legacy import, and reset remain client-owned and are explicitly out of scope for this PR.
+
 ## Production audit — 2026-11-09
 
 - Read-only verification confirms exactly three rows remain in public.player_saves. No rows were inserted, updated, or deleted during this audit.
