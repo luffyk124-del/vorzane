@@ -1,6 +1,8 @@
+import type { GameState } from "../game/model";
+
 export type SaveSnapshotRecord = {
   user_id: string;
-  game_state: unknown;
+  game_state: GameState;
   updated_at: string;
 };
 
