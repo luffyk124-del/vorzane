@@ -92,7 +92,7 @@ test("settings update rejects empty, unsupported, and out-of-range values before
     { musicVolume: -1 },
     { sfx: "yes" },
     { admin: true },
-  ] as never[]) {
+  ]) {
     const result = await invokeSettingsUpdate(invoke, SAVE_VERSION, settings);
     assert.ok(result.error);
   }
@@ -120,7 +120,7 @@ test("profile avatar update rejects unknown identifiers before invoking", async 
   const result = await invokeProfileAvatarUpdate(async () => {
     called = true;
     return { data: null, error: null };
-  }, SAVE_VERSION, "Admin" as never);
+  }, SAVE_VERSION, "Admin");
 
   assert.equal(called, false);
   assert.match(result.error?.message ?? "", /unsupported profile avatar/i);
