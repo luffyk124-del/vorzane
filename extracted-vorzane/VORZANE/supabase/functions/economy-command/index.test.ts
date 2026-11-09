@@ -300,6 +300,39 @@ Deno.test("profile appearance command rejects unsupported style values", async (
   assert(calls.table === undefined && calls.rpc === undefined, "invalid style must not touch save");
 });
 
+Deno.test("resetSave replaces the caller's state with a canonical fresh state without deleting the save row", async () => {
+  const state = createHeroState("Existing Hero", "Warrior");
+  state.gold = 987654;
+  state.wins = 42;
+  state.inventory.push({ ...state.inventory[0]!, id: "owned-item" });
+  const { handler, calls } = fixture({ state });
+  const response = await handler(commandRequest({ type: "resetSave" }));
+  const body = await readJson(response);
+  assert(response.status === 200, "server reset should succeed");
+  const args = calls.args as Record<string, unknown>;
+  const saved = args.p_game_state as GameState;
+  assert(JSON.stringify(saved) === JSON.stringify(createFreshState()), "reset must use canonical fresh state, not a client snapshot");
+  assert(args.p_expected_updated_at === "2026-11-08T20:00:00.000Z", "reset must use the current save version");
+  assert(args.p_result && (args.p_result as Record<string, unknown>).commandType === "resetSave", "reset must be recorded as an idempotent command");
+  assert((calls.tables as string[]).includes("player_saves"), "reset must operate on the existing save row");
+  assert(body.replayed === false, "first reset must not be a replay");
+  assert(!((calls.tables as string[]).includes("player_saves_delete")), "reset must not delete the player save row");
+});
+
+Deno.test("resetSave rejects client-supplied state or extra command fields before database access", async () => {
+  const { handler, calls } = fixture();
+  const response = await handler(commandRequest({ type: "resetSave", state: { gold: 999999999 } }));
+  assert(response.status === 400, "reset must reject client-supplied state");
+  assert(calls.table === undefined && calls.rpc === undefined, "invalid reset must not read or commit a save");
+});
+
+Deno.test("resetSave is allowed when the current save has no hero", async () => {
+  const { handler, calls } = fixture({ state: createFreshState() });
+  const response = await handler(commandRequest({ type: "resetSave" }));
+  assert(response.status === 200, "a save without a hero can be reset");
+  const saved = (calls.args as Record<string, unknown>).p_game_state as GameState;
+  assert(saved.hero === null, "reset should keep canonical no-hero state");
+});
 Deno.test("another unauthenticated identity cannot invoke commands", async () => {
   const { handler } = fixture({ user: null, authError: new Error("invalid token") });
   const response = await handler(commandRequest({ type: "buyItem", itemId: "sword1" }));
