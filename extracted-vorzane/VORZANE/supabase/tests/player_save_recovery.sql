@@ -108,6 +108,10 @@ reset role;
 do $quota_counter$
 begin
   if coalesce((select record_count from private.player_save_recovery_quotas
+      where user_id = '00000000-0000-0000-0000-00000000000a'), 0) <> 1 then
+    raise exception 'RECOVERY IDEMPOTENCY FAIL: duplicate key consumed quota';
+  end if;
+  if coalesce((select record_count from private.player_save_recovery_quotas
       where user_id = '00000000-0000-0000-0000-00000000000b'), 0) <> 5 then
     raise exception 'RECOVERY QUOTA FAIL: stored quota counter is incorrect';
   end if;
