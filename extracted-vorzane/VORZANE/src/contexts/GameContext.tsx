@@ -143,6 +143,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         game_state: safeSnapshot,
         updated_at: new Date(nextVersionTime).toISOString(),
       }, expectedVersion);
+      if (activeUserRef.current !== userId) return false;
 
       if (outcome.kind === "conflict") {
         await markOfflineSavePending(userId, offlineMarkerStorage());
@@ -151,6 +152,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         setSaveStatus("اكتشفنا نسخة سحابية أحدث؛ نتحقق منها قبل متابعة الحفظ");
         try {
           const latest = await readCloudSave(userId);
+          if (activeUserRef.current !== userId) return false;
           if (latest.error) throw latest.error;
           if (latest.data) {
             const latestState = normalizeGameState(latest.data.game_state);
@@ -170,6 +172,7 @@ export function GameProvider({ children }: PropsWithChildren) {
             setCloudError("تغير الحفظ السحابي أثناء المزامنة. نسختك المحلية محفوظة؛ أعد تحميل الحساب للتحقق.");
           }
         } catch (caught) {
+          if (activeUserRef.current !== userId) return false;
           const message = caught instanceof Error ? caught.message : "تعذر التحقق من أحدث نسخة سحابية.";
           setCloudError(message);
           setSaveStatus("تعذرت المزامنة؛ النسخة المحلية محفوظة ولم نستبدل النسخة السحابية");
