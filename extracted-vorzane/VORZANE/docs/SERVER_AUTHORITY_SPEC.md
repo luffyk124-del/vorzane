@@ -33,6 +33,28 @@ Each slice needs tests: rejected invalid command, rejected command for another u
 - **Implementation order:** (1) read-only state endpoint and contract tests; (2) economy and inventory commands; (3) battle and quest reward validation; (4) progression and expedition completion; (5) client-write cutover only after every supported write path is server-backed and tested.
 - **Compatibility:** Keep the existing `player_saves` table and save JSON shape during the initial rollout. Migrations, if later needed, must be additive, tested against a disposable or local database first, reversible where possible, and separately approved before production application.
 
+## Current mutation-path audit (2026-11-09)
+
+The first-save initialization slice is merged in PR #18 (c5759d5d18f661bb772391db4ab2f0f4add14f70), but is not deployed. The following paths remain client-owned in src/contexts/GameContext.tsx and must be handled before client write privileges can be revoked:
+
+| Path | Current behavior | Required server-side treatment |
+|---|---|---|
+| persistSnapshot | Direct client player_saves.upsert of a full GameState; used by autosave and flushNow. | Replace with typed commands / server-validated transitions. Do not accept arbitrary full snapshots. |
+| Offline progression | advanceExpeditions runs on client load and can award gold, XP, completion counts, and reports. | Server calculates elapsed completions from persisted expedition timestamps and canonical rules; client only renders the result. |
+| Offline conflict resolution | resolveMigration can write either local or cloud snapshot through persistSnapshot. | Preserve both copies until a validated, explicit resolution is accepted. A local snapshot is untrusted input and must not be allowed to set currency, levels, inventory, or rewards. |
+| Legacy import / fresh choice | resolveMigration writes an imported legacy snapshot or a fresh snapshot directly. | One-time, owner-scoped import with schema validation and server-side sanitization; never overwrite an existing cloud row. Define an explicit policy for legacy economic/progression fields before implementation. |
+| Reset | resetPlayerSave directly deletes the caller's player_saves row. | Do not deploy a delete-based reset. Keep the row and design a recoverable, explicit reset flow only after backup/restore semantics are defined. |
+| First account initialization | initialize-save creates canonical server state for an account with no cloud row. | Merged and CI-tested; deploy only after the remaining client write paths and rollout safeguards are reviewed. The compatibility fallback still exists. |
+
+### Required cutover gates
+
+1. No client code may call player_saves.upsert, update, or delete for game-state mutations.
+2. Server commands must own expedition completion, mission-period rollover, reward claims, and every progression/economy mutation—not merely the shop commands.
+3. Save recovery/import must not trust client-supplied economic or progression values.
+4. Reset must preserve an auditable recovery path and must never delete the player's only save row.
+5. Add tests for concurrency, duplicate command replay, stale versions, cross-user access, malformed payloads, offline time boundaries, and failure recovery.
+6. Only after all gates pass may the production migration revoke direct client writes. Keep the current compatibility path until then.
+
 ## Not in this spec
 
 - Multiplayer, clans, trading between players, realtime events. These need a separate spec.
