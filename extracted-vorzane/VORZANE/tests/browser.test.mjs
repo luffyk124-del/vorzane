@@ -47,6 +47,20 @@ function saveFixture() {
   };
 }
 
+function newPlayerFixture() {
+  const state = saveFixture();
+  state.hero = null;
+  state.characterStyle = { gender: "male", appearance: 0, hairstyle: "short", hairColor: "obsidian", face: "classic", outfit: "adventurer", body: "balanced" };
+  state.missionPeriods = {
+    daily: { key: new Date().toISOString().slice(0, 10), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+    weekly: { key: "test-week", baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+    season: { key: new Date().toISOString().slice(0, 7), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
+  };
+  state.quests = { first: false, battles: false, level: false };
+  state.settings.musicEnabled = true;
+  return state;
+}
+
 function mockSession() {
   const user = {
     id: playerId,
@@ -103,6 +117,32 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
     }
     if (request.method() === "GET" && url.pathname.endsWith("/auth/v1/user")) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(session.user) });
+      return;
+    }
+    if (request.method() === "OPTIONS" && url.pathname.endsWith("/functions/v1/initialize-save")) {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+        },
+        body: "",
+      });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/functions/v1/initialize-save")) {
+      const payload = request.postDataJSON();
+      if (!payload || Object.keys(payload).length !== 0) {
+        await route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "Initialization accepts an empty payload only" }) });
+        return;
+      }
+      if (!store.state) store.state = newPlayerFixture();
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ state: store.state, updatedAt: new Date().toISOString(), created: true }),
+      });
       return;
     }
     if (request.method() === "OPTIONS" && url.pathname.endsWith("/functions/v1/game-state")) {

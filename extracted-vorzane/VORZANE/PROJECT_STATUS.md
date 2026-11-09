@@ -41,6 +41,14 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Live web application: https://luffyk124-del.github.io/vorzane/
 - Preserved Manus version: https://vorzane-ebvt9uxg.manus.space/home
 
+## In progress — server-side first-save initialization (2026-11-09)
+
+- Added an authenticated `initialize-save` Edge Function that validates the caller JWT, returns an existing owner-scoped save unchanged, or creates a canonical fresh save on the server when none exists.
+- The endpoint accepts an empty payload only; it never accepts a client-provided game-state snapshot. It uses the server-only service-role key for an insert with conflict-ignore semantics, then re-reads through the caller JWT/RLS to verify owner visibility.
+- Integrated the new-account path in `GameContext`. If the function is not deployed yet, the existing compatibility fallback remains in place; existing local/legacy/offline recovery flows are unchanged.
+- Added Deno tests for authentication, payload rejection, preserving existing saves, fresh initialization, RLS-scoped verification, and database failures.
+- This work is on branch `feat/server-initialize-player-save`; awaiting CI. It has not been merged or deployed. No production schema, player-save rows, or Manus deployment were changed.
+
 ## Remaining work
 
 - GitHub Pages deployment for PR #13's merge commit was verified successful (workflow run `42527315821`).

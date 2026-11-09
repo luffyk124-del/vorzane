@@ -213,6 +213,26 @@ export function GameProvider({ children }: PropsWithChildren) {
         return;
       }
 
+      // Prefer server-generated initialization for a genuinely new account.
+      // If the function is not deployed yet, preserve the existing compatibility path.
+      const initialized = await supabase.functions.invoke<{
+        state: unknown;
+        updatedAt: string | null;
+        created: boolean;
+      }>("initialize-save", { method: "POST", body: {} });
+      if (!initialized.error && initialized.data && Object.hasOwn(initialized.data, "state")) {
+        const serverState = normalizeGameState(initialized.data.state);
+        if (!serverState) throw new Error("تعذر التحقق من الحفظ الجديد؛ لم نغيّر أي بيانات.");
+        syncReadyRef.current = userId;
+        skipNextEffectRef.current = true;
+        stateRef.current = serverState;
+        setState(serverState);
+        await storeUserCache(userId, serverState);
+        setStatus("ready");
+        setSaveStatus(initialized.data.created ? "أُنشئ حفظك السحابي بأمان" : "تم استعادة تقدمك");
+        return;
+      }
+
       const fresh = createFreshState();
       syncReadyRef.current = userId;
       skipNextEffectRef.current = true;
