@@ -6,7 +6,8 @@ begin;
 insert into auth.users (id)
 values
   ('00000000-0000-0000-0000-00000000000a'),
-  ('00000000-0000-0000-0000-00000000000b')
+  ('00000000-0000-0000-0000-00000000000b'),
+  ('00000000-0000-0000-0000-00000000000c')
 on conflict (id) do nothing;
 
 set local role service_role;
@@ -70,6 +71,55 @@ begin
 end
 $privileges$;
 
+-- The database enforces a five-record lifetime quota even for service_role inserts.
+set local role service_role;
+do $quota$
+declare
+  i integer;
+begin
+  for i in 10..14 loop
+    insert into public.player_save_recovery (user_id, recovery_key, source, snapshot)
+    values (
+      '00000000-0000-0000-0000-00000000000b',
+      ('10000000-0000-4000-8000-0000000000' || lpad(i::text, 2, '0'))::uuid,
+      'offline',
+      jsonb_build_object('attempt', i)
+    );
+  end loop;
+
+  begin
+    insert into public.player_save_recovery (user_id, recovery_key, source, snapshot)
+    values (
+      '00000000-0000-0000-0000-00000000000b',
+      '10000000-0000-4000-8000-000000000015',
+      'offline',
+      '{"attempt":15}'::jsonb
+    );
+    raise exception 'RECOVERY QUOTA FAIL: sixth recovery record was accepted';
+  exception when check_violation then
+    null;
+  end;
+
+  if (select record_count from private.player_save_recovery_quotas
+      where user_id = '00000000-0000-0000-0000-00000000000b') <> 5 then
+    raise exception 'RECOVERY QUOTA FAIL: stored quota counter is incorrect';
+  end if;
+end
+$quota$;
+
+-- Clients cannot inspect or manipulate the private quota counter or trigger function.
+do $private$
+begin
+  if has_schema_privilege('authenticated', 'private', 'USAGE')
+     or has_schema_privilege('service_role', 'private', 'USAGE')
+     or has_table_privilege('service_role', 'private.player_save_recovery_quotas', 'INSERT')
+     or has_table_privilege('service_role', 'private.player_save_recovery_quotas', 'UPDATE')
+     or has_function_privilege('service_role', 'private.enforce_player_save_recovery_quota()', 'EXECUTE') then
+    raise exception 'RECOVERY QUOTA PRIVILEGE FAIL: private quota internals are exposed';
+  end if;
+end
+$private$;
+
 -- The database also enforces the payload size limit for privileged callers.
 set local role service_role;
 do $size$
@@ -77,7 +127,7 @@ begin
   begin
     insert into public.player_save_recovery (user_id, recovery_key, source, snapshot)
     values (
-      '00000000-0000-0000-0000-00000000000b',
+      '00000000-0000-0000-0000-00000000000c',
       '10000000-0000-4000-8000-000000000002',
       'offline',
       jsonb_build_object('blob', repeat('x', 400000))
