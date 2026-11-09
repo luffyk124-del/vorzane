@@ -65,12 +65,14 @@ export function createInitializeSaveHandler(
     const admin = makeClient(url, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { error: insertError } = await admin
+    const { data: inserted, error: insertError } = await admin
       .from("player_saves")
       .upsert(
         { user_id: userId, game_state: createFreshState() },
         { onConflict: "user_id", ignoreDuplicates: true },
-      );
+      )
+      .select("user_id")
+      .maybeSingle();
 
     if (insertError) return json({ error: "Could not initialize save" }, 500);
 
@@ -86,7 +88,7 @@ export function createInitializeSaveHandler(
     const state = normalizeGameState(created.game_state);
     if (!state) return json({ error: "Initialized player state is invalid" }, 409);
 
-    return json({ state, updatedAt: created.updated_at, created: true });
+    return json({ state, updatedAt: created.updated_at, created: !!inserted });
   };
 }
 
