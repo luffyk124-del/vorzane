@@ -37,11 +37,11 @@ function fixture(options: {
           return this;
         },
         select(columns: string) {
-          (calls.selects ??= []).push({ table, columns });
+          ((calls.selects ??= []) as unknown[]).push({ table, columns });
           return this;
         },
         eq(column: string, value: string) {
-          (calls.filters ??= []).push({ table, column, value });
+          ((calls.filters ??= []) as unknown[]).push({ table, column, value });
           return this;
         },
         async maybeSingle() {
@@ -129,7 +129,7 @@ Deno.test("oversized request and snapshot are rejected", async () => {
   const hugeRequest = await tooLarge.handler(request({
     recoveryKey,
     source: "offline",
-    snapshot: { data: "x".repeat(290 * 1024) },
+    snapshot: { data: "x".repeat(270 * 1024) },
   }));
   assert(hugeRequest.status === 413, "oversized body must be rejected");
   assert((tooLarge.calls.clients as unknown[] | undefined) === undefined, "oversized body must not access database");
@@ -138,7 +138,7 @@ Deno.test("oversized request and snapshot are rejected", async () => {
   const large = await tooLargeSnapshot.handler(request({
     recoveryKey,
     source: "offline",
-    snapshot: { data: "x".repeat(257 * 1024) },
+    snapshot: { data: "x".repeat(241 * 1024) },
   }));
   assert(large.status === 413, "snapshot above database cap must be rejected");
 });
