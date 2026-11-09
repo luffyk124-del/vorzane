@@ -5,6 +5,7 @@ import { advanceExpeditions, dismissOfflineReport } from "../game/engine";
 import { createFreshState, LEGACY_CLAIM_KEY, LEGACY_SAVE_KEY, normalizeGameState, USER_SAVE_PREFIX, type GameState } from "../game/model";
 import { supabase } from "../lib/supabase";
 import { clearOfflineSavePending, getOfflineSavePendingToken, hasOfflineSavePending, markOfflineSavePending, type StorageLike } from "../lib/offlineSaveMarker";
+import { isValidSaveVersion, writeSaveConditionally } from "../lib/saveConcurrency";
 import { useAuth } from "./AuthContext";
 
 const LEGACY_DECLINE_PREFIX = "vorzane_legacy_save_declined_";
@@ -106,6 +107,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   const currentUserId = user?.id ?? null;
   const activeUserRef = useRef<string | null>(null);
   const syncReadyRef = useRef<string | null>(null);
+  const cloudVersionRef = useRef<string | null>(null);
   const generationRef = useRef(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
@@ -120,12 +122,60 @@ export function GameProvider({ children }: PropsWithChildren) {
     saveQueueRef.current = saveQueueRef.current.catch(() => false).then(async () => {
       if (activeUserRef.current !== userId) return false;
       const markerToken = await getOfflineSavePendingToken(userId, offlineMarkerStorage());
-      const { error } = await supabase.from("player_saves").upsert({
+      const outcome = await writeSaveConditionally({
+        insert: async (record) => await supabase
+          .from("player_saves")
+          .insert(record)
+          .select("updated_at")
+          .maybeSingle(),
+        update: async (record, expectedUpdatedAt) => await supabase
+          .from("player_saves")
+          .update({ game_state: record.game_state, updated_at: record.updated_at })
+          .eq("user_id", userId)
+          .eq("updated_at", expectedUpdatedAt)
+          .select("updated_at")
+          .maybeSingle(),
+      }, {
         user_id: userId,
         game_state: safeSnapshot,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id" });
-      if (error) throw error;
+      }, cloudVersionRef.current);
+
+      if (outcome.kind === "conflict") {
+        await markOfflineSavePending(userId, offlineMarkerStorage());
+        syncReadyRef.current = null;
+        setStatus("offline");
+        setSaveStatus("اكتشفنا نسخة سحابية أحدث؛ نتحقق منها قبل متابعة الحفظ");
+        try {
+          const latest = await readCloudSave(userId);
+          if (latest.error) throw latest.error;
+          if (latest.data) {
+            const latestState = normalizeGameState(latest.data.game_state);
+            if (!latestState || !isValidSaveVersion(latest.data.updated_at)) {
+              throw new Error("تعذر التحقق من النسخة السحابية الأحدث؛ احتفظنا بنسختك المحلية.");
+            }
+            cloudVersionRef.current = latest.data.updated_at;
+            const cloudProgress = advanceExpeditions(latestState, Date.now()).state;
+            stateRef.current = safeSnapshot;
+            setState(safeSnapshot);
+            setMigration({ kind: "offline", localState: safeSnapshot, cloudState: cloudProgress });
+            setStatus("conflict");
+            setSaveStatus("يوجد تعارض بين الحفظ المحلي والسحابي؛ اختر النسخة التي تريد الاحتفاظ بها");
+            setCloudError("لم نستبدل الحفظ السحابي؛ توجد نسخة أحدث من جلسة أخرى.");
+          } else {
+            cloudVersionRef.current = null;
+            setCloudError("تغير الحفظ السحابي أثناء المزامنة. نسختك المحلية محفوظة؛ أعد تحميل الحساب للتحقق.");
+          }
+        } catch (caught) {
+          const message = caught instanceof Error ? caught.message : "تعذر التحقق من أحدث نسخة سحابية.";
+          setCloudError(message);
+          setSaveStatus("تعذرت المزامنة؛ النسخة المحلية محفوظة ولم نستبدل النسخة السحابية");
+        }
+        return false;
+      }
+
+      if (outcome.kind === "failed") throw outcome.error;
+      cloudVersionRef.current = outcome.updatedAt;
       await clearOfflineSavePending(userId, offlineMarkerStorage(), markerToken);
       setCloudError("");
       setSaveStatus("تم حفظ تقدمك بأمان");
@@ -143,6 +193,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   const loadForUser = useCallback(async (userId: string, generation: number) => {
     activeUserRef.current = userId;
     syncReadyRef.current = null;
+    cloudVersionRef.current = null;
     setStatus("loading");
     setCloudError("");
     setMigration(null);
@@ -154,6 +205,12 @@ export function GameProvider({ children }: PropsWithChildren) {
       const { data, error } = await readCloudSave(userId);
       if (generation !== generationRef.current) return;
       if (error) throw error;
+      if (data) {
+        if (!isValidSaveVersion(data.updated_at)) throw new Error("تعذر التحقق من إصدار الحفظ السحابي؛ لم نغيّر أي شيء.");
+        cloudVersionRef.current = data.updated_at;
+      } else {
+        cloudVersionRef.current = null;
+      }
       const remote = data ? normalizeGameState(data.game_state) : null;
       if (data && !remote) throw new Error("تعذر قراءة حفظ حسابك؛ لم نغيّر أي شيء.");
 
@@ -222,7 +279,8 @@ export function GameProvider({ children }: PropsWithChildren) {
       }>("initialize-save", { method: "POST", body: {} });
       if (!initialized.error && initialized.data && Object.hasOwn(initialized.data, "state")) {
         const serverState = normalizeGameState(initialized.data.state);
-        if (!serverState) throw new Error("تعذر التحقق من الحفظ الجديد؛ لم نغيّر أي بيانات.");
+        if (!serverState || !isValidSaveVersion(initialized.data.updatedAt)) throw new Error("تعذر التحقق من الحفظ الجديد؛ لم نغيّر أي بيانات.");
+        cloudVersionRef.current = initialized.data.updatedAt;
         syncReadyRef.current = userId;
         skipNextEffectRef.current = true;
         stateRef.current = serverState;
@@ -262,6 +320,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (!currentUserId) {
       activeUserRef.current = null;
       syncReadyRef.current = null;
+      cloudVersionRef.current = null;
       setMigration(null);
       setCloudError("");
       const fresh = createFreshState();
@@ -372,6 +431,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       setSaveStatus("تعذر حذف الحفظ السحابي؛ لم تُحذف النسخة المحلية");
       return false;
     }
+    cloudVersionRef.current = null;
     try { await AsyncStorage.removeItem(userKey(userId)); } catch { /* Continue after cloud deletion. */ }
     await clearOfflineSavePending(userId, offlineMarkerStorage());
     if (localGet(LEGACY_CLAIM_KEY) === userId) {
