@@ -70,7 +70,9 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Created branch `feat/server-authority-command-expansion` from current `main` after leaving stale PR #16 untouched.
 - Ported the server-side command validation and canonical state transitions from the reviewed PR #16 implementation into `economy-command`, together with its Deno tests. This expands the server handler for pet ownership/activation, hero creation and starter state, stat allocation, expeditions, quest/achievement/recurring rewards, report dismissal, settings, and character/profile appearance.
 - The change is server-side only at this stage. It does not wire the client, change the feature gate, alter the `player_saves` RLS policies, deploy an Edge Function, run a migration, or change production player data.
-- Still requires fresh CI and security review. This does not complete save authority: autosave/full-snapshot writes, offline conflict resolution, legacy import, and reset remain client-owned and are explicitly out of scope for this PR.
+- PR #19 CI run `42577337288` passed: game-system tests, desktop/mobile browser flows, TypeScript, Deno Edge Function typecheck/tests, web export, Pages export verification, and isolated social DB tests. The separate social DB run `42577337315` also passed.
+- Code review confirmed the handler authenticates the caller, reads only the caller's save, validates command payloads against canonical game rules, and commits through the atomic receipt RPC. The PR remains server-side only: no client wiring, feature-gate activation, migration, production deployment, RLS/Auth change, or player-save write.
+- Important rollout dependency: reward commands that inspect battle counters must remain disabled until battle settlement is server-owned and generic client snapshot writes are removed. This PR does not complete save authority: autosave/full-snapshot writes, offline conflict resolution, legacy import, reset, and battle settlement remain client-owned/outstanding.
 
 ## Production audit — 2026-11-09
 
@@ -114,6 +116,7 @@ Production Supabase project ref: `incidgigfqyjbqfegukg`. The authenticated read-
 | 2026-11-08 | `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a` | PR #12 merged: duplicate new-hero creator controls removed; fresh-account mobile browser regression test, game tests, TypeScript, Edge Function checks/tests, web export, and social DB tests passed. |
 | 2026-11-09 | `741126b48c0831f2353987d7cc94267f7e52f15b` | PR #14 merged. Production `game-state` Edge Function deployed and confirmed ACTIVE v1 with JWT verification enabled; production migration history unchanged. |
 | 2026-11-09 | `c5759d5d18f661bb772391db4ab2f0f4add14f70` | PR #18 merged. New-player save initialization passed game/browser, TypeScript, Deno, web-export, and isolated DB CI. `initialize-save` is not yet deployed to production; no production player data changed. |
+| 2026-11-09 | PR #19 head `a2590bcb27f1710be607e10b0ba3a90ad25910ae` | All CI checks passed (workflow `42577337288`; separate social DB run `42577337315`). Server-side non-combat command expansion only; not deployed, not wired to client, and not enabled. |
 
 ## Update policy
 
