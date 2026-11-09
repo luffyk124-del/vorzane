@@ -91,3 +91,6 @@ After every meaningful development batch, update the relevant sections above wit
 - Tests actually run and their results.
 - Commit SHA and deployment link, when available.
 - Any remaining issue or follow-up task.
+
+
+- 2026-11-09 review update: CI run `42535990066` completed with desktop/mobile browser tests, game systems, TypeScript, Edge Function typecheck, and isolated social DB tests passing; the Edge Function test suite found a real starter-loadout defect: hero creation selected `STARTER_ITEMS[3]` (a high-level armor entry) instead of `boots1`. Fixed on this branch in commit `eab722d6ace280ec7486c67d3ed989e685be8104` by resolving the starter boots by catalog ID and failing closed if the item is missing. A fresh CI run for this fix must pass before PR #16 is mergeable. PR #16 remains incomplete: battle resolution and full-state client writes are still client-controlled, and the feature gate remains disabled.
