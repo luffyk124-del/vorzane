@@ -43,7 +43,8 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
           CREATE ROLE anon NOLOGIN;
           CREATE ROLE authenticated NOLOGIN;
-          GRANT USAGE ON SCHEMA public TO anon, authenticated;
+          CREATE ROLE service_role NOLOGIN BYPASSRLS;
+          GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
           CREATE SCHEMA auth;
           CREATE TABLE auth.users (id uuid PRIMARY KEY);
           CREATE FUNCTION auth.uid() RETURNS uuid
@@ -51,8 +52,8 @@ jobs:
           AS $$
             SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
           $$;
-          GRANT USAGE ON SCHEMA auth TO authenticated;
-          GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
+          GRANT USAGE ON SCHEMA auth TO authenticated, service_role;
+          GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated, service_role;
           SQL
       - name: Apply additive migrations and test social privacy and notifications
         env:
@@ -61,3 +62,30 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261108012451_create_player_social.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261108180000_create_player_notifications.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/tests/player_social.integration.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/migrations/20261109090000_create_player_save_recovery.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f extracted-vorzane/VORZANE/supabase/tests/player_save_recovery.sql
+          # Verify the database quota under simultaneous privileged inserts.
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "INSERT INTO auth.users (id) VALUES ('00000000-0000-0000-0000-00000000000d') ON CONFLICT (id) DO NOTHING"
+          quota_dir="$(mktemp -d)"
+          for i in $(seq 1 8); do
+            recovery_key="$(printf '10000000-0000-4000-8000-0000000000%02d' "$i")"
+            (
+              if psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "SET ROLE service_role; INSERT INTO public.player_save_recovery (user_id, recovery_key, source, snapshot) VALUES ('00000000-0000-0000-0000-00000000000d', '$recovery_key', 'offline', '{}'::jsonb)" >"$quota_dir/$i.log" 2>&1; then
+                echo success >"$quota_dir/$i.status"
+              else
+                echo rejected >"$quota_dir/$i.status"
+              fi
+            ) &
+          done
+          wait
+          successes="$(grep -l '^success
+ "$quota_dir"/*.status | wc -l)"
+          rejected="$(grep -l '^rejected
+ "$quota_dir"/*.status | wc -l)"
+          actual_rows="$(psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM public.player_save_recovery WHERE user_id = '00000000-0000-0000-0000-00000000000d'")"
+          actual_counter="$(psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT record_count FROM private.player_save_recovery_quotas WHERE user_id = '00000000-0000-0000-0000-00000000000d'")"
+          if [ "$successes" -ne 5 ] || [ "$rejected" -ne 3 ] || [ "$actual_rows" -ne 5 ] || [ "$actual_counter" -ne 5 ]; then
+            echo "Recovery quota concurrency test failed: successes=$successes rejected=$rejected rows=$actual_rows counter=$actual_counter"
+            cat "$quota_dir"/*.log
+            exit 1
+          fi
