@@ -9,7 +9,6 @@ Updated: 2026-11-07
 - `extracted-vorzane/VORZANE/src/contexts/`: Supabase authentication and save synchronization, game state orchestration, and music playback.
 - `extracted-vorzane/VORZANE/src/components/`: reusable UI, battle animation, account, profile, and save migration views.
 - `extracted-vorzane/VORZANE/supabase/migrations/`: the `player_saves` JSONB table linked to `auth.users`; row-level policies constrain reads and writes to the authenticated owner.
-- `extracted-vorzane/VORZANE/backend/`: separate Express/Prisma/MariaDB scaffold. It is not the active Pages backend.
 - `extracted-vorzane/VORZANE/legacy/`: archived web implementation retained for compatibility/reference; it is not the current Expo application.
 - `.github/workflows/pages.yml`: static Expo build and GitHub Pages deployment.
 
@@ -26,13 +25,11 @@ Updated: 2026-11-07
 | Save data | The client reads/upserts/deletes the signed-in player's `player_saves` row. RLS isolates player rows, but does not validate game rewards or prevent a player modifying their own JSON save. |
 | Local/offline save | Per-player local cache and a conflict UI exist. A failed upsert previously failed to set the dirty marker, risking silent replacement by an older cloud save; this was fixed in this cycle. |
 | Multiplayer/social/live events | Not implemented. No real player-to-player market, guild, PvP, or event service is present. |
-| GitHub Pages | Static web build works under `/vorzane/`. Pages can host the frontend but cannot run the Express backend. |
 
 ## Issues Found
 
 - A Supabase save failure cached the local state but did not set `vorzane_offline_dirty_<userId>`. On a later load, a valid older cloud save could be preferred without presenting the existing conflict-resolution screen.
 - Game rewards and all current game rules are calculated in the browser. RLS protects one player's row from another player; it does not make a player's own gold, inventory, XP, or battle result trustworthy.
-- The FPS frontend integration is incomplete: no FPS auth provider is wired into `AuthContext`, `/api/v1/game/state` does not match the backend's `/api/state`, and `/api/v1/game/command` is a stub returning 501.
 - Live Chromium inspection found the brand emblem requested at `/images/characters/brand-emblem.webp`, which 404s under the GitHub Pages project path. `src/game/art.ts` now applies the Expo base path to all character images; a unit test covers `/vorzane` and trailing-slash normalization.
 - The web entry bundle is about 1.1 MB before transfer compression in the current Expo export. Measure real compressed transfer and runtime before deciding on code splitting.
 - Playwright desktop/mobile tests mock Supabase auth and PostgREST endpoints so UI save flows can be exercised without production writes. They do not prove live credentials, RLS policy behavior, or cross-device persistence against the real project.
@@ -101,7 +98,6 @@ Updated: 2026-11-07
 
 ### P1: Complete or safely isolate backend integration
 
-- If FPS is chosen, reconcile auth/session contracts and API routes, implement and test game commands, enforce ownership and game rules in server transactions, and add idempotency and rate-limit tests.
 - Review backend configuration, secret handling, CORS, cookies, health checks, and Docker startup. Keep migrations separate from deployment until backup and rollback procedures are approved.
 
 ### P1: Verify player-facing workflows
