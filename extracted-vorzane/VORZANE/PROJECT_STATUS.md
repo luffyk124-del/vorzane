@@ -55,7 +55,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 
 - GitHub Pages deployment for PR #13's merge commit was verified successful (workflow run `42527315821`).
 - PR #15 (atomic command receipts plus `economy-command`) is merged as `a36ae7cad7f46feb17242f170fcc7227c72a8128`; its migration and command function are not deployed to production.
-- PR #16 remains draft and unmerged. Its base is stale relative to current `main`; do not merge it. Reconcile its client changes against the now-merged server command/recovery work and review every save mutation path before reusing any code.
+- PR #16 remains draft and unmerged. Fresh comparison against `main` shows it is diverged by 38 commits ahead and 16 behind; do not merge it as-is. Its gated client command wiring still leaves the generic `player_saves` upsert in `GameContext`, the direct-delete reset path, local import/offline conflict snapshot writes, and other full-state updates. Reuse only individually reviewed non-combat changes after reconciling against current `main`.
 - Server authority is not complete: battle results are still client-computed and the generic full-save client upsert remains active. Do not enable the economy feature gate or revoke client writes until battle settlement, save initialization, import/migration, reset, offline progression, and every other save mutation are server-owned and tested.
 - Continue reviewing and improving existing gameplay and application flows.
 - Verify each change with relevant automated tests before merging.
@@ -83,6 +83,14 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Exact-head CI passed: build workflow `42592611623` (game systems, desktop/mobile browser flows, character preview artifact, TypeScript, Deno typecheck/tests, web export and Pages export verification) and isolated social DB workflow `42592611556`.
 - PR validation's Pages deploy job was skipped as expected. A separate push deployment for merge commit `5949ed038f1f5965ce871ce2ff7595ef1e3443db` was triggered; deployment status must be verified separately.
 - Client reset UI remains on the legacy direct-delete path. The server command is not client-wired, the feature gate is unchanged, and no production migration/function deployment or production player-save mutation was performed. Manus remains untouched.
+
+## Client save-mutation audit — 2026-11-09
+
+- Confirmed the central `GameContext.persistSnapshot` still performs a client-side full-state `player_saves.upsert`. It is reached by autosave, cloud recovery, offline conflict resolution, legacy import, and logout/account-transition flushes.
+- Confirmed `resetPlayerSave` still issues a client-side `player_saves.delete`; PR #23 now provides a server-side non-destructive reset command, but the UI is not wired to it.
+- Screen-level state mutations still use the generic `update` callback in gear/pet management, expedition/report flows, quests/mission-period bookkeeping, profile appearance, settings, and avatar selection. These must be mapped to server commands before removing generic snapshot writes.
+- The stale PR #16 branch adds a feature-gated command helper, but exact comparison shows 38 commits ahead and 16 behind. Even with its flag hard-coded false, it retains the generic upsert and direct reset delete; its local import path also remains. Do not merge or enable it as a whole.
+- Current safe next sequence: define and test command coverage for non-combat state transitions; design a validated, reviewable import/recovery path using the quarantine table; preserve offline copies until server confirmation; then remove generic client writes only after every remaining mutation has a server-owned replacement. No production database or player data changes in this audit.
 
 ## Production audit — 2026-11-09
 
