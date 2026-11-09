@@ -14,7 +14,7 @@ const achievementRows = [
 ];
 
 export default function QuestsScreen() {
-  const { state, update } = useGame();
+  const { state, update, executeEconomyCommand, serverEconomyCommandsEnabled } = useGame();
   const [sequence, setSequence] = useState<BattleSequence | null>(null);
   useEffect(() => { update((current) => ensureMissionPeriods(current)); }, [update]);
   const recurringGroups: { scope: MissionScope; title: string; subtitle: string; icon: string; missions: ReturnType<typeof getRecurringMissions> }[] = [
@@ -33,6 +33,10 @@ export default function QuestsScreen() {
     if (battle) setSequence(battle);
   };
   const settleBattle = useCallback((result: BattleResult) => { update(() => result.state); }, [update]);
+  const claimReward = async (command: Parameters<typeof executeEconomyCommand>[0], fallback: () => void) => {
+    if (serverEconomyCommandsEnabled) { const result = await executeEconomyCommand(command); if (!result.success) return; return; }
+    fallback();
+  };
 
   return <AppScreen>
     <PageTitle eyebrow="مسارك في الظلال" title="المهام والإنجازات" subtitle="زنزانة لا تنتهي، خصوم متبدلون، وأهداف تمنح تقدمك معنى." trailing={<Pill label={`${state.wins} انتصار`} icon="trophy" tone="gold" />} />
@@ -71,7 +75,7 @@ export default function QuestsScreen() {
         <AppButton
           label={mission.claimed ? "استُلمت" : mission.available ? "استلام" : "تابع التقدم"}
           icon={mission.claimed ? "checkmark" : "gift-outline"}
-          onPress={() => update((current) => claimRecurringMission(current, group.scope, mission.id))}
+          onPress={() => void claimReward({ type: "claimRecurringMission", scope: group.scope, missionId: mission.id }, () => update((current) => claimRecurringMission(current, group.scope, mission.id)))}
           variant={mission.available ? "jade" : "secondary"}
           small
           disabled={!mission.available || mission.claimed}
@@ -90,7 +94,7 @@ export default function QuestsScreen() {
     {quests.map((quest) => {
       const tone = quest.category === "الزنزانة" || quest.category === "البرج" ? "gold" : quest.category === "الرحلات" ? "jade" : quest.category === "قتال" ? "red" : "muted";
       return <Card key={quest.id} style={styles.questCard}>
-        <AppButton label={quest.claimed ? "استُلمت" : quest.available ? `استلم ${quest.rewardGold}` : "غير مكتملة"} icon={quest.claimed ? "checkmark" : "gift-outline"} onPress={() => quest.available && update((current) => claimQuest(current, quest.id))} variant={quest.available ? "jade" : "secondary"} small disabled={!quest.available || quest.claimed} />
+        <AppButton label={quest.claimed ? "استُلمت" : quest.available ? `استلم ${quest.rewardGold}` : "غير مكتملة"} icon={quest.claimed ? "checkmark" : "gift-outline"} onPress={() => quest.available && void claimReward({ type: "claimQuest", questId: quest.id }, () => update((current) => claimQuest(current, quest.id)))} variant={quest.available ? "jade" : "secondary"} small disabled={!quest.available || quest.claimed} />
         <View style={styles.questBody}>
           <View style={styles.questHeading}><Pill label={quest.category} tone={tone} /><Pill label={`+${quest.rewardGold} ذهب`} tone="gold" /></View>
           <Txt style={styles.questTitle}>{quest.title}</Txt>
@@ -121,7 +125,7 @@ export default function QuestsScreen() {
         <AppButton
           label={claimed ? "استُلمت" : available ? `استلم ${task.rewardGold}` : "غير مكتملة"}
           icon={claimed ? "checkmark" : "gift-outline"}
-          onPress={() => update((current) => claimExpeditionTask(current, task.id))}
+          onPress={() => void claimReward({ type: "claimExpeditionTask", taskId: task.id }, () => update((current) => claimExpeditionTask(current, task.id)))}
           variant={available ? "jade" : "secondary"}
           small
           disabled={!available || claimed}
@@ -151,7 +155,7 @@ export default function QuestsScreen() {
         <AppButton
           label={claimed ? "استُلمت" : available ? `استلم ${achievement.rewardGold}` : "غير مكتمل"}
           icon={claimed ? "checkmark" : "gift-outline"}
-          onPress={() => update((current) => claimExplorationAchievement(current, achievement.id))}
+          onPress={() => void claimReward({ type: "claimExplorationAchievement", achievementId: achievement.id }, () => update((current) => claimExplorationAchievement(current, achievement.id)))}
           variant={available ? "jade" : "secondary"}
           small
           disabled={!available || claimed}

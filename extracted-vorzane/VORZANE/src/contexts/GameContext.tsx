@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from "react";
 import { advanceExpeditions, dismissOfflineReport } from "../game/engine";
-import { createFreshState, LEGACY_CLAIM_KEY, LEGACY_SAVE_KEY, normalizeGameState, USER_SAVE_PREFIX, type GameState } from "../game/model";
+import { createFreshState, LEGACY_CLAIM_KEY, LEGACY_SAVE_KEY, normalizeGameState, USER_SAVE_PREFIX, type CharacterStyle, type ClassId, type GameState, type StatKey } from "../game/model";
 import { supabase } from "../lib/supabase";
 import { clearOfflineSavePending, getOfflineSavePendingToken, hasOfflineSavePending, markOfflineSavePending, type StorageLike } from "../lib/offlineSaveMarker";
 import { useAuth } from "./AuthContext";
@@ -14,6 +14,39 @@ type MigrationChoice =
   | { kind: "offline"; localState: GameState; cloudState: GameState }
   | null;
 type Resolution = "import" | "fresh" | "local" | "cloud";
+type EconomyCommand =
+  | { type: "buyItem"; itemId: string }
+  | { type: "sellItem"; itemId: string }
+  | { type: "equipItem"; itemId: string }
+  | { type: "unequipItem"; slot: string }
+  | { type: "buyPet"; petId: string }
+  | { type: "setPet"; petId: string | null }
+  | { type: "createHero"; name: string; className: ClassId; gender: "male" | "female"; appearance: 0 | 1 | 2 | 3 }
+  | { type: "allocateStatPoint"; key: StatKey }
+  | { type: "beginExpedition"; planId: string }
+  | { type: "advanceExpeditions" }
+  | { type: "claimQuest"; questId: string }
+  | { type: "claimExpeditionTask"; taskId: string }
+  | { type: "claimExplorationAchievement"; achievementId: string }
+  | { type: "claimRecurringMission"; scope: "daily" | "weekly" | "season"; missionId: string }
+  | { type: "dismissReport"; id: string }
+  | { type: "updateSettings"; settings: Partial<GameState["settings"]> }
+  | { type: "setProfileAvatar"; avatarId: ClassId | "brand" }
+  | { type: "updateCharacterStyle"; style: CharacterStyle };
+type EconomyCommandResult = { success: boolean; enabled: boolean; error?: string; soldPrice?: number };
+
+// Keep disabled until the additive receipt migration and Edge Function are separately
+// reviewed and deployed to the existing Supabase project with explicit approval.
+const SERVER_ECONOMY_COMMANDS_ENABLED = false;
+
+function createCommandId(): string {
+  const cryptoApi = globalThis.crypto;
+  if (typeof cryptoApi?.randomUUID === "function") return cryptoApi.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const random = Math.floor(Math.random() * 16);
+    return (char === "x" ? random : (random & 0x3) | 0x8).toString(16);
+  });
+}
 
 export type GameContextValue = {
   state: GameState;
@@ -22,6 +55,8 @@ export type GameContextValue = {
   cloudError: string;
   migration: MigrationChoice;
   update: (updater: (current: GameState) => GameState) => void;
+  executeEconomyCommand: (command: EconomyCommand) => Promise<EconomyCommandResult>;
+  serverEconomyCommandsEnabled: boolean;
   flushNow: () => Promise<boolean>;
   resolveMigration: (choice: Resolution) => Promise<boolean>;
   resetPlayerSave: () => Promise<boolean>;
@@ -89,6 +124,9 @@ export function GameProvider({ children }: PropsWithChildren) {
   const generationRef = useRef(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
+  const economyQueueRef = useRef<Promise<EconomyCommandResult>>(Promise.resolve({ success: false, enabled: false }));
+  const pendingCommandRef = useRef<{ fingerprint: string; commandId: string; expectedUpdatedAt: string } | null>(null);
+  const cloudUpdatedAtRef = useRef<string | null>(null);
   const skipNextEffectRef = useRef(false);
   const stateRef = useRef(state);
 
@@ -100,12 +138,13 @@ export function GameProvider({ children }: PropsWithChildren) {
     saveQueueRef.current = saveQueueRef.current.catch(() => false).then(async () => {
       if (activeUserRef.current !== userId) return false;
       const markerToken = await getOfflineSavePendingToken(userId, offlineMarkerStorage());
-      const { error } = await supabase.from("player_saves").upsert({
+      const { data: saved, error } = await supabase.from("player_saves").upsert({
         user_id: userId,
         game_state: safeSnapshot,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id" });
+      }, { onConflict: "user_id" }).select("updated_at").single();
       if (error) throw error;
+      cloudUpdatedAtRef.current = saved.updated_at;
       await clearOfflineSavePending(userId, offlineMarkerStorage(), markerToken);
       setCloudError("");
       setSaveStatus("تم حفظ تقدمك بأمان");
@@ -122,7 +161,9 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   const loadForUser = useCallback(async (userId: string, generation: number) => {
     activeUserRef.current = userId;
+    pendingCommandRef.current = null;
     syncReadyRef.current = null;
+    cloudUpdatedAtRef.current = null;
     setStatus("loading");
     setCloudError("");
     setMigration(null);
@@ -135,10 +176,11 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (generation !== generationRef.current) return;
       if (error) throw error;
       const remote = data ? normalizeGameState(data.game_state) : null;
+      cloudUpdatedAtRef.current = data?.updated_at ?? null;
       if (data && !remote) throw new Error("تعذر قراءة حفظ حسابك؛ لم نغيّر أي شيء.");
 
       if (remote) {
-        const cloudProgress = advanceExpeditions(remote, Date.now());
+        const cloudProgress = SERVER_ECONOMY_COMMANDS_ENABLED ? { state: remote, reports: [] } : advanceExpeditions(remote, Date.now());
         if (hasOfflineChanges && cached) {
           setMigration({ kind: "offline", localState: cached, cloudState: cloudProgress.state });
           stateRef.current = cached;
@@ -159,7 +201,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
 
       if (cached) {
-        const progressed = advanceExpeditions(cached, Date.now()).state;
+        const progressed = SERVER_ECONOMY_COMMANDS_ENABLED ? cached : advanceExpeditions(cached, Date.now()).state;
         syncReadyRef.current = userId;
         skipNextEffectRef.current = true;
         setState(progressed);
@@ -174,7 +216,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (generation !== generationRef.current) return;
       const claimedBy = localGet(LEGACY_CLAIM_KEY);
       if (legacy && claimedBy === userId) {
-        const progressed = advanceExpeditions(legacy, Date.now()).state;
+        const progressed = SERVER_ECONOMY_COMMANDS_ENABLED ? legacy : advanceExpeditions(legacy, Date.now()).state;
         syncReadyRef.current = userId;
         skipNextEffectRef.current = true;
         setState(progressed);
@@ -206,6 +248,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       const cached = await readUserCache(userId);
       if (generation !== generationRef.current) return;
       const fallback = cached ?? createFreshState();
+      cloudUpdatedAtRef.current = null;
       setState(fallback);
       stateRef.current = fallback;
       syncReadyRef.current = null;
@@ -221,7 +264,9 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     if (!currentUserId) {
       activeUserRef.current = null;
+      pendingCommandRef.current = null;
       syncReadyRef.current = null;
+      cloudUpdatedAtRef.current = null;
       setMigration(null);
       setCloudError("");
       const fresh = createFreshState();
@@ -262,12 +307,6 @@ export function GameProvider({ children }: PropsWithChildren) {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if ((status !== "ready" && status !== "offline") || !state.activeExpedition) return;
-    const result = advanceExpeditions(state, clock);
-    if (result.reports.length) setState(result.state);
-  }, [clock, state.activeExpedition, status]);
-
   const update = useCallback((updater: (current: GameState) => GameState) => { setState((current) => updater(current)); }, []);
 
   const flushNow = useCallback(async () => {
@@ -276,6 +315,79 @@ export function GameProvider({ children }: PropsWithChildren) {
     saveTimerRef.current = null;
     return persistSnapshot(stateRef.current, currentUserId);
   }, [currentUserId, persistSnapshot]);
+
+  const executeEconomyCommand = useCallback((command: EconomyCommand): Promise<EconomyCommandResult> => {
+    if (!SERVER_ECONOMY_COMMANDS_ENABLED) return Promise.resolve({ success: false, enabled: false });
+    const task = economyQueueRef.current.catch(() => ({ success: false, enabled: true })).then(async () => {
+      if (!currentUserId || status !== "ready" || syncReadyRef.current !== currentUserId) {
+        return { success: false, enabled: true, error: "يجب الاتصال بحسابك قبل تنفيذ هذه العملية." };
+      }
+
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+      const fingerprint = JSON.stringify(command);
+      const pending = pendingCommandRef.current;
+      if (pending && pending.fingerprint !== fingerprint) {
+        return { success: false, enabled: true, error: "هناك عملية سابقة لم يصل تأكيدها. أعد المحاولة للعملية نفسها أولًا." };
+      }
+      if (!pending) {
+        const flushed = await persistSnapshot(stateRef.current, currentUserId);
+        if (!flushed) return { success: false, enabled: true, error: "تعذر مزامنة الحفظ قبل تنفيذ العملية." };
+      }
+      const expectedUpdatedAt = pending?.expectedUpdatedAt ?? cloudUpdatedAtRef.current;
+      if (!expectedUpdatedAt) return { success: false, enabled: true, error: "لم يتم تأكيد نسخة الحفظ السحابية؛ أعد تحميل تقدمك." };
+      const commandId = pending?.commandId ?? createCommandId();
+      pendingCommandRef.current = { fingerprint, commandId, expectedUpdatedAt };
+
+      const { data, error } = await supabase.functions.invoke("economy-command", {
+        body: { commandId, expectedUpdatedAt, command },
+      });
+      if (error) {
+        const message = typeof data?.error === "string" ? data.error : error.message;
+        const statusCode = (error as unknown as { context?: { status?: number } }).context?.status;
+        if (statusCode === 409 || error.message.includes("409") || message.toLowerCase().includes("save changed")) {
+          pendingCommandRef.current = null;
+          return { success: false, enabled: true, error: "تغيّر الحفظ من جهاز آخر. أعد تحميل تقدمك ثم حاول مجددًا." };
+        }
+        if (statusCode && statusCode >= 400 && statusCode < 500 && statusCode !== 408 && statusCode !== 429) {
+          pendingCommandRef.current = null;
+        }
+        return { success: false, enabled: true, error: message || "تعذر تنفيذ العملية على الخادم." };
+      }
+
+      const next = normalizeGameState(data?.state);
+      if (!next || typeof data?.updatedAt !== "string") {
+        return { success: false, enabled: true, error: "استجابة الخادم غير صالحة؛ لم نحدّث الحفظ المحلي." };
+      }
+
+      pendingCommandRef.current = null;
+      cloudUpdatedAtRef.current = data.updatedAt;
+      stateRef.current = next;
+      skipNextEffectRef.current = true;
+      setState(next);
+      await storeUserCache(currentUserId, next);
+      await clearOfflineSavePending(currentUserId, offlineMarkerStorage());
+      setCloudError("");
+      setSaveStatus("تم تنفيذ العملية وحفظها على الخادم");
+      return {
+        success: true,
+        enabled: true,
+        soldPrice: typeof data.soldPrice === "number" ? data.soldPrice : undefined,
+      };
+    });
+    economyQueueRef.current = task;
+    return task;
+  }, [currentUserId, persistSnapshot, status]);
+
+  useEffect(() => {
+    if ((status !== "ready" && status !== "offline") || !state.activeExpedition) return;
+    if (SERVER_ECONOMY_COMMANDS_ENABLED) {
+      if (status === "ready" && state.activeExpedition.endsAt <= clock) void executeEconomyCommand({ type: "advanceExpeditions" });
+      return;
+    }
+    const result = advanceExpeditions(state, clock);
+    if (result.reports.length) setState(result.state);
+  }, [clock, state.activeExpedition, status, executeEconomyCommand]);
 
   const resolveMigration = useCallback(async (choice: Resolution) => {
     if (!currentUserId || !migration) return false;
@@ -339,6 +451,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       localSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
     }
     const fresh = createFreshState();
+    cloudUpdatedAtRef.current = null;
     syncReadyRef.current = userId;
     skipNextEffectRef.current = true;
     stateRef.current = fresh;
@@ -348,14 +461,17 @@ export function GameProvider({ children }: PropsWithChildren) {
     return true;
   }, [currentUserId, status]);
 
-  const clearReport = useCallback((id: string) => { update((current) => dismissOfflineReport(current, id)); }, [update]);
+  const clearReport = useCallback((id: string) => {
+    if (SERVER_ECONOMY_COMMANDS_ENABLED) { void executeEconomyCommand({ type: "dismissReport", id }); return; }
+    update((current) => dismissOfflineReport(current, id));
+  }, [executeEconomyCommand, update]);
   const reloadCloud = useCallback(async () => {
     if (!currentUserId) return;
     const generation = ++generationRef.current;
     await loadForUser(currentUserId, generation);
   }, [currentUserId, loadForUser]);
 
-  const value = useMemo<GameContextValue>(() => ({ state, status, saveStatus, cloudError, migration, update, flushNow, resolveMigration, resetPlayerSave, clearReport, reloadCloud }), [state, status, saveStatus, cloudError, migration, update, flushNow, resolveMigration, resetPlayerSave, clearReport, reloadCloud]);
+  const value = useMemo<GameContextValue>(() => ({ state, status, saveStatus, cloudError, migration, update, executeEconomyCommand, serverEconomyCommandsEnabled: SERVER_ECONOMY_COMMANDS_ENABLED, flushNow, resolveMigration, resetPlayerSave, clearReport, reloadCloud }), [state, status, saveStatus, cloudError, migration, update, executeEconomyCommand, flushNow, resolveMigration, resetPlayerSave, clearReport, reloadCloud]);
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 

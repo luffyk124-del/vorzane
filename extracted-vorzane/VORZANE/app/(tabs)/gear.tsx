@@ -20,7 +20,7 @@ const SHOP_CATEGORIES: { id: ShopCategory; label: string }[] = [
 const slotIcons: Record<string, string> = { "سلاح": "flash", "درع": "shield", "خوذة": "skull", "قفازات": "hand-left", "حذاء": "footsteps", "قلادة": "diamond", "خاتم أول": "ellipse", "خاتم ثانٍ": "ellipse" };
 
 export default function GearScreen() {
-  const { state, update } = useGame();
+  const { state, update, executeEconomyCommand, serverEconomyCommandsEnabled } = useGame();
   const [tab, setTab] = useState<Tab>("equipment");
   const [shopCategory, setShopCategory] = useState<ShopCategory>("all");
   const [notice, setNotice] = useState("");
@@ -40,23 +40,59 @@ export default function GearScreen() {
   ], [state.inventory, state.equipped]);
   const message = (text: string) => { setNotice(text); setTimeout(() => setNotice(""), 2400); };
 
-  const purchaseItem = (id: string) => {
+  const purchaseItem = async (id: string) => {
+    if (serverEconomyCommandsEnabled) {
+      const result = await executeEconomyCommand({ type: "buyItem", itemId: id });
+      if (!result.success) { message(result.error ?? "تعذر شراء القطعة."); return; }
+      message("أُضيف العتاد إلى حقيبتك.");
+      return;
+    }
     const result = buyItem(state, id);
     if (result.error) { message(result.error); return; }
     update(() => result.state);
     message("أُضيف العتاد إلى حقيبتك.");
   };
-  const purchasePet = (id: string) => {
+  const purchasePet = async (id: string) => {
+    if (serverEconomyCommandsEnabled) {
+      const result = await executeEconomyCommand({ type: "buyPet", petId: id });
+      if (!result.success) { message(result.error ?? "تعذر شراء الرفيق."); return; }
+      message("انضم رفيق جديد إلى رحلتك.");
+      return;
+    }
     const result = buyPet(state, id);
     if (result.error) { message(result.error); return; }
     update(() => result.state);
     message("انضم رفيق جديد إلى رحلتك.");
   };
-  const sellOwnedItem = (id: string) => {
+  const sellOwnedItem = async (id: string) => {
+    if (serverEconomyCommandsEnabled) {
+      const result = await executeEconomyCommand({ type: "sellItem", itemId: id });
+      if (!result.success) { message(result.error ?? "تعذر بيع القطعة."); return; }
+      message(`تم البيع مقابل ${result.soldPrice ?? 0} ذهب.`);
+      return;
+    }
     const result = sellItem(state, id);
     if (result.error) { message(result.error); return; }
     update(() => result.state);
     message(`تم البيع مقابل ${result.soldPrice} ذهب.`);
+  };
+
+  const equipOwnedItem = async (id: string) => {
+    if (serverEconomyCommandsEnabled) {
+      const result = await executeEconomyCommand({ type: "equipItem", itemId: id });
+      if (!result.success) message(result.error ?? "تعذر تجهيز القطعة.");
+      return;
+    }
+    update((current) => equipItem(current, id));
+  };
+
+  const unequipOwnedItem = async (slot: string) => {
+    if (serverEconomyCommandsEnabled) {
+      const result = await executeEconomyCommand({ type: "unequipItem", slot });
+      if (!result.success) message(result.error ?? "تعذر فك التجهيز.");
+      return;
+    }
+    update((current) => unequipItem(current, slot));
   };
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
@@ -92,7 +128,7 @@ export default function GearScreen() {
               <Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt>
               <Txt muted style={styles.itemBonus}>{Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt>
               <Txt style={styles.requirement}>يتطلب مستوى {shown.requiredLevel ?? 1}{shown.requiredDungeonFloor && shown.requiredDungeonFloor > 1 ? ` • طابق ${shown.requiredDungeonFloor}` : ""}</Txt>
-              <AppButton label={state.inventory.length >= 500 ? "الحقيبة ممتلئة" : "فكّ التجهيز"} onPress={() => update((current) => unequipItem(current, slot))} variant="ghost" small disabled={state.inventory.length >= 500} />
+              <AppButton label={state.inventory.length >= 500 ? "الحقيبة ممتلئة" : "فكّ التجهيز"} onPress={() => void unequipOwnedItem(slot)} variant="ghost" small disabled={state.inventory.length >= 500} />
             </> : <Txt muted style={styles.emptySlot}>فارغ</Txt>}
           </Card>;
         })}
@@ -104,7 +140,7 @@ export default function GearScreen() {
         const locked = !template || !state.hero || heroLevel < (shown.requiredLevel ?? 1);
         const required = `مستوى ${shown.requiredLevel ?? 1}`;
         return <Card key={item.id} style={styles.itemRow}>
-          <AppButton label={locked ? "مقيّد" : "جهّز"} onPress={() => update((current) => equipItem(current, item.id))} variant={locked ? "secondary" : "jade"} small disabled={locked} />
+          <AppButton label={locked ? "مقيّد" : "جهّز"} onPress={() => void equipOwnedItem(item.id)} variant={locked ? "secondary" : "jade"} small disabled={locked} />
           <View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt><Txt muted style={styles.itemBonus}>{shown.slot} • {Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>يتطلب {required}</Txt></View>
           <Icon name={(shown.icon ?? "ellipse") as never} color={rarityColor[shown.rarity]} size={20} />
         </Card>;
@@ -137,7 +173,11 @@ export default function GearScreen() {
         return <Card key={pet.id} style={styles.petCard}>
           <View style={styles.petBadge}><Icon name={pet.icon as never} color={active ? palette.gold : palette.jade} size={23} /></View>
           <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : locked ? <Pill label={`تفعيل مستوى ${pet.requiredLevel}`} tone="muted" /> : null}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التفعيل من المستوى {pet.requiredLevel}</Txt></View>
-          {owned ? <AppButton label={locked ? `مستوى ${pet.requiredLevel}` : active ? "النشط" : "تفعيل"} onPress={() => update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active || locked} /> : <AppButton label={canAfford ? `شراء ${pet.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => purchasePet(pet.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />}
+          {owned ? <AppButton label={locked ? `مستوى ${pet.requiredLevel}` : active ? "النشط" : "تفعيل"} onPress={() => {
+            if (serverEconomyCommandsEnabled) {
+              void executeEconomyCommand({ type: "setPet", petId: pet.id }).then((result) => { if (!result.success) message(result.error ?? "تعذر تفعيل الرفيق."); });
+            } else update((current) => setPet(current, pet.id));
+          }} variant={active ? "secondary" : "jade"} small disabled={active || locked} /> : <AppButton label={canAfford ? `شراء ${pet.price.toLocaleString("ar-EG")}` : "ذهب غير كافٍ"} onPress={() => void purchasePet(pet.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />}
         </Card>;
       })}
       </> : null}
