@@ -132,7 +132,7 @@
       button.title = !currentUser ? "تسجيل الدخول أو إنشاء حساب" : isGuest() ? "حساب ضيف" : (currentUser.email || "حساب اللاعب");
     }
     if (info) info.textContent = !currentUser ? "لا يوجد حساب مسجل" : isGuest() ? "تلعب كضيف — تقدمك محفوظ لهذا الحساب المجهول" : `مسجل الدخول: ${currentUser.email || "حساب VORZANE"}`;
-    if (note) note.textContent = isGuest() ? "احفظ معرّف الضيف على هذا الجهاز؛ لن يمكن استعادته من جهاز آخر قبل ربط بريد أو Google." : "يُحمّل حفظ هذا الحساب من السحابة ويظل منفصلًا عن حسابات اللاعبين الآخرين.";
+    if (note) note.textContent = isGuest() ? "احفظ معرّف الضيف على هذا الجهاز؛ ويمكن ربطه ببريد إلكتروني لاستعادة التقدم على جهاز آخر." : "يُحمّل حفظ هذا الحساب من السحابة ويظل منفصلًا عن حسابات اللاعبين الآخرين.";
     renderModal();
   }
 
@@ -166,12 +166,10 @@
 
     byId("authEmailForm").hidden = !showForm;
     byId("authModeSwitch").hidden = signedIn || migration;
-    byId("authGoogleButton").hidden = signedIn || migration;
     byId("authGuestButton").hidden = signedIn || migration;
     byId("authSessionPanel").hidden = !showSession;
     byId("authMigrationPanel").hidden = !migration;
     byId("authEmailUpgradeButton").hidden = !showSession || !isGuest();
-    byId("authLinkGoogleButton").hidden = !showSession;
     byId("authSignOutButton").hidden = !showSession;
     byId("authBackToSessionButton").hidden = !showUpgrade;
     byId("authOfflineButton").hidden = showSession || migration;
@@ -181,7 +179,7 @@
     if (title) title.textContent = migration ? "اختيار الحفظ" : signedIn ? "حساب اللاعب" : "ادخل إلى عالم VORZANE";
     if (subtitle) subtitle.textContent = migration
       ? "اختر ما إذا كنت تريد نقل الحفظ القديم إلى هذا الحساب."
-      : signedIn ? "إدارة تسجيل الدخول ومزامنة تقدمك." : "احفظ مغامرتك لكل لاعب عبر البريد أو Google أو حساب ضيف.";
+      : signedIn ? "إدارة تسجيل الدخول ومزامنة تقدمك." : "احفظ مغامرتك عبر البريد الإلكتروني أو حساب ضيف.";
 
     const submit = byId("authSubmitButton");
     if (submit) submit.textContent = showUpgrade ? "ربط البريد بهذا الحساب" : emailMode === "signup" ? "إنشاء حساب بالبريد" : "تسجيل الدخول بالبريد";
@@ -198,7 +196,7 @@
     const note = byId("authAccountNote");
     if (info) info.textContent = isGuest() ? "حساب ضيف — تقدمك محفوظ تحت هوية مستقلة" : `مسجل الدخول: ${currentUser?.email || "حساب VORZANE"}`;
     if (note) note.textContent = isGuest()
-      ? "للاستمرار على جهاز آخر، اربط بريدك أو Google بهذا الحساب قبل تسجيل الخروج أو مسح بيانات المتصفح."
+      ? "للاستمرار على جهاز آخر، اربط بريدك الإلكتروني بهذا الحساب قبل تسجيل الخروج أو مسح بيانات المتصفح."
       : "حفظ السحابة مرتبط بهويتك فقط ولا يمكن للاعبين الآخرين قراءته.";
   }
 
@@ -207,13 +205,12 @@
     if (/invalid login credentials/i.test(text)) return "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
     if (/email not confirmed/i.test(text)) return "أكد بريدك الإلكتروني من رسالة التحقق، ثم حاول تسجيل الدخول.";
     if (/anonymous.*disabled|anonymous sign-ins.*disabled/i.test(text)) return "تسجيل الضيف غير مفعّل في إعدادات Supabase بعد.";
-    if (/provider.*(not enabled|disabled|unsupported)|unsupported provider/i.test(text)) return "تسجيل Google غير مهيّأ في Supabase بعد؛ يلزم إضافة بيانات OAuth الخاصة بالمشروع.";
     if (/redirect.*(not allowed|allow list)/i.test(text)) return "عنوان الموقع غير موجود في قائمة إعادة التوجيه المسموح بها في Supabase.";
     return text;
   }
 
   function setBusy(busy) {
-    ["authSubmitButton", "authGoogleButton", "authGuestButton", "authEmailUpgradeButton", "authLinkGoogleButton", "authSignOutButton"].forEach((id) => {
+    ["authSubmitButton", "authGuestButton", "authEmailUpgradeButton", "authSignOutButton"].forEach((id) => {
       const button = byId(id);
       if (button) button.disabled = busy;
     });
@@ -411,27 +408,6 @@
     }
   }
 
-  async function signInWithGoogle() {
-    if (!client) return setMessage("تعذر تحميل خدمة الحسابات. يمكنك اللعب محليًا مؤقتًا.", "warning");
-    setBusy(true);
-    setMessage(currentUser ? "جارٍ ربط Google بالحساب الحالي..." : "جارٍ التحويل إلى Google...");
-    try {
-      if (currentUser && !(await flushSave())) {
-        setMessage("تعذر تأكيد حفظ تقدمك في السحابة؛ لم يبدأ ربط Google. حاول مجددًا بعد عودة الاتصال.", "error");
-        return;
-      }
-      const options = { redirectTo: redirectUrl() };
-      const result = currentUser
-        ? await client.auth.linkIdentity({ provider: "google", options })
-        : await client.auth.signInWithOAuth({ provider: "google", options });
-      if (result.error) throw result.error;
-    } catch (error) {
-      setMessage(safeError(error), "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function handleEmailSubmit(event) {
     event.preventDefault();
     if (!client) return setMessage("تعذر تحميل خدمة الحسابات. يمكنك اللعب محليًا مؤقتًا.", "warning");
@@ -618,9 +594,7 @@
 
   authForm?.addEventListener("submit", handleEmailSubmit);
   byId("authModeSwitch")?.addEventListener("click", toggleEmailMode);
-  byId("authGoogleButton")?.addEventListener("click", signInWithGoogle);
   byId("authGuestButton")?.addEventListener("click", signInAnonymously);
-  byId("authLinkGoogleButton")?.addEventListener("click", signInWithGoogle);
   byId("authEmailUpgradeButton")?.addEventListener("click", upgradeGuestWithEmail);
   byId("authBackToSessionButton")?.addEventListener("click", backToSession);
   byId("authSignOutButton")?.addEventListener("click", signOut);
