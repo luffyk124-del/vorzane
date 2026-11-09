@@ -109,8 +109,8 @@ export default function SettingsScreen() {
     setBusy(true);
     try {
       const success = await game.resetPlayerSave();
-      if (success) setConfirmReset(false);
-      setMessage(success ? "أُعيد ضبط تقدم هذا الحساب إلى بداية جديدة؛ لم يُحذف صف الحفظ أو يُمسّ حفظ أي لاعب آخر." : "تعذر تأكيد إعادة الضبط؛ احتفظنا بالنسخة المحلية كما هي.");
+      setConfirmReset(false);
+      setMessage(success ? "حُذف حفظ هذا الحساب فقط؛ لم يُمسّ حفظ أي لاعب آخر." : "تعذر حذف الحفظ السحابي؛ لم تُجرَ إزالة جزئية.");
     } finally { setBusy(false); }
   };
 
@@ -183,7 +183,7 @@ export default function SettingsScreen() {
     {game.status === "offline" && game.cloudError ? <Card style={styles.errorCard}><Txt style={styles.errorText}>{game.cloudError}</Txt></Card> : null}
 
     <Modal transparent visible={confirmReset} animationType="fade" onRequestClose={() => setConfirmReset(false)}>
-      <View style={styles.modalBackdrop}><Card style={styles.confirmCard}><View style={styles.modalIcon}><Icon name="trash-outline" color={palette.red} size={24} /></View><Txt style={styles.modalTitle}>حذف حفظ هذا الحساب؟</Txt><Txt muted style={styles.modalCopy}>سيُستبدل تقدم هذا الحساب بحفظ جديد أنشأه الخادم. سيبقى صف الحفظ موجودًا، ولن يُمسّ تقدم أي لاعب آخر أو النسخة المحلية القديمة قبل تأكيد نجاح العملية.</Txt><AppButton label="نعم، أعد ضبط حفظي" icon="trash-outline" variant="danger" onPress={resetSave} loading={busy} /><AppButton label="إلغاء" variant="secondary" onPress={() => setConfirmReset(false)} disabled={busy} /></Card></View>
+      <View style={styles.modalBackdrop}><Card style={styles.confirmCard}><View style={styles.modalIcon}><Icon name="trash-outline" color={palette.red} size={24} /></View><Txt style={styles.modalTitle}>حذف حفظ هذا الحساب؟</Txt><Txt muted style={styles.modalCopy}>سيُحذف صف تقدمك السحابي فقط. لا يمكن التراجع عن الحذف، ولن يُمسّ تقدم أي لاعب آخر أو ملف الحفظ القديم على الجهاز.</Txt><AppButton label="نعم، احذف حفظي" icon="trash-outline" variant="danger" onPress={resetSave} loading={busy} /><AppButton label="إلغاء" variant="secondary" onPress={() => setConfirmReset(false)} disabled={busy} /></Card></View>
     </Modal>
 
     <Modal transparent visible={confirmImport} animationType="fade" onRequestClose={() => setConfirmImport(false)}>
