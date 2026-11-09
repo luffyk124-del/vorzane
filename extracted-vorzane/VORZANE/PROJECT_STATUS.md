@@ -9,6 +9,14 @@ This file records the actual state of the VORZANE project. Update it after each 
 
 ## Current state
 
+## Approved product scope — 2026-11-09
+
+- Hosting and database: keep the existing Manus deployment and Supabase project. The FPS.ms migration plan and related backend work are cancelled and are not part of VORZANE.
+- Authentication: support only anonymous guest accounts and email/password accounts. Google/Google Play sign-in and account linking are out of scope.
+- The current Expo AuthContext/AuthScreen already expose only guest and email/password flows. The archived legacy web auth controls and handlers for Google sign-in were removed.
+- No production Supabase Auth settings, database schema, player saves, or Manus deployment were changed as part of this scope update.
+
+
 - The web application is deployed on GitHub Pages.
 - The original Manus version is preserved and has not been modified.
 - The existing Supabase project remains the application's database. Production audit confirmed three player-save rows, RLS enabled on the three public game/social tables, and no economy-command migration applied.
