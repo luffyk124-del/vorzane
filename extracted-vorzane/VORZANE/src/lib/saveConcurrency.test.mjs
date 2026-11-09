@@ -85,6 +85,19 @@ test("permission and network errors remain failures, not version conflicts", asy
   if (result.kind === "failed") assert.match(result.error.message, /permission denied/i);
 });
 
+test("an update must advance the version to prevent same-timestamp stale writes", async () => {
+  let called = false;
+  const result = await writeSaveConditionally(adapter({
+    update: async () => {
+      called = true;
+      return { data: { updated_at: RECORD.updated_at }, error: null };
+    },
+  }), { ...RECORD, updated_at: CURRENT_VERSION }, CURRENT_VERSION);
+
+  assert.equal(result.kind, "failed");
+  assert.equal(called, false);
+});
+
 test("invalid expected versions are rejected before any database request", async () => {
   let called = false;
   const result = await writeSaveConditionally(adapter({
