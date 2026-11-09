@@ -1,6 +1,6 @@
 # VORZANE — Project Status
 
-> Last updated: 2026-11-09
+> Last updated: 2026-11-09 (verified after PR #26/#27 merges)
 > Main branch: `main`
 > Latest main documentation commit: this file's current revision on `main` (see GitHub file history for its SHA)
 > Latest merged application commit: `29b25592bdc831a739216f967f0c7a3bc55dd4cf`
@@ -183,3 +183,31 @@ After every meaningful development batch, update the relevant sections above wit
 - The audit confirms that generic full-state client upsert, direct-delete reset, import/recovery, offline conflict resolution, and mission-period initialization still block safe server-authoritative cutover.
 - Existing typed non-combat commands are candidates for isolated client wiring; they are not yet evidence of production behavior.
 - No runtime code, production Supabase schema/configuration, player saves, feature flags, or Manus deployment changed in this documentation update.
+
+
+## Verified project update — 2026-11-09 (after PR #26 and PR #27)
+
+### Completed and merged
+- PR #26 merged as `63ed09c9dac8275fd8241168aaa36da33e6cf90d`: added `SAVE_MUTATION_AUDIT.md` and refreshed this status document against current `main`. The audit inventories remaining client-side save mutations and the blockers to a safe server-authoritative transition.
+- PR #27 merged as `d7da1d8e16f8439a5336cef65a89370022e1522d`: added a typed client transport for the server `resetSave` command, with validation for save version, UUID command IDs, server errors, and malformed responses, plus unit tests.
+- Important: PR #27 is preparatory only. The reset UI and existing GameContext save behavior remain unchanged until the required Supabase production function and database RPC/migration are separately approved, deployed, and verified.
+- PR #25 remains merged: cancelled FPS.ms references removed from active documentation and Google sign-in/account linking removed from the archived legacy web flow. Supported sign-in methods remain guest and email/password.
+
+### Verification and deployment
+- PR #26 exact-head workflow `42597512412`: completed successfully.
+- PR #27 exact-head workflow `42597565437`: completed successfully.
+- Post-merge main workflow `42598221065` for commit `d7da1d8e16f8439a5336cef65a89370022e1522d`: build, isolated social DB tests, and GitHub Pages deploy all completed successfully.
+- Current GitHub Pages application: https://luffyk124-del.github.io/vorzane/
+- Preserved Manus application: https://vorzane-ebvt9uxg.manus.space/home (not modified).
+
+### Still outstanding
+1. Complete a safe server-authoritative save lifecycle: generic full-state client upserts, direct-delete reset, legacy import, offline conflict/recovery, and all remaining mutation callsites still require reviewed replacements.
+2. Finish a validated import/recovery/restore path that preserves local copies until the server confirms success.
+3. Resolve mission-period bookkeeping and remaining profile/settings/avatar/report/expedition/reward mutation paths with typed server commands and tests, while excluding battle/combat work from this continuation.
+4. Only after every relevant client write path is removed and tested, seek separate approval and a rollback plan for production Supabase migrations/functions. No such production rollout has happened in this update.
+5. Verify the production Supabase deployment state before any client cutover; do not assume merged source code is deployed.
+
+### Safety and production boundary
+- No Supabase production migration, Edge Function deployment, Auth/RLS change, feature-flag change, or player-save mutation was performed in this update.
+- Existing player saves were not modified or deleted. Manus remains unchanged.
+- Keep PR #16 unmerged; it is stale and must not be merged wholesale. Do not reintroduce FPS.ms or Google sign-in.
