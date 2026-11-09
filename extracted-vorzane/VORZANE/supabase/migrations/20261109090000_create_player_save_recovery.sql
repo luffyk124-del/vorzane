@@ -57,11 +57,11 @@ begin
   -- ON CONFLICT serializes concurrent inserts on the same owner's counter row.
   -- This is AFTER INSERT, so duplicate-key attempts rejected by the unique index
   -- do not consume quota. Raising here rolls back the just-inserted recovery row.
-  insert into vorzane_internal.player_save_recovery_quotas (user_id, record_count)
+  insert into vorzane_internal.player_save_recovery_quotas as quota (user_id, record_count)
   values (new.user_id, 1)
   on conflict (user_id) do update
-    set record_count = vorzane_internal.player_save_recovery_quotas.record_count + 1
-    where vorzane_internal.player_save_recovery_quotas.record_count < 5
+    set record_count = quota.record_count + 1
+    where quota.record_count < 5
   returning record_count into v_record_count;
 
   if not found then
