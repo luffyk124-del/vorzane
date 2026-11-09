@@ -50,3 +50,8 @@ The SQL tests cover first commit, replay, stale-version rejection, and denial of
 **Not yet complete:** battle settlement is still client-computed and applied through `GameContext.update`; the generic client save upsert remains active for ordinary autosave, import/migration, and other save lifecycle paths. The command client currently flushes the existing snapshot before issuing a command, so the feature gate must remain off: enabling it before removing client-controlled full-state writes would not provide true server authority. The current implementation is a gated integration and a foundation for the cutover, not a completed anti-tampering boundary. Next work must make battle resolution server-owned (including server-generated battle sessions and one-time settlement), migrate remaining save lifecycle mutations, and then remove the pre-command full snapshot flush. Only after those are tested end-to-end can client write access be considered for revocation.
 
 The migration and Edge Function are tested through CI only; neither has been applied or deployed to the production Supabase project.
+
+
+## Branch review note — 2026-11-09
+
+The expanded command batch is not merge-ready until a fresh CI run passes after commit `eab722d6ace280ec7486c67d3ed989e685be8104`. The prior run `42535990066` exposed an incorrect starter-loadout array index that equipped a high-level armor item instead of `boots1`; the implementation now resolves the canonical starter boots by catalog ID. This correction does not close the larger server-authority gaps described above: battle outcomes and the generic client snapshot upsert remain client-controlled, so the feature gate must stay disabled.
