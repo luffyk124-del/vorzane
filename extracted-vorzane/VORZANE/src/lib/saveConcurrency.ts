@@ -41,6 +41,9 @@ export async function writeSaveConditionally(
   if (expectedUpdatedAt !== null && !isValidSaveVersion(expectedUpdatedAt)) {
     return { kind: "failed", error: new Error("The current cloud save version is invalid; reload before saving.") };
   }
+  if (expectedUpdatedAt !== null && Date.parse(record.updated_at) <= Date.parse(expectedUpdatedAt)) {
+    return { kind: "failed", error: new Error("The new cloud save version must be later than the current version.") };
+  }
 
   let result: SaveWriteDbResult;
   try {
