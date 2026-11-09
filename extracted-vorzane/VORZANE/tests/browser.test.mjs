@@ -105,6 +105,32 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(session.user) });
       return;
     }
+    if (request.method() === "OPTIONS" && url.pathname.endsWith("/functions/v1/initialize-save")) {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+        },
+        body: "",
+      });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/functions/v1/initialize-save")) {
+      const payload = request.postDataJSON();
+      if (!payload || Object.keys(payload).length !== 0) {
+        await route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "Initialization accepts an empty payload only" }) });
+        return;
+      }
+      if (!store.state) store.state = saveFixture();
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ state: store.state, updatedAt: new Date().toISOString(), created: true }),
+      });
+      return;
+    }
     if (request.method() === "OPTIONS" && url.pathname.endsWith("/functions/v1/game-state")) {
       await route.fulfill({
         status: 200,
