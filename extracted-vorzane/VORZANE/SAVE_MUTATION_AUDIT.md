@@ -7,7 +7,7 @@ Audited base: `main` at `65df6dfd65454cff53c331c4e5bb4ea4aaad8b53`
 
 This is a source-only audit of client save mutation paths. It does not change runtime behavior, database schema, Edge Functions, production data, or deployment configuration.
 
-The client is **not ready for server-authoritative cutover**. `GameContext.persistSnapshot` still performs a whole-state client upsert to `public.player_saves`; `resetPlayerSave` still deletes the row directly. The server-side command endpoint already implements a number of useful non-combat operations, but the current UI calls them through the generic `update` callback or bypasses them through full-state snapshot persistence.
+The client is **not ready for server-authoritative cutover**. The current development branch replaces the blind whole-state upsert with an insert-only / version-conditional whole-state write, but the client still supplies the complete state and remains authoritative for many transitions. `resetPlayerSave` still deletes the row directly. The server-side command endpoint already implements a number of useful non-combat operations, but the current UI calls them through the generic `update` callback or bypasses them through full-state snapshot persistence.
 
 No feature flag, RLS policy, client database privilege, production Edge Function, migration, player save, or Manus deployment was changed in this audit.
 
@@ -15,7 +15,7 @@ No feature flag, RLS policy, client database privilege, production Edge Function
 
 | Client path | Current behavior | Server-side coverage in main | Cutover status / required work |
 |---|---|---|---|
-| Autosave / state effect | `GameContext.tsx`: delayed full-state `player_saves.upsert` after any state change | `economy-command` has typed commands for many individual operations | **Blocker.** Replace generic snapshot persistence only after every mutation path has a typed command and conflict-safe client handling. |
+| Autosave / state effect | `GameContext.tsx`: delayed full-state write; development branch uses `insert` for an unknown row and `update` filtered by both `user_id` and the last observed `updated_at` | `economy-command` has typed commands for many individual operations | **Still a blocker.** Optimistic concurrency prevents stale sessions from blindly overwriting newer rows, but arbitrary client snapshots remain accepted. Replace generic snapshot persistence only after every mutation path has a typed command and conflict-safe client handling. |
 | `flushNow`, logout/account transition flush | Flushes the latest full snapshot through `persistSnapshot` | No safe generic full-state replacement command | **Blocker.** Define explicit flush semantics; do not accept arbitrary client state as authoritative. |
 | Offline cache / offline progress | Stores device cache and pending marker; local progress can later be reconciled | Recovery staging stores untrusted payloads in quarantine; it is not a restore/merge command | **Blocker.** Preserve local copy; add explicit user-reviewed recovery/merge flow and server validation before applying anything. |
 | Cloud recovery / expedition progression | Loading may call `advanceExpeditions` and then persist the resulting snapshot | `advanceExpeditions` command exists | Replace snapshot write with the typed command; handle idempotency and stale versions. |
@@ -67,3 +67,12 @@ No feature flag, RLS policy, client database privilege, production Edge Function
 - Do not deploy Supabase production migrations/functions or mutate existing player saves as part of this audit.
 - Preserve the original Manus deployment.
 - No battle/combat feature work is included in this non-combat save-lifecycle slice.
+
+## Conditional client snapshot protection — development branch
+
+- Branch: `feat/conflict-safe-cloud-save` (based on current `main`).
+- Replaces the unconditional client `upsert` with insert-only behavior when no cloud row/version is known, and an update guarded by both `user_id` and the exact previously observed `updated_at` when a row exists.
+- A uniqueness collision on first insert or an update returning no row is treated as a version conflict. Permission/network errors remain ordinary failures and are not mislabeled as conflicts.
+- On conflict, the client preserves its local cache and pending marker, pauses further cloud writes, fetches the latest cloud copy, and exposes the existing local/cloud conflict-resolution UI when both copies are available.
+- New versions are monotonic relative to the observed version, avoiding a same-millisecond update that would leave the concurrency token unchanged.
+- This is a **client-side optimistic-concurrency safeguard**, not server authority: it does not validate game rules, remove client snapshot writes, change RLS, alter schema, deploy functions, or mutate production data. It must pass exact-head CI and review before merge.
