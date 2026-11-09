@@ -131,6 +131,11 @@ export function createStageSaveRecoveryHandler(
       return json({ recoveryId: existing.recovery_id, status: existing.status, created: false, replayed: true });
     }
 
+    if (insertError?.code === "23514" &&
+        insertError.message?.includes("Per-user recovery quota reached")) {
+      return json({ error: "Recovery quota reached", maxRecords: 5 }, 429);
+    }
+
     return json({ error: "Could not stage recovery snapshot" }, 500);
   };
 }
