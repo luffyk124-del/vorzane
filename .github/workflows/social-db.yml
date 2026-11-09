@@ -83,7 +83,7 @@ jobs:
           rejected="$(grep -l '^rejected
  "$quota_dir"/*.status | wc -l)"
           actual_rows="$(psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM public.player_save_recovery WHERE user_id = '00000000-0000-0000-0000-00000000000d'")"
-          actual_counter="$(psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT record_count FROM private.player_save_recovery_quotas WHERE user_id = '00000000-0000-0000-0000-00000000000d'")"
+          actual_counter="$(psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT record_count FROM vorzane_internal.player_save_recovery_quotas WHERE user_id = '00000000-0000-0000-0000-00000000000d'")"
           if [ "$successes" -ne 5 ] || [ "$rejected" -ne 3 ] || [ "$actual_rows" -ne 5 ] || [ "$actual_counter" -ne 5 ]; then
             echo "Recovery quota concurrency test failed: successes=$successes rejected=$rejected rows=$actual_rows counter=$actual_counter"
             cat "$quota_dir"/*.log
