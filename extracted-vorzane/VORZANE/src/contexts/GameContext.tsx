@@ -121,7 +121,10 @@ export function GameProvider({ children }: PropsWithChildren) {
     await storeUserCache(userId, safeSnapshot);
     saveQueueRef.current = saveQueueRef.current.catch(() => false).then(async () => {
       if (activeUserRef.current !== userId) return false;
+      if (!allowPendingMigration && syncReadyRef.current !== userId) return false;
       const markerToken = await getOfflineSavePendingToken(userId, offlineMarkerStorage());
+      const expectedVersion = cloudVersionRef.current;
+      const nextVersionTime = Math.max(Date.now(), expectedVersion ? Date.parse(expectedVersion) + 1 : 0);
       const outcome = await writeSaveConditionally({
         insert: async (record) => await supabase
           .from("player_saves")
@@ -138,8 +141,8 @@ export function GameProvider({ children }: PropsWithChildren) {
       }, {
         user_id: userId,
         game_state: safeSnapshot,
-        updated_at: new Date().toISOString(),
-      }, cloudVersionRef.current);
+        updated_at: new Date(nextVersionTime).toISOString(),
+      }, expectedVersion);
 
       if (outcome.kind === "conflict") {
         await markOfflineSavePending(userId, offlineMarkerStorage());
