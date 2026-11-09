@@ -139,3 +139,6 @@ After every meaningful development batch, update the relevant sections above wit
 - Tests actually run and their results.
 - Commit SHA and deployment link, when available.
 - Any remaining issue or follow-up task.
+
+
+<!-- Temporary CI-only validation branch marker; do not merge this branch. -->
