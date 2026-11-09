@@ -2,7 +2,7 @@
 
 > Last updated: 2026-11-09
 > Main branch: `main`
-> Latest main documentation commit: `6d546b2ca5c764bee8d847db0c3d91645a328d9d`
+> Latest main documentation commit: `28b5ed310f145a7724fa18c1560236b2701963a0`
 > Latest merged application commit: `741126b48c0831f2353987d7cc94267f7e52f15b`
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
@@ -64,6 +64,14 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Improve mobile usability and verify responsive behavior on real devices.
 - Maintain clear release notes and deployment verification for each production update.
 - The project owner explicitly authorized necessary production Supabase changes. Still back up/export where supported, review every migration, keep changes additive and reversible, verify against isolated/test data first, and never drop or overwrite player data as a shortcut.
+
+## Production audit — 2026-11-09
+
+- Read-only verification confirms exactly three rows remain in public.player_saves. No rows were inserted, updated, or deleted during this audit.
+- Supabase currently lists only the authenticated read-only game-state Edge Function as ACTIVE (v1, verify_jwt=true). initialize-save is merged in GitHub but not deployed; economy-command is also not deployed.
+- Security Advisor reports 8 authenticated-executable SECURITY DEFINER RPCs in the social/profile feature set, anonymous-sign-in policy warnings on friend_requests, player_profiles, and player_saves, plus leaked-password protection disabled. These are review findings, not confirmed exploits. Existing policies target the authenticated role and use auth.uid() ownership/participant checks where applicable; anonymous Auth users can still carry the authenticated database role. Do not change these settings or policies without verifying the intended anonymous-account product behavior and testing social flows.
+- No production schema, RLS policy, Auth setting, Edge Function, or player-save row was changed by this audit.
+
 
 ## Replit handoff — current work order
 
