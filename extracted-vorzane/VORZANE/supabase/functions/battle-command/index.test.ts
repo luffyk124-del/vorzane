@@ -23,7 +23,7 @@ function fixture(options: {
   commitError?: { code?: string } | null;
 } = {}) {
   const state = options.state ?? createHeroState("Test", "Warrior");
-  const calls: Record<string, unknown> = { tables: [], filters: {}, rpcCalls: [] };
+  const calls: Record<string, unknown> = { tables: [], filters: {}, rpcCalls: [], keys: [] };
   const fakeClient = (key: string) => ({
     auth: {
       async getUser() {
