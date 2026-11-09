@@ -3,7 +3,7 @@
 > Last updated: 2026-11-09
 > Main branch: `main`
 > Latest main documentation commit: this file's current revision on `main` (see GitHub file history for its SHA)
-> Latest merged application commit: `741126b48c0831f2353987d7cc94267f7e52f15b`
+> Latest merged application commit: `039a73897c380f9cd947f2cdaa04f7fc51a5d8bf`
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
 
@@ -55,7 +55,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 
 - GitHub Pages deployment for PR #13's merge commit was verified successful (workflow run `42527315821`).
 - PR #15 (atomic command receipts plus `economy-command`) is merged as `a36ae7cad7f46feb17242f170fcc7227c72a8128`; its migration and command function are not deployed to production.
-- PR #16 remains draft and unmerged: https://github.com/luffyk124-del/vorzane/pull/16. Current head is `80b90be86ed6b8a6874d17166314c55d99276194`; it is 38 commits ahead and 4 behind current `main`, with GitHub reporting `mergeable=false`. Do not merge as-is. Reconcile its branch with current `main`, inspect the complete diff and latest CI, then re-run all required checks.
+- PR #16 remains draft and unmerged; it is not part of the active implementation path. Do not merge it without a fresh reconciliation against current `main` and full review.
 - Server authority is not complete: battle results are still client-computed and the generic full-save client upsert remains active. Do not enable the economy feature gate or revoke client writes until battle settlement, save initialization, import/migration, reset, offline progression, and every other save mutation are server-owned and tested.
 - Continue reviewing and improving existing gameplay and application flows.
 - Verify each change with relevant automated tests before merging.
@@ -70,7 +70,7 @@ This file records the actual state of the VORZANE project. Update it after each 
 - Created branch `feat/server-authority-command-expansion` from current `main` after leaving stale PR #16 untouched.
 - Ported the server-side command validation and canonical state transitions from the reviewed PR #16 implementation into `economy-command`, together with its Deno tests. This expands the server handler for pet ownership/activation, hero creation and starter state, stat allocation, expeditions, quest/achievement/recurring rewards, report dismissal, settings, and character/profile appearance.
 - The change is server-side only at this stage. It does not wire the client, change the feature gate, alter the `player_saves` RLS policies, deploy an Edge Function, run a migration, or change production player data.
-- PR #19 CI run `42577337288` passed: game-system tests, desktop/mobile browser flows, TypeScript, Deno Edge Function typecheck/tests, web export, Pages export verification, and isolated social DB tests. The separate social DB run `42577337315` also passed.
+- PR #19 merged into `main` as `039a73897c380f9cd947f2cdaa04f7fc51a5d8bf` after all checks passed on head `d4d2a996e67bdc789278d39ce331f52320591355` (workflow `42578020613`; separate social DB run `42578020638`). The server-side non-combat command expansion is not deployed, not wired to the client, and not enabled.
 - Code review confirmed the handler authenticates the caller, reads only the caller's save, validates command payloads against canonical game rules, and commits through the atomic receipt RPC. The PR remains server-side only: no client wiring, feature-gate activation, migration, production deployment, RLS/Auth change, or player-save write.
 - Important rollout dependency: reward commands that inspect battle counters must remain disabled until battle settlement is server-owned and generic client snapshot writes are removed. This PR does not complete save authority: autosave/full-snapshot writes, offline conflict resolution, legacy import, reset, and battle settlement remain client-owned/outstanding.
 
@@ -116,7 +116,7 @@ Production Supabase project ref: `incidgigfqyjbqfegukg`. The authenticated read-
 | 2026-11-08 | `d84a3cb6ec3e1310415b54d53853b86ea4fcb48a` | PR #12 merged: duplicate new-hero creator controls removed; fresh-account mobile browser regression test, game tests, TypeScript, Edge Function checks/tests, web export, and social DB tests passed. |
 | 2026-11-09 | `741126b48c0831f2353987d7cc94267f7e52f15b` | PR #14 merged. Production `game-state` Edge Function deployed and confirmed ACTIVE v1 with JWT verification enabled; production migration history unchanged. |
 | 2026-11-09 | `c5759d5d18f661bb772391db4ab2f0f4add14f70` | PR #18 merged. New-player save initialization passed game/browser, TypeScript, Deno, web-export, and isolated DB CI. `initialize-save` is not yet deployed to production; no production player data changed. |
-| 2026-11-09 | PR #19 head `a2590bcb27f1710be607e10b0ba3a90ad25910ae` | All CI checks passed (workflow `42577337288`; separate social DB run `42577337315`). Server-side non-combat command expansion only; not deployed, not wired to client, and not enabled. |
+| 2026-11-09 | `039a73897c380f9cd947f2cdaa04f7fc51a5d8bf` | PR #19 squash-merged after all CI passed: workflow `42578020613` (game systems, desktop/mobile browser, TypeScript, Deno typecheck/tests, web export, Pages export verification, isolated social DB) and workflow `42578020638` (isolated social DB). Deployment job skipped; no Supabase deployment/migration, client wiring, feature enablement, RLS/Auth change, or player-save mutation. |
 
 ## Update policy
 
