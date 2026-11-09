@@ -16,7 +16,6 @@ function fixture(options: {
   readError?: unknown;
   user?: { id: string } | null;
   authError?: unknown;
-  readError?: unknown;
   receipt?: { result: Record<string, unknown> } | null;
   commit?: Record<string, unknown>;
   commitError?: unknown;
