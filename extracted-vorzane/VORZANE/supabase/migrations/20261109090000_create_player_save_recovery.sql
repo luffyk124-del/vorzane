@@ -11,7 +11,7 @@ create table public.player_save_recovery (
   created_at timestamptz not null default now(),
   resolved_at timestamptz,
   constraint player_save_recovery_snapshot_size
-    check (octet_length(snapshot::text) <= 262144),
+    check (octet_length(snapshot::text) <= 393216),
   constraint player_save_recovery_resolution_consistency
     check ((status = 'pending' and resolved_at is null) or (status = 'resolved' and resolved_at is not null)),
   unique (user_id, recovery_key)
