@@ -128,7 +128,370 @@ begin
     'character_gender', coalesce(v_style ->> 'gender', 'male'),
     'hero_name', coalesce(v_hero ->> 'name', v_profile.display_name),
     'class_name', coalesce(v_hero ->> 'className', 'Warrior'),
-    'level', coalesce(nullif(v_hero ->> 'level', '')::integer, 1),
+    'level', case when coalesce(v_hero ->> 'level', '') ~ '^[0-9]{1,4}
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', case when coalesce(v_state ->> 'wins', '') ~ '^[0-9]{1,10}
+    'battles', case when coalesce(v_state ->> 'battles', '') ~ '^[0-9]{1,10}
+    'dimas_floor', case when coalesce(v_state #>> '{dimas,highestFloor}', '') ~ '^[0-9]{1,3}
+    'roaming_events', case when coalesce(v_state #>> '{roaming,eventsCompleted}', '') ~ '^[0-9]{1,10}
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'wins')::integer else 0 end,
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'battles')::integer else 0 end,
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'wins')::integer else 0 end,
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state #>> '{dimas,highestFloor}')::integer else 0 end,
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'wins')::integer else 0 end,
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'battles')::integer else 0 end,
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'wins')::integer else 0 end,
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state #>> '{roaming,eventsCompleted}')::integer else 0 end
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'wins')::integer else 0 end,
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'battles')::integer else 0 end,
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'wins')::integer else 0 end,
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state #>> '{dimas,highestFloor}')::integer else 0 end,
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'wins')::integer else 0 end,
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'battles')::integer else 0 end,
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
+    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'equipped', v_equipped,
+    'active_pet', v_state ->> 'activePet',
+    'wins', coalesce(nullif(v_state ->> 'wins', '')::integer, 0),
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_state ->> 'wins')::integer else 0 end,
+    'battles', coalesce(nullif(v_state ->> 'battles', '')::integer, 0),
+    'dimas_floor', coalesce(nullif(v_state #>> '{dimas,highestFloor}', '')::integer, 0),
+    'roaming_events', coalesce(nullif(v_state #>> '{roaming,eventsCompleted}', '')::integer, 0)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_player_profile(uuid) from public, anon;
+grant execute on function public.get_public_player_profile(uuid) to authenticated;
+ then (v_hero ->> 'level')::integer else 1 end,
     'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
     'equipped', v_equipped,
     'active_pet', v_state ->> 'activePet',
