@@ -8,7 +8,24 @@ export type PlayerProfile = {
   created_at: string;
 };
 
-export type PublicPlayerProfile = {\n  user_id: string;\n  display_name: string;\n  avatar_id: string;\n  character_gender: "male" | "female";\n  hero_name: string;\n  class_name: string;\n  level: number;\n  stats: Record<string, number>;\n  equipped: Record<string, { name?: string; rarity?: string; bonus?: Record<string, number> } | null>;\n  active_pet: string | null;\n  wins: number;\n  battles: number;\n  dimas_floor: number;\n  roaming_events: number;\n};\n\nexport type PlayerSearchResult = {
+export type PublicPlayerProfile = {
+  user_id: string;
+  display_name: string;
+  avatar_id: string;
+  character_gender: "male" | "female";
+  hero_name: string;
+  class_name: string;
+  level: number;
+  stats: Record<string, number>;
+  equipped: Record<string, { name?: string; rarity?: string; bonus?: Record<string, number> } | null>;
+  active_pet: string | null;
+  wins: number;
+  battles: number;
+  dimas_floor: number;
+  roaming_events: number;
+};
+
+export type PlayerSearchResult = {
   user_id: string;
   display_name: string;
   avatar_id: string;
@@ -55,7 +72,13 @@ export async function getMyProfile(userId: string): Promise<PlayerProfile | null
   return data as PlayerProfile | null;
 }
 
-export async function getPublicPlayerProfile(userId: string): Promise<PublicPlayerProfile | null> {\n  const { data, error } = await supabase.rpc("get_public_player_profile", { p_user_id: userId });\n  if (error) throw new Error(error.message);\n  return data as PublicPlayerProfile | null;\n}\n\nexport async function saveMyProfile(displayName: string, avatarId: string): Promise<PlayerProfile> {
+export async function getPublicPlayerProfile(userId: string): Promise<PublicPlayerProfile | null> {
+  const { data, error } = await supabase.rpc("get_public_player_profile", { p_user_id: userId });
+  if (error) throw new Error(error.message);
+  return data as PublicPlayerProfile | null;
+}
+
+export async function saveMyProfile(displayName: string, avatarId: string): Promise<PlayerProfile> {
   const { data, error } = await supabase.rpc("upsert_my_profile", {
     p_display_name: displayName,
     p_avatar_id: avatarId,
