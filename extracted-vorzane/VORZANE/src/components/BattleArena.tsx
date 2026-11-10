@@ -162,6 +162,7 @@ export function BattleArena({ sequence, onBattleSettled, onClose }: Props) {
               <Meter value={heroHP} max={activeSequence.heroMaxHP} color={hpColor} height={8} />
             </View>
             <Pill label={`هجوم ${activeSequence.hero.attack}`} icon="flash" tone="gold" />
+            <Pill label={activeSequence.hero.passiveName} icon="sparkles" tone="jade" />
           </Animated.View>
 
           <View style={styles.versusColumn}>
