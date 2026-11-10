@@ -316,7 +316,9 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await page.goto(`${appUrl}/login`);
       assert.equal(await page.getByRole("button", { name: /Google/i }).count(), 0, "Google sign-in must not be shown");
       await signInWithMock(page);
-      await page.getByText("2 نقطة متاحة", { exact: true }).waitFor();
+      await page.getByRole("button", { name: "الشخصية", exact: true }).click();
+      await page.getByText("2 نقطة تطوير متاحة", { exact: true }).waitFor();
+      await page.getByRole("button", { name: "المخيم", exact: true }).click();
       await page.getByRole("button", { name: "فتح القائمة" }).click();
       await page.getByRole("button", { name: "الملف الشخصي", exact: true }).waitFor();
       await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
@@ -335,7 +337,7 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       const increaseButtons = page.getByText("+1", { exact: true });
       assert.equal(await increaseButtons.count(), 5);
       await increaseButtons.first().click();
-      await page.getByText("1 نقطة متاحة", { exact: true }).waitFor();
+      await page.getByText("1 نقطة تطوير متاحة", { exact: true }).waitFor();
 
       const deadline = Date.now() + 5000;
       while (!writes.length && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 100));
@@ -447,7 +449,7 @@ test("offline progress conflict resolves and restores in a clean second context"
   const secondPage = await secondContext.newPage();
   await installSupabaseMock(secondPage, { store });
   await signInWithMock(secondPage);
-  await secondPage.getByText("1 نقطة متاحة", { exact: true }).waitFor();
+  await secondPage.getByText("1 نقطة تطوير متاحة", { exact: true }).waitFor();
   assert.equal(await secondPage.getByText("14", { exact: true }).count(), 1);
   await secondContext.close();
 });
