@@ -55,7 +55,7 @@ export default function RoamingScreen() {
 
     {event ? <Card style={styles.eventCard}>
       <View style={styles.eventTop}>
-        <Pill label={event.kind === "chain" ? "حلقة من حكاية طويلة" : event.kind === "encounter" ? "مواجهة" : event.kind === "traveler" ? "لقاء عابر" : event.kind === "cache" ? "اكتشاف" : "حدث غامض"} tone={event.kind === "chain" ? "violet" : "gold"} />
+        <Pill label={event.kind === "chain" ? "حلقة من حكاية طويلة" : event.kind === "encounter" ? "مواجهة" : event.kind === "traveler" ? "لقاء عابر" : event.kind === "cache" ? "اكتشاف" : "حدث غامض"} tone="gold" />
         <Icon name="sparkles" size={21} color={palette.gold} />
       </View>
       <Txt style={styles.region}>{event.region}</Txt>
