@@ -50,7 +50,7 @@ export default function CharacterScreen() {
         </ProgressRing>
         <View style={styles.progressCopy}>
           <Txt style={styles.progressTitle}>التقدم التالي</Txt>
-          <Txt muted style={styles.progressText}>{hero.exp.toLocaleString("ar-EG")} / {stats.xpNeeded.toLocaleString("ar-EG")} خبرة</Txt>
+          <Txt muted style={styles.progressText}>{hero.exp.toLocaleString("en-US")} / {stats.xpNeeded.toLocaleString("en-US")} خبرة</Txt>
           <Pill label={`${hero.statPoints} نقطة تطوير متاحة`} tone={hero.statPoints > 0 ? "gold" : "muted"} />
         </View>
       </View>
@@ -59,9 +59,9 @@ export default function CharacterScreen() {
     <SectionTitle title="القدرات الأساسية" icon="analytics-outline" />
     <View style={styles.statsGrid}>
       <StatCard label="الصحة" value={stats.maxHP} icon="heart" color={palette.red} />
-      <StatCard label="الهجوم" value={stats.attack} icon="flash" color={palette.gold} />
+      <StatCard label="الهجوم" value={stats.attack} icon="sword" color={palette.gold} />
       <StatCard label="الدفاع" value={stats.defense} icon="shield-checkmark" color={palette.blue} />
-      <StatCard label="القوة" value={stats.power} icon="star" color={palette.jade} />
+      <StatCard label="القوة" value={stats.power} icon="fist" color={palette.jade} />
     </View>
 
     <SectionTitle title="تطوير السمات" icon="bar-chart-outline" action={<Pill label={`${hero.statPoints} نقطة متاحة`} tone="gold" />} />
@@ -69,7 +69,7 @@ export default function CharacterScreen() {
       {STAT_KEYS.map((key) => <View key={key} style={styles.statRow}>
         <AppButton label="+1" icon="add-circle-outline" variant="jade" small disabled={hero.statPoints < 1 || hero.stats[key] >= 999_999} onPress={() => update((current) => allocateStatPoint(current, key).state)} style={styles.allocateButton} />
         <View style={styles.statValue}>
-          <Txt style={styles.statNumber}>{hero.stats[key].toLocaleString("ar-EG")}</Txt>
+          <Txt style={styles.statNumber}>{hero.stats[key].toLocaleString("en-US")}</Txt>
           <Txt muted style={styles.statLabel}>{STAT_LABELS[key]}</Txt>
         </View>
       </View>)}
