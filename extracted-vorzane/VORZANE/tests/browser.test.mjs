@@ -268,8 +268,34 @@ before(async () => {
 after(async () => {
   await browser?.close();
   if (serverProcess && serverProcess.exitCode === null) {
+    const exited = new Promise((resolve) => {
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          resolve(false);
+        }
+      }, 5_000);
+      serverProcess.once("exit", () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        resolve(true);
+      });
+    });
     try { process.kill(-serverProcess.pid, "SIGTERM"); } catch { serverProcess.kill("SIGTERM"); }
-    await new Promise((resolve) => serverProcess.once("exit", resolve));
+    const stopped = await exited;
+    if (!stopped && serverProcess.exitCode === null) {
+      serverProcess.kill("SIGKILL");
+      await new Promise((resolve) => {
+        if (serverProcess.exitCode !== null) return resolve();
+        const timeout = setTimeout(resolve, 2_000);
+        serverProcess.once("exit", () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      });
+    }
   }
 });
 
