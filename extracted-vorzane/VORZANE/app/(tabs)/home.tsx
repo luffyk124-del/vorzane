@@ -47,8 +47,11 @@ export default function CampScreen() {
     next.characterStyle = selectedGender === "male"
       ? { gender: "male", appearance: 2, hairstyle: "short", hairColor: "obsidian", face: "weathered", outfit: "shadow", body: "sturdy" }
       : { gender: "female", appearance: 1, hairstyle: "braids", hairColor: "silver", face: "noble", outfit: "royal", body: "agile" };
-    const firstSword = createItemInstance(STARTER_ITEMS[0], "starter");
-    const firstBoots = createItemInstance(STARTER_ITEMS[3], "starter");
+    const starterSword = STARTER_ITEMS.find((item) => item.id === "sword1");
+    const starterBoots = STARTER_ITEMS.find((item) => item.id === "boots1");
+    if (!starterSword || !starterBoots) throw new Error("The starter equipment catalog is incomplete.");
+    const firstSword = createItemInstance(starterSword, "starter");
+    const firstBoots = createItemInstance(starterBoots, "starter");
     next.equipped[firstSword.slot] = firstSword;
     next.inventory.push(firstBoots);
     update(() => next);
