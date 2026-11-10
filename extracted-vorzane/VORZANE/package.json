@@ -13,7 +13,7 @@
     "preview": "node scripts/preview.mjs",
     "build": "node scripts/generate-character-model-variants.mjs && expo export --platform web --output-dir dist",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/game/engine.test.mjs src/game/art.test.mjs src/game/characterAppearance.test.mjs src/lib/authErrors.test.mjs src/lib/offlineSaveMarker.test.mjs scripts/characterModelVariants.test.mjs",
+    "test": "tsx --test src/game/engine.test.mjs src/game/art.test.mjs src/game/characterAppearance.test.mjs src/lib/authErrors.test.mjs src/lib/offlineSaveMarker.test.mjs src/lib/commandContext.test.mjs scripts/characterModelVariants.test.mjs",
     "test:browser": "node --test tests/browser.test.mjs"
   },
   "dependencies": {
