@@ -85,7 +85,26 @@ export function createBattleSequence(state: GameState, mode: BattleMode, random:
     let damage = 0;
     let critical = false;
     let passiveNote = "";
-    if (nextActor === "hero") {\n      heroAttackCount += 1;\n      damage = damageAmount(player.attack, enemyDefense);\n      if (hero.className === "Archer" && heroAttackCount === 1) { damage = Math.floor(damage * 1.3); passiveNote = " عين الصياد: ضربة افتتاحية!"; }\n      if (hero.className === "Mage" && heroAttackCount % 3 === 0) { damage = Math.floor(damage * 1.45); passiveNote = " نبض الأثير: انفجار سحري!"; }\n      const criticalBonus = hero.className === "Assassin" ? 0.10 : 0;\n      const criticalChance = clamp(0.04 + player.stats.luck * 0.004 + criticalBonus, 0.04, hero.className === "Assassin" ? 0.40 : 0.30);\n      critical = random() < criticalChance;\n      if (critical) { damage = Math.floor(damage * (hero.className === "Assassin" ? 1.7 : 1.55)); if (hero.className === "Assassin") passiveNote = " حدس قاتل: ضربة حرجة!"; }\n      enemyHP = Math.max(0, enemyHP - damage);\n    } else {\n      damage = damageAmount(enemyAttack, player.defense);\n      if (hero.className === "Warrior") { damage = Math.max(1, Math.floor(damage * 0.88)); passiveNote = " درع الصمود: خفّف الضربة."; }\n      heroHP = Math.max(0, heroHP - damage);\n    }\n    const round = Math.ceil((turns.length + 1) / 2);\n    const message = nextActor === "hero"\n      ? hero.name + " يهاجم " + enemy.name + " ويسبب " + damage + " ضرر" + (critical ? " بضربة حرجة!" : ".") + passiveNote\n      : enemy.name + " يردّ بضربة ويسبب " + damage + " ضررًا." + passiveNote;\n    turns.push({ index: turns.length + 1, round, actor: nextActor, damage, critical, heroHP, enemyHP, message });
+    if (nextActor === "hero") {
+      heroAttackCount += 1;
+      damage = damageAmount(player.attack, enemyDefense);
+      if (hero.className === "Archer" && heroAttackCount === 1) { damage = Math.floor(damage * 1.3); passiveNote = " عين الصياد: ضربة افتتاحية!"; }
+      if (hero.className === "Mage" && heroAttackCount % 3 === 0) { damage = Math.floor(damage * 1.45); passiveNote = " نبض الأثير: انفجار سحري!"; }
+      const criticalBonus = hero.className === "Assassin" ? 0.10 : 0;
+      const criticalChance = clamp(0.04 + player.stats.luck * 0.004 + criticalBonus, 0.04, hero.className === "Assassin" ? 0.40 : 0.30);
+      critical = random() < criticalChance;
+      if (critical) { damage = Math.floor(damage * (hero.className === "Assassin" ? 1.7 : 1.55)); if (hero.className === "Assassin") passiveNote = " حدس قاتل: ضربة حرجة!"; }
+      enemyHP = Math.max(0, enemyHP - damage);
+    } else {
+      damage = damageAmount(enemyAttack, player.defense);
+      if (hero.className === "Warrior") { damage = Math.max(1, Math.floor(damage * 0.88)); passiveNote = " درع الصمود: خفّف الضربة."; }
+      heroHP = Math.max(0, heroHP - damage);
+    }
+    const round = Math.ceil((turns.length + 1) / 2);
+    const message = nextActor === "hero"
+      ? hero.name + " يهاجم " + enemy.name + " ويسبب " + damage + " ضرر" + (critical ? " بضربة حرجة!" : ".") + passiveNote
+      : enemy.name + " يردّ بضربة ويسبب " + damage + " ضررًا." + passiveNote;
+    turns.push({ index: turns.length + 1, round, actor: nextActor, damage, critical, heroHP, enemyHP, message });
     nextActor = nextActor === "hero" ? "enemy" : "hero";
   }
 
