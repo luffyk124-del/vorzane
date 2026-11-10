@@ -6,10 +6,12 @@ import { usePathname, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { palette, layout, shared } from "../theme";
 
-export type IconName = keyof typeof Ionicons.glyphMap;
+export type IconName = keyof typeof Ionicons.glyphMap | "sword" | "fist";
 
 export function Icon({ name, size = 20, color = palette.text }: { name: IconName; size?: number; color?: string }) {
-  return <Ionicons name={name} size={size} color={color} />;
+  if (name === "sword") return <MaterialCommunityIcons name="sword" size={size} color={color} />;
+  if (name === "fist") return <MaterialCommunityIcons name="arm-flex" size={size} color={color} />;
+  return <Ionicons name={name as keyof typeof Ionicons.glyphMap} size={size} color={color} />;
 }
 
 export function Txt({ children, style, muted = false, numberOfLines }: PropsWithChildren<{ style?: StyleProp<TextStyle>; muted?: boolean; numberOfLines?: number }>) {
