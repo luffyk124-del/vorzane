@@ -101,6 +101,13 @@ export const CLASS_NAMES: Record<ClassId, string> = {
   Archer: "رامي السهام",
 };
 
+export const CLASS_PASSIVES: Record<ClassId, { name: string; description: string }> = {
+  Warrior: { name: "درع الصمود", description: "يخفّض الضرر الوارد بنسبة 12٪." },
+  Mage: { name: "نبض الأثير", description: "كل هجوم ثالث ينفجر بطاقة إضافية." },
+  Assassin: { name: "حدس قاتل", description: "يرفع فرصة الضربة الحرجة." },
+  Archer: { name: "عين الصياد", description: "تبدأ المواجهة بضربة افتتاحية أقوى." },
+};
+
 export const CLASS_DESCRIPTIONS: Record<ClassId, string> = {
   Warrior: "خط الدفاع الأول؛ صمود وقوة في المواجهة.",
   Mage: "سحر هجومي يوازن بين الطاقة والحكمة.",
