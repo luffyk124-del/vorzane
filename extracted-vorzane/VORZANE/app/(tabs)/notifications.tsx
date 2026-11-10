@@ -72,7 +72,7 @@ export default function NotificationsScreen() {
         />
         <View style={styles.body}>
           <Txt style={styles.message}>{notificationText(item)}</Txt>
-          <Txt muted style={styles.date}>{new Date(item.created_at).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" })}</Txt>
+          <Txt muted style={styles.date}>{new Date(item.created_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</Txt>
         </View>
         <View style={styles.icon}><Icon name={item.notification_type === "friend_request" ? "person-add-outline" : "people-outline"} color={item.read_at ? palette.muted : palette.gold} size={21} /></View>
       </Card>) : <Card style={styles.empty}><Icon name="notifications-off-outline" color={palette.muted} size={24} /><Txt muted>لا توجد إشعارات حتى الآن.</Txt></Card>}
