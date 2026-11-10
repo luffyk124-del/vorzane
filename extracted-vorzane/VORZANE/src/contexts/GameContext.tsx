@@ -6,6 +6,7 @@ import { createFreshState, LEGACY_CLAIM_KEY, LEGACY_SAVE_KEY, normalizeGameState
 import { supabase } from "../lib/supabase";
 import { clearOfflineSavePending, getOfflineSavePendingToken, hasOfflineSavePending, markOfflineSavePending, type StorageLike } from "../lib/offlineSaveMarker";
 import { useAuth } from "./AuthContext";
+import { isCurrentCommandOwner } from "../lib/commandContext";
 
 const LEGACY_DECLINE_PREFIX = "vorzane_legacy_save_declined_";
 type LoadStatus = "auth" | "loading" | "migration" | "conflict" | "ready" | "offline";
@@ -318,8 +319,20 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   const executeEconomyCommand = useCallback((command: EconomyCommand): Promise<EconomyCommandResult> => {
     if (!SERVER_ECONOMY_COMMANDS_ENABLED) return Promise.resolve({ success: false, enabled: false });
+    const requestUserId = currentUserId;
+    const request = requestUserId ? { userId: requestUserId, generation: generationRef.current } : null;
+    const isRequestCurrent = () => !!request && isCurrentCommandOwner(request, {
+      userId: activeUserRef.current,
+      generation: generationRef.current,
+    });
+    const accountChanged = (): EconomyCommandResult => ({
+      success: false,
+      enabled: true,
+      error: "تغيّر الحساب أثناء تنفيذ العملية؛ لم نطبّق استجابة الحساب السابق على الحساب الحالي.",
+    });
+
     const task = economyQueueRef.current.catch(() => ({ success: false, enabled: true })).then(async () => {
-      if (!currentUserId || status !== "ready" || syncReadyRef.current !== currentUserId) {
+      if (!request || !isRequestCurrent() || status !== "ready" || syncReadyRef.current !== request.userId) {
         return { success: false, enabled: true, error: "يجب الاتصال بحسابك قبل تنفيذ هذه العملية." };
       }
 
@@ -331,7 +344,8 @@ export function GameProvider({ children }: PropsWithChildren) {
         return { success: false, enabled: true, error: "هناك عملية سابقة لم يصل تأكيدها. أعد المحاولة للعملية نفسها أولًا." };
       }
       if (!pending) {
-        const flushed = await persistSnapshot(stateRef.current, currentUserId);
+        const flushed = await persistSnapshot(stateRef.current, request.userId);
+        if (!isRequestCurrent()) return accountChanged();
         if (!flushed) return { success: false, enabled: true, error: "تعذر مزامنة الحفظ قبل تنفيذ العملية." };
       }
       const expectedUpdatedAt = pending?.expectedUpdatedAt ?? cloudUpdatedAtRef.current;
@@ -339,9 +353,11 @@ export function GameProvider({ children }: PropsWithChildren) {
       const commandId = pending?.commandId ?? createCommandId();
       pendingCommandRef.current = { fingerprint, commandId, expectedUpdatedAt };
 
+      if (!isRequestCurrent()) return accountChanged();
       const { data, error } = await supabase.functions.invoke("economy-command", {
         body: { commandId, expectedUpdatedAt, command },
       });
+      if (!isRequestCurrent()) return accountChanged();
       if (error) {
         const message = typeof data?.error === "string" ? data.error : error.message;
         const statusCode = (error as unknown as { context?: { status?: number } }).context?.status;
@@ -360,13 +376,15 @@ export function GameProvider({ children }: PropsWithChildren) {
         return { success: false, enabled: true, error: "استجابة الخادم غير صالحة؛ لم نحدّث الحفظ المحلي." };
       }
 
+      await storeUserCache(request.userId, next);
+      if (!isRequestCurrent()) return accountChanged();
+      await clearOfflineSavePending(request.userId, offlineMarkerStorage());
+      if (!isRequestCurrent()) return accountChanged();
       pendingCommandRef.current = null;
       cloudUpdatedAtRef.current = data.updatedAt;
       stateRef.current = next;
       skipNextEffectRef.current = true;
       setState(next);
-      await storeUserCache(currentUserId, next);
-      await clearOfflineSavePending(currentUserId, offlineMarkerStorage());
       setCloudError("");
       setSaveStatus("تم تنفيذ العملية وحفظها على الخادم");
       return {
