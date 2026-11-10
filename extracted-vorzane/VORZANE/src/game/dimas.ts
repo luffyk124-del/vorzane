@@ -61,7 +61,7 @@ function rareWeapon(floor: number, rewardName: string): EquipmentItem {
     bonus: { str: 12 + floor * 1.4, agi: 6 + floor * 0.55, luck: Math.floor(floor / 8) },
     price: floor * 1800,
     requiredLevel: Math.min(999, Math.max(1, Math.floor(floor / 2))),
-    requiredDungeonFloor: floor,
+    requiredDungeonFloor: 1,
     icon: "sword",
   };
 }
@@ -77,7 +77,6 @@ export function clearDimasFloor(state: GameState, floor: number): { state: GameS
   const next = JSON.parse(JSON.stringify(state)) as GameState;
   next.dimas.highestFloor = floor;
   next.dimas.lastCompletedAt = Date.now();
-  next.tower = Math.max(next.tower, floor);
   next.gold += reward.gold;
   const trained = addExperience(next, reward.xp);
   Object.assign(next, trained.state);
