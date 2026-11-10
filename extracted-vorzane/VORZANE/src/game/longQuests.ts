@@ -40,6 +40,7 @@ const rows: Omit<LongQuest, "id">[] = [
   { title: "جامع الآثار الأكبر", description: "اجمع 250 قطعة.", tier: "ملحمي", metric: "fragments", target: 250, gold: 85_000, xp: 38_000, gems: 200 },
   { title: "آخر العتبات", description: "بلغ المستوى 60.", tier: "ملحمي", metric: "level", target: 60, gold: 100_000, xp: 45_000, gems: 250 },
   { title: "سيد الديماس", description: "أكمل الطابق 300 في الديماس.", tier: "ملحمي", metric: "dimas", target: 300, gold: 250_000, xp: 100_000, gems: 500, fragments: 300 },
+  { title: "شهر في عالم الأساطير", description: "أكمل 30 يومًا منذ بدء رحلتك.", tier: "ملحمي", metric: "days", target: 30, gold: 150_000, xp: 70_000, gems: 300, fragments: 500 },
 ];
 export const LONG_QUESTS: LongQuest[] = rows.map((quest, index) => ({ ...quest, id: `long-${index + 1}` }));
 
