@@ -62,7 +62,7 @@ export default function CampScreen() {
     <GradientCard style={styles.createHero}>
       <BrandMark size={58} />
       <Txt style={styles.createTitle}>اختر من يسير في الظل</Txt>
-      <Txt muted style={styles.createCopy}>اصنع شخصيتك الأولى؛ يبدأ كل بطل برحلة مختلفة.</Txt>
+      <Txt muted style={styles.createCopy}>اختر شخصيتك مرة واحدة عند البداية؛ لن تتمكن من استبدالها بعد إنشاء البطل.</Txt>
       <SectionTitle title="اختر شخصيتك" icon="person-circle-outline" />
       <View style={styles.characterChoiceRow}>
         {([{ id: "male", label: "البطل" }, { id: "female", label: "البطلة" }] as const).map((option) => {
