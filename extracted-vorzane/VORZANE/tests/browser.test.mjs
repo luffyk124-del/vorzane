@@ -478,7 +478,7 @@ test("premium hero identity is locked in profile and persists after reload", asy
   const openProfile = async () => {
     await page.getByRole("button", { name: "فتح القائمة" }).click();
     await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
-    await page.getByText("شخصيتك", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByText("شخصيتك", { exact: true }).first().waitFor({ state: "visible", timeout: 10_000 });
     await page.getByLabel("إغلاق القائمة").waitFor({ state: "hidden", timeout: 5_000 });
   };
 
