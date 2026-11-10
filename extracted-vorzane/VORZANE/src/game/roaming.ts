@@ -121,7 +121,7 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   next.gems = Math.max(0, next.gems + (reward.gems ?? 0));
   next.roaming.fragments += reward.fragments ?? 0;
   next.roaming.health = Math.min(next.roaming.maxHealth, Math.max(0, next.roaming.health - (reward.damage ?? 0) + (reward.heal ?? 0)));
-  if (reward.xp) addExperience(next, reward.xp);
+  if (reward.xp) { const trained = addExperience(next, reward.xp); Object.assign(next, trained.state); }
   next.roaming.eventsCompleted += 1;
   next.roaming.lastEventAt = now;
   next.roaming.eventsSeen = [...next.roaming.eventsSeen.filter((id) => id !== event.id), event.id].slice(-500);
@@ -171,6 +171,6 @@ export function buyMerchantItem(state: GameState, itemId: string) {
   next.gems += item.gems ?? 0;
   next.gold += item.gold ?? 0;
   if (item.heal) next.roaming.health = Math.min(next.roaming.maxHealth, next.roaming.health + item.heal);
-  if (item.xp && next.hero) addExperience(next, item.xp);
+  if (item.xp && next.hero) { const trained = addExperience(next, item.xp); Object.assign(next, trained.state); }
   return { state: next };
 }
