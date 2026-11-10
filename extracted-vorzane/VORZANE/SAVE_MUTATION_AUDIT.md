@@ -1,7 +1,7 @@
 # Client Save Mutation Audit
 
-Date: 2026-11-09  
-Audited base: `main` at `65df6dfd65454cff53c331c4e5bb4ea4aaad8b53`
+Date: 2026-11-10  
+Audited base: `main` at `1025e024c47cacf3e91079cc162c0cb54cd3269e`
 
 ## Scope and conclusion
 
