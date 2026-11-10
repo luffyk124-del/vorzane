@@ -372,7 +372,7 @@ test("new hero creator offers two fixed heroes and saves a valid starter loadout
   await page.getByText("حارسة الاختبار", { exact: true }).waitFor({ timeout: 10_000 });
 
   const deadline = Date.now() + 10_000;
-  while ((!store.writes.length || !store.state?.inventory?.some((item) => item.id === "boots1")) && Date.now() < deadline) {
+  while ((!store.writes.length || !store.state?.inventory?.some((item) => item.catalogId === "boots1")) && Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   assert.deepEqual(store.state.characterStyle, {
@@ -384,8 +384,8 @@ test("new hero creator offers two fixed heroes and saves a valid starter loadout
     outfit: "royal",
     body: "agile",
   });
-  assert.ok(store.state.inventory.some((item) => item.id === "boots1"), "the starter inventory must contain boots1, not a higher-level armor item");
-  assert.equal(store.state.equipped["سلاح"]?.id, "sword1", "the starter sword should be equipped");
+  assert.ok(store.state.inventory.some((item) => item.catalogId === "boots1"), "the starter inventory must contain boots1, not a higher-level armor item");
+  assert.equal(store.state.equipped["سلاح"]?.catalogId, "sword1", "the starter sword should be equipped");
   assert.deepEqual(unexpectedRequests, []);
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(consoleErrors, []);
