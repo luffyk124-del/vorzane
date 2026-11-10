@@ -10,7 +10,8 @@ import { palette } from "../../src/theme";
 const STAT_LABELS: Record<string, string> = { str: "القوة", def: "الدفاع", vit: "الحيوية", agi: "الرشاقة", luck: "الحظ" };
 
 export default function PublicPlayerScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();\n  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [profile, setProfile] = useState<PublicPlayerProfile | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
