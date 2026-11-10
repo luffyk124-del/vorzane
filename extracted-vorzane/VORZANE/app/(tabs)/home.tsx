@@ -91,7 +91,7 @@ export default function CampScreen() {
       <View style={styles.choiceRow}>
         {([{ id: "male", label: "فارس الظلال", subtitle: "درع فولاذي • عباءة داكنة", icon: "male" }, { id: "female", label: "حارسة العرش", subtitle: "زي ملكي • ضفائر فضية", icon: "female" }] as const).map((option) => {
           const selected = selectedGender === option.id;
-          return <Pressable key={option.id} onPress={() => setSelectedGender(option.id)} accessibilityRole="radio" accessibilityState={{ checked: selected }} style={[styles.characterChoice, selected && styles.characterChoiceActive]}>
+          return <Pressable key={option.id} onPress={() => setSelectedGender(option.id)} accessibilityRole="radio" accessibilityState={{ checked: selected }} aria-checked={selected} style={[styles.characterChoice, selected && styles.characterChoiceActive]}>
             <View style={styles.characterChoiceIcon}><Icon name={option.icon as never} size={21} color={selected ? palette.gold : palette.jade} /></View>
             <Txt style={[styles.characterChoiceTitle, selected && { color: palette.gold }]}>{option.label}</Txt>
             <Txt muted style={styles.characterChoiceSubtitle}>{option.subtitle}</Txt>
