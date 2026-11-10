@@ -324,7 +324,7 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       const profileOverlay = await page.locator("#error-overlay").innerText().catch(() => "");
       assert.deepEqual({ overlay: profileOverlay.trim(), pageErrors, consoleErrors }, { overlay: "", pageErrors: [], consoleErrors: [] }, `${viewport.name} profile runtime diagnostics`);
       await page.getByRole("button", { name: "رجوع" }).click();
-      await page.getByText("تطوير السمات", { exact: true }).first().waitFor({ timeout: 10_000 });
+      await page.getByText("تطوير السمات", { exact: true }).filter({ visible: true }).first().waitFor({ timeout: 10_000 });
 
       const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
       assert.equal(hasHorizontalOverflow, false, `${viewport.name} layout has horizontal overflow`);
