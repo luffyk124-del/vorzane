@@ -146,6 +146,7 @@ export default function CampScreen() {
           <Pill label={`المستوى ${hero.level}`} icon="star" tone="gold" />
           <Txt style={styles.heroName}>{hero.name}</Txt>
           <Txt style={styles.heroClass}>{CLASS_NAMES[hero.className]}</Txt>
+          <Pill label={CLASS_PASSIVES[hero.className].name} icon="sparkles" tone="jade" />
           <Txt muted style={styles.heroCaption}>{activePet ? `رفيقك: ${activePet.name}` : "استعد لعبور حدود الرماد"}</Txt>
         </View>
         <View style={styles.heroPortrait}>
