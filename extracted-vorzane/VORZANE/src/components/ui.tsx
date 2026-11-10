@@ -20,23 +20,22 @@ export function Txt({ children, style, muted = false, numberOfLines }: PropsWith
   return <Text numberOfLines={numberOfLines} style={[styles.text, fontFamily ? { fontFamily } : undefined, muted && { color: palette.muted }, style]}>{children}</Text>;
 }
 
-const gameMenuItems = [
-  { label: "المخيم", href: "/(tabs)/home" as const, icon: "home-outline" as const },
-  { label: "الرحلات", href: "/(tabs)/expeditions" as const, icon: "compass-outline" as const },
-  { label: "العتاد والسوق", href: "/(tabs)/gear" as const, icon: "shield-outline" as const },
-  { label: "المهام والإنجازات", href: "/(tabs)/quests" as const, icon: "trophy-outline" as const },
-  { label: "الملف الشخصي", href: "/(tabs)/profile" as const, icon: "person-circle-outline" as const },
-  { label: "الأصدقاء", href: "/(tabs)/friends" as const, icon: "people-outline" as const },
-  { label: "الإعدادات", href: "/(tabs)/settings" as const, icon: "settings-outline" as const },
-];
-
 const primaryNavigation = [
   { label: "المخيم", href: "/(tabs)/home" as const, icon: "home-outline" as const },
+  { label: "الشخصية", href: "/(tabs)/character" as const, icon: "person-circle-outline" as const },
   { label: "الرحلات", href: "/(tabs)/expeditions" as const, icon: "compass-outline" as const },
   { label: "العتاد", href: "/(tabs)/gear" as const, icon: "shield-outline" as const },
   { label: "المهام", href: "/(tabs)/quests" as const, icon: "trophy-outline" as const },
-  { label: "البطل", href: "/(tabs)/profile" as const, icon: "person-circle-outline" as const },
 ];
+
+const secondaryNavigation = [
+  { label: "الملف الشخصي", href: "/(tabs)/profile" as const, icon: "person-outline" as const },
+  { label: "الأصدقاء", href: "/(tabs)/friends" as const, icon: "people-outline" as const },
+  { label: "الإشعارات", href: "/(tabs)/notifications" as const, icon: "notifications-outline" as const },
+  { label: "الإعدادات", href: "/(tabs)/settings" as const, icon: "settings-outline" as const },
+];
+
+const gameMenuItems = [...primaryNavigation, ...secondaryNavigation];
 
 export function AppScreen({ children, scroll = true, contentStyle, safe = true }: PropsWithChildren<{ scroll?: boolean; contentStyle?: StyleProp<ViewStyle>; safe?: boolean }>) {
   const pathname = usePathname();
@@ -83,10 +82,10 @@ export function AppScreen({ children, scroll = true, contentStyle, safe = true }
         <Pressable style={styles.drawerScrim} accessibilityRole="button" accessibilityLabel="إغلاق القائمة" onPress={() => setMenuOpen(false)} />
         <View style={styles.drawerPanel}>
           <View style={styles.drawerHeading}>
-            <View><Txt style={styles.drawerWordmark}>VORZANE</Txt><Txt muted style={styles.drawerSubtitle}>بوابتك إلى العالم</Txt></View>
+            <View><Txt style={styles.drawerWordmark}>VORZANE</Txt><Txt muted style={styles.drawerSubtitle}>حسابك وخدماتك</Txt></View>
             <Pressable accessibilityRole="button" accessibilityLabel="إغلاق" onPress={() => setMenuOpen(false)} style={styles.drawerClose}><Icon name="close" size={21} color={palette.text} /></Pressable>
           </View>
-          {gameMenuItems.map((item) => {
+          {secondaryNavigation.map((item) => {
             const active = pathname.endsWith(item.href.split("/").at(-1) ?? "");
             return <Pressable key={item.href} accessibilityRole="button" accessibilityLabel={item.label} onPress={() => { if (!active) router.push(item.href); setMenuOpen(false); }} style={[styles.drawerItem, active && styles.drawerItemActive]}>
               <Icon name={item.icon} size={19} color={active ? palette.ink : palette.jade} />

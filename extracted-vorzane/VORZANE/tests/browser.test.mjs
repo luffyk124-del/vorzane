@@ -324,13 +324,14 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       const profileOverlay = await page.locator("#error-overlay").innerText().catch(() => "");
       assert.deepEqual({ overlay: profileOverlay.trim(), pageErrors, consoleErrors }, { overlay: "", pageErrors: [], consoleErrors: [] }, `${viewport.name} profile runtime diagnostics`);
       await page.getByRole("button", { name: "رجوع" }).click();
+      await page.getByRole("button", { name: "الشخصية", exact: true }).click();
       await page.getByText("تطوير السمات", { exact: true }).filter({ visible: true }).first().waitFor({ timeout: 10_000 });
 
       const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
       assert.equal(hasHorizontalOverflow, false, `${viewport.name} layout has horizontal overflow`);
 
       const campOverlay = await page.locator("#error-overlay").innerText().catch(() => "");
-      assert.deepEqual({ overlay: campOverlay.trim(), pageErrors, consoleErrors }, { overlay: "", pageErrors: [], consoleErrors: [] }, `${viewport.name} camp runtime diagnostics`);
+      assert.deepEqual({ overlay: campOverlay.trim(), pageErrors, consoleErrors }, { overlay: "", pageErrors: [], consoleErrors: [] }, `${viewport.name} character runtime diagnostics`);
       const increaseButtons = page.getByText("+1", { exact: true });
       assert.equal(await increaseButtons.count(), 5);
       await increaseButtons.first().click();
@@ -489,74 +490,30 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
 });
 
 
-test("2D character appearance choices persist in the cloud save and restore after reload", async () => {
+test("character, player profile, and settings have separate responsibilities", async () => {
   const store = { state: saveFixture(), writes: [] };
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
-  const { writes, unexpectedRequests } = await installSupabaseMock(page, { store });
+  const { unexpectedRequests } = await installSupabaseMock(page, { store });
 
   await signInWithMock(page);
+  await page.getByRole("button", { name: "الشخصية", exact: true }).click();
+  await page.getByText("ملف البطل", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByText("ذكر", { exact: true }).waitFor({ state: "visible", timeout: 5_000 });
+  assert.equal(await page.getByRole("radio").count(), 0, "gender and appearance must not be editable after creation");
+
   await page.getByRole("button", { name: "فتح القائمة" }).click();
   await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
-  await page.getByText("مظهر الشخصية", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-  await page.getByLabel("إغلاق القائمة").waitFor({ state: "hidden", timeout: 5_000 });
-  const portrait = page.getByLabel("معاينة الشخصية ثنائية الأبعاد");
-  await portrait.scrollIntoViewIfNeeded();
-  await portrait.waitFor({ state: "visible", timeout: 5_000 });
-  const appearanceOverlay = await page.locator("#error-overlay").innerText().catch(() => "");
-  assert.equal(appearanceOverlay.trim(), "", `2D character page runtime overlay: ${appearanceOverlay}`);
+  await page.getByText("اسم اللاعب", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  assert.equal(await page.getByText("مظهر الشخصية", { exact: true }).count(), 0, "character customization must not live in player profile");
 
-  await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).click();
-  assert.ok(await page.locator("svg").count() > 0, "the 2D SVG portrait must render");
-  await page.getByRole("radio", { name: "درجة اللون 3" }).click();
-  await page.getByRole("radio", { name: "تسريحة الشعر: ضفائر" }).click();
-  await page.getByRole("radio", { name: "لون الشعر: فضي" }).click();
-  await page.getByRole("radio", { name: "ملامح الوجه: نبيل" }).click();
-  assert.equal(await page.locator('[data-testid="adventurer-circlet"]').count(), 1, "adventurer outfit must show its circlet");
-  await page.getByRole("radio", { name: "الملابس: ملكي" }).click();
-  assert.equal(await page.locator('[data-testid="royal-crown"]').count(), 1, "royal outfit must show its crown");
-  assert.equal(await page.locator('[data-testid="adventurer-circlet"]').count(), 0, "royal outfit must replace the adventurer circlet");
-  await page.getByRole("radio", { name: "الملابس: داكن" }).click();
-  assert.equal(await page.locator('[data-testid="shadow-hood"]').count(), 1, "shadow outfit must show its hood");
-  await page.getByRole("radio", { name: "الملابس: ملكي" }).click();
-  assert.equal(await page.locator('[data-testid="royal-crown"]').count(), 1, "switching back must restore the royal crown");
-  await page.getByRole("radio", { name: "بنية الجسم: متين" }).click();
+  await page.getByRole("button", { name: "فتح القائمة" }).click();
+  await page.getByRole("button", { name: "الإعدادات", exact: true }).click();
+  await page.getByText("الموسيقى", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  assert.equal(await page.getByText("الصورة الشخصية", { exact: true }).count(), 0, "profile identity controls must not live in settings");
 
-  const deadline = Date.now() + 10_000;
-  while ((!writes.length
-    || store.state.characterStyle?.gender !== "female"
-    || store.state.characterStyle?.hairstyle !== "braids"
-    || store.state.characterStyle?.hairColor !== "silver"
-    || store.state.characterStyle?.outfit !== "royal"
-    || store.state.characterStyle?.body !== "sturdy") && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  assert.equal(store.state.characterStyle.gender, "female");
-  assert.equal(store.state.characterStyle.appearance, 2);
-  assert.equal(store.state.characterStyle.hairstyle, "braids");
-  assert.equal(store.state.characterStyle.hairColor, "silver");
-  assert.equal(store.state.characterStyle.face, "noble");
-  assert.equal(store.state.characterStyle.outfit, "royal");
-  assert.equal(store.state.characterStyle.body, "sturdy");
+  const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  assert.equal(hasHorizontalOverflow, false, "separated screens must not overflow horizontally");
   assert.deepEqual(unexpectedRequests, []);
-
-  await page.reload();
-  await page.getByRole("button", { name: "فتح القائمة" }).click();
-  await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
-  await page.getByText("مظهر الشخصية", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-  await page.getByLabel("إغلاق القائمة").waitFor({ state: "hidden", timeout: 5_000 });
-  const restoredPortrait = page.getByLabel("معاينة الشخصية ثنائية الأبعاد");
-  await restoredPortrait.scrollIntoViewIfNeeded();
-  await restoredPortrait.waitFor({ state: "visible", timeout: 5_000 });
-  await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "درجة اللون 3" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "تسريحة الشعر: ضفائر" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "لون الشعر: فضي" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "ملامح الوجه: نبيل" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "الملابس: ملكي" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "بنية الجسم: متين" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  assert.ok(await page.locator("svg").count() > 0, "the restored 2D portrait must render");
-  await restoredPortrait.screenshot({ path: "/tmp/vorzane-profile-2d-mobile.png" });
-
   await context.close();
 });
