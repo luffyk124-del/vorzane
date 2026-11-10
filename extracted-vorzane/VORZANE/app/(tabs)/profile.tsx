@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { CharacterPortrait } from "../../src/components/CharacterPortrait";\nimport { ProfileAvatar } from "../../src/components/ProfileAvatar";\nimport { CLASS_NAMES, type ClassId } from "../../src/game/model";
+import { CharacterPortrait } from "../../src/components/CharacterPortrait";
+import { ProfileAvatar } from "../../src/components/ProfileAvatar";
+import { CLASS_NAMES, type ClassId } from "../../src/game/model";
 import { useAuth } from "../../src/contexts/AuthContext";
 import { useGame } from "../../src/contexts/GameContext";
 import { getMyProfile, saveMyProfile } from "../../src/lib/social";
@@ -27,7 +29,12 @@ export default function ProfileScreen() {
     if (!user?.id) return () => { active = false; };
     void getMyProfile(user.id).then((profile) => {
       if (!active) return;
-      if (profile) {\n        setDisplayName(profile.display_name);\n        if (["brand", "Warrior", "Mage", "Assassin", "Archer"].includes(profile.avatar_id)) {\n          update((current) => ({ ...current, profileAvatarId: profile.avatar_id as ClassId | "brand" }));\n        }\n      }
+      if (profile) {
+        setDisplayName(profile.display_name);
+        if (["brand", "Warrior", "Mage", "Assassin", "Archer"].includes(profile.avatar_id)) {
+          update((current) => ({ ...current, profileAvatarId: profile.avatar_id as ClassId | "brand" }));
+        }
+      }
       else if (hero?.name) setDisplayName(hero.name);
     }).catch((error) => {
       if (active) setNotice(error instanceof Error ? error.message : "تعذر تحميل الملف الشخصي.");
@@ -68,7 +75,22 @@ export default function ProfileScreen() {
       </View> : null}
     </Card>
 
-    <SectionTitle title="رمز الملف الشخصي" icon="image-outline" />\n    <Card style={styles.avatarPanel}>\n      <Txt muted style={styles.hint}>هذا الرمز مستقل عن الشخصية والفئة، ويمكن تغييره من هنا فقط.</Txt>\n      <View style={styles.avatarChoices}>\n        {(["brand", "Warrior", "Mage", "Assassin", "Archer"] as const).map((avatar) => {\n          const selected = state.profileAvatarId === avatar;\n          return <Pressable key={avatar} accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={() => update((current) => ({ ...current, profileAvatarId: avatar }))} style={[styles.avatarChoice, selected && styles.avatarChoiceSelected]}>\n            <ProfileAvatar avatarId={avatar} size={48} />\n            <Txt style={styles.avatarLabel}>{avatar === "brand" ? "الختم" : CLASS_NAMES[avatar]}</Txt>\n            {selected ? <Icon name="checkmark-circle" color={palette.gold} size={16} /> : null}\n          </Pressable>;\n        })}\n      </View>\n    </Card>\n\n    <SectionTitle title="اسم اللاعب" icon="person-circle-outline" />
+    <SectionTitle title="رمز الملف الشخصي" icon="image-outline" />
+    <Card style={styles.avatarPanel}>
+      <Txt muted style={styles.hint}>هذا الرمز مستقل عن الشخصية والفئة، ويمكن تغييره من هنا فقط.</Txt>
+      <View style={styles.avatarChoices}>
+        {(["brand", "Warrior", "Mage", "Assassin", "Archer"] as const).map((avatar) => {
+          const selected = state.profileAvatarId === avatar;
+          return <Pressable key={avatar} accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={() => update((current) => ({ ...current, profileAvatarId: avatar }))} style={[styles.avatarChoice, selected && styles.avatarChoiceSelected]}>
+            <ProfileAvatar avatarId={avatar} size={48} />
+            <Txt style={styles.avatarLabel}>{avatar === "brand" ? "الختم" : CLASS_NAMES[avatar]}</Txt>
+            {selected ? <Icon name="checkmark-circle" color={palette.gold} size={16} /> : null}
+          </Pressable>;
+        })}
+      </View>
+    </Card>
+
+    <SectionTitle title="اسم اللاعب" icon="person-circle-outline" />
     <Card style={styles.panel}>
       <TextInput value={displayName} onChangeText={setDisplayName} maxLength={24} placeholder="اسمك الظاهر لجميع اللاعبين" placeholderTextColor={palette.muted} style={styles.input} accessibilityLabel="اسم اللاعب" />
       <Txt muted style={styles.hint}>من 3 إلى 24 حرفًا. هذا الاسم يظهر في البحث وصفحتك العامة.</Txt>
@@ -108,7 +130,12 @@ const styles = StyleSheet.create({
   miniStat: { alignItems: "center", gap: 3 },
   miniValue: { color: palette.gold, fontSize: 15, fontWeight: "900" },
   miniLabel: { fontSize: 9 },
-  avatarPanel: { padding: 13, gap: 10 },\n  avatarChoices: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-around", gap: 8 },\n  avatarChoice: { minWidth: 62, alignItems: "center", gap: 5, padding: 7, borderRadius: 12, borderWidth: 1, borderColor: "transparent" },\n  avatarChoiceSelected: { borderColor: palette.gold, backgroundColor: "rgba(230,199,124,0.08)" },\n  avatarLabel: { fontSize: 9, textAlign: "center" },\n  panel: { gap: 11, backgroundColor: "#13242C" },
+  avatarPanel: { padding: 13, gap: 10 },
+  avatarChoices: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-around", gap: 8 },
+  avatarChoice: { minWidth: 62, alignItems: "center", gap: 5, padding: 7, borderRadius: 12, borderWidth: 1, borderColor: "transparent" },
+  avatarChoiceSelected: { borderColor: palette.gold, backgroundColor: "rgba(230,199,124,0.08)" },
+  avatarLabel: { fontSize: 9, textAlign: "center" },
+  panel: { gap: 11, backgroundColor: "#13242C" },
   input: { minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 12, color: palette.text, textAlign: "right", backgroundColor: "#0B171D" },
   publicNotice: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 5 },
   publicNoticeText: { flex: 1, fontSize: 11, color: palette.jade, textAlign: "right" },
