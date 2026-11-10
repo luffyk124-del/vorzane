@@ -431,6 +431,31 @@ test("offline progress conflict resolves and restores in a clean second context"
   await secondContext.close();
 });
 
+test("a remotely deleted save requires an explicit choice before local data can be restored", async () => {
+  const store = { state: saveFixture(), writes: [] };
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  const { writes } = await installSupabaseMock(page, { store });
+
+  await signInWithMock(page);
+  // Simulate another session resetting/deleting the cloud row after this client read it.
+  store.state = null;
+  store.updatedAt = null;
+
+  await page.getByText("+1", { exact: true }).first().click();
+  await page.getByText("توجد نسختان لهذا اللاعب", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("لم نعثر على حفظ سحابي لهذا الحساب.", { exact: false }).waitFor({ timeout: 5_000 });
+
+  assert.equal(store.state, null, "a missing cloud row must not be recreated automatically from stale local data");
+  assert.equal(writes.length, 0, "no cloud write is allowed before the player chooses");
+
+  await page.getByRole("button", { name: "ابدأ بحفظ سحابي جديد" }).click();
+  await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
+  assert.ok(store.state, "the explicit new-save choice should create a fresh cloud row");
+  assert.equal(writes.length, 1);
+  await browserContext.close();
+});
+
 test("guest sign-in displays an Arabic message when the network fails", async () => {
   const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await browserContext.newPage();
