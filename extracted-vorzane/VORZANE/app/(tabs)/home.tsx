@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Image, ImageBackground, Pressable, StyleSheet, View } from "react-native";
+import { ImageBackground, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, GradientCard, Icon, InputField, Meter, Pill, SectionTitle, StatCard, Txt } from "../../src/components/ui";
 import { CLASS_ICON, findExpedition, PETS, STARTER_ITEMS } from "../../src/game/catalog";
@@ -15,7 +15,6 @@ import { createItemInstance } from "../../src/game/dungeonItems";
 import { Character2DViewer } from "../../src/components/Character2DViewer";
 
 const CLASSES: ClassId[] = ["Warrior", "Mage", "Assassin", "Archer"];
-const APPEARANCE_COLORS = ["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"];
 const STAT_LABELS: Record<StatKey, string> = { str: "القوة", def: "الدفاع", vit: "الحيوية", agi: "الرشاقة", luck: "الحظ" };
 const STAT_KEYS: StatKey[] = ["str", "def", "vit", "agi", "luck"];
 const formatTime = (milliseconds: number) => {
