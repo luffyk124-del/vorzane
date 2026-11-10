@@ -28,6 +28,8 @@ export default function GearScreen() {
   const { state, update } = useGame();
   const [tab, setTab] = useState<Tab>("equipment");
   const [shopCategory, setShopCategory] = useState<ShopCategory>("all");
+  const [inventoryCategory, setInventoryCategory] = useState<InventoryCategory>("all");
+  const [inventorySort, setInventorySort] = useState<InventorySort>("power");
   const [notice, setNotice] = useState("");
   const stats = combatStats(state);
   const heroLevel = state.hero?.level ?? 0;
@@ -204,7 +206,8 @@ const styles = StyleSheet.create({
   shopFilterActive: { backgroundColor: palette.gold, borderColor: palette.gold },
   shopFilterText: { color: palette.muted, fontSize: 11, fontWeight: "800" },
   shopFilterTextActive: { color: palette.ink },
-  sortChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: palette.line, backgroundColor: "rgba(255,255,255,0.025)" },\n  sortChipActive: { borderColor: palette.jade, backgroundColor: "rgba(98,216,195,0.10)" },\n  sortChipText: { color: palette.muted, fontSize: 10, fontWeight: "800" },\n  sortChipTextActive: { color: palette.jade },\n  comparisonText: { color: palette.jade, fontSize: 9, lineHeight: 15, textAlign: "right", marginTop: 3 },
+  sortChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: palette.line, backgroundColor: "rgba(255,255,255,0.025)" },
+  sortChipActive: { borderColor: palette.jade, backgroundColor: "rgba(98,216,195,0.10)" },\n  sortChipText: { color: palette.muted, fontSize: 10, fontWeight: "800" },\n  sortChipTextActive: { color: palette.jade },\n  comparisonText: { color: palette.jade, fontSize: 9, lineHeight: 15, textAlign: "right", marginTop: 3 },
   tab: { flex: 1, minHeight: 43, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 4 },
   tabActive: { backgroundColor: palette.gold },
   tabText: { fontSize: 10, fontWeight: "800", color: palette.muted },
