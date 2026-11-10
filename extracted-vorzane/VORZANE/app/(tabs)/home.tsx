@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { CharacterPortrait } from "../../src/components/CharacterPortrait";
 import { useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, GradientCard, Icon, InputField, Meter, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { CLASS_ICON, findExpedition, PETS, STARTER_ITEMS } from "../../src/game/catalog";
@@ -8,7 +9,7 @@ import { combatStats, createBattleSequence, createHeroState, type BattleMode, ty
 import { CLASS_DESCRIPTIONS, CLASS_NAMES, CLASS_PASSIVES, type ClassId } from "../../src/game/model";
 import { useGame } from "../../src/contexts/GameContext";
 import { palette } from "../../src/theme";
-import { ProfileAvatar } from "../../src/components/ProfileAvatar";
+
 import { BattleArena } from "../../src/components/BattleArena";
 import { createItemInstance } from "../../src/game/dungeonItems";
 
@@ -62,6 +63,18 @@ export default function CampScreen() {
       <BrandMark size={58} />
       <Txt style={styles.createTitle}>اختر من يسير في الظل</Txt>
       <Txt muted style={styles.createCopy}>اصنع شخصيتك الأولى؛ يبدأ كل بطل برحلة مختلفة.</Txt>
+      <SectionTitle title="اختر شخصيتك" icon="person-circle-outline" />
+      <View style={styles.characterChoiceRow}>
+        {([{ id: "male", label: "البطل" }, { id: "female", label: "البطلة" }] as const).map((option) => {
+          const selected = selectedGender === option.id;
+          return <Pressable key={option.id} onPress={() => setSelectedGender(option.id)} accessibilityRole="radio" accessibilityState={{ checked: selected }} style={[styles.characterChoice, selected && styles.characterChoiceActive]}>
+            <CharacterPortrait gender={option.id} width={126} height={174} selected={selected} />
+            <Txt style={[styles.characterChoiceLabel, selected && styles.characterChoiceLabelActive]}>{option.label}</Txt>
+            {selected ? <Icon name="checkmark-circle" size={18} color={palette.gold} /> : <View style={styles.characterCheckSpace} />}
+          </Pressable>;
+        })}
+      </View>
+      <SectionTitle title="اختر فئتك" icon="shield-outline" />
       <View style={styles.classGrid}>
         {CLASSES.map((classId) => {
           const active = classId === selectedClass;
@@ -76,13 +89,6 @@ export default function CampScreen() {
             </View>
           </Pressable>;
         })}
-      </View>
-      <SectionTitle title="اختيار الشخصية" icon="person-circle-outline" />
-      <View style={styles.choiceRow}>
-        {([{ id: "male", label: "ذكر", icon: "male" }, { id: "female", label: "أنثى", icon: "female" }] as const).map((option) => <Pressable key={option.id} onPress={() => setSelectedGender(option.id)} style={[styles.choiceButton, selectedGender === option.id && styles.choiceButtonActive]}>
-          <Icon name={option.icon as never} size={18} color={selectedGender === option.id ? palette.ink : palette.jade} />
-          <Txt style={[styles.choiceLabel, selectedGender === option.id && styles.choiceLabelActive]}>{option.label}</Txt>
-        </Pressable>)}
       </View>
       <InputField label="اسم البطل" value={heroName} onChangeText={setHeroName} placeholder="اسمٌ يليق بالأساطير" icon="person-outline" />
       <AppButton label="ابدأ الرحلة" icon="arrow-back" onPress={createHero} disabled={heroName.trim().length < 2} />
@@ -104,7 +110,7 @@ export default function CampScreen() {
       </View>
       <View style={styles.brandInline}>
         <Pressable onPress={() => router.push("/profile")} accessibilityRole="button" accessibilityLabel="فتح الملف الشخصي" style={styles.profileButton}>
-          <ProfileAvatar avatarId={state.profileAvatarId} size={36} />
+          <CharacterPortrait gender={state.characterStyle.gender} width={36} height={42} compact />
         </Pressable>
         <BrandMark size={32} />
         <Txt style={styles.wordmark}>VORZANE</Txt>
@@ -123,13 +129,7 @@ export default function CampScreen() {
           <Pill label={CLASS_PASSIVES[hero.className].name} icon="sparkles" tone="jade" />
           <Txt muted style={styles.heroCaption}>{activePet ? `رفيقك: ${activePet.name}` : "استعد لعبور حدود الرماد"}</Txt>
         </View>
-        <View style={styles.heroPortrait}>
-          <Icon name={CLASS_ICON[hero.className] as never} size={48} color={palette.gold} />
-          <View style={styles.genderBadge}>
-            <Icon name={state.characterStyle.gender === "male" ? "male" : "female"} size={16} color={palette.jade} />
-            <Txt style={styles.genderBadgeText}>{state.characterStyle.gender === "male" ? "ذكر" : "أنثى"}</Txt>
-          </View>
-        </View>
+        <CharacterPortrait gender={state.characterStyle.gender} width={104} height={132} />
       </View>
       <View style={styles.xpBlock}><View style={styles.xpMeta}><Txt muted style={styles.xpLabel}>الخبرة</Txt><Txt style={styles.xpValue}>{hero.exp} / {stats.xpNeeded}</Txt></View><Meter value={hero.exp} max={stats.xpNeeded} color={palette.gold} height={8} /></View>
       <View style={styles.powerRow}><Pill label={`قوة ${stats.power}`} icon="flash" tone="jade" /><Txt muted style={styles.saveLine}>{saveStatus}</Txt></View>
@@ -220,6 +220,12 @@ const styles = StyleSheet.create({
   choiceLabelActive: { color: palette.ink },
   createTitle: { fontSize: 25, fontWeight: "900", marginTop: 2 },
   createCopy: { fontSize: 14, lineHeight: 22, marginTop: -8 },
+  characterChoiceRow: { flexDirection: "row", justifyContent: "center", gap: 14 },
+  characterChoice: { width: "47%", alignItems: "center", gap: 8, padding: 9, borderRadius: 18, borderWidth: 1, borderColor: palette.line, backgroundColor: "#0E1A22" },
+  characterChoiceActive: { borderColor: palette.gold, backgroundColor: "rgba(230,199,124,0.07)" },
+  characterChoiceLabel: { color: palette.muted, fontSize: 13, fontWeight: "900" },
+  characterChoiceLabelActive: { color: palette.gold },
+  characterCheckSpace: { height: 18 },
   classGrid: { flexDirection: "row", flexWrap: "wrap", gap: 9 },
   classCard: { width: "48%", minHeight: 116, borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden" },
   classCardActive: { borderColor: palette.gold },
