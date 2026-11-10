@@ -81,6 +81,15 @@ export const BATTLE_ENEMIES: Record<BattleMode, EnemyBlueprint[]> = {
   ],
 };
 
+export type StoryMetric = "wins" | "dungeonFloors" | "towerFloors" | "expeditions" | "level";
+export const STORY_CHAPTERS = [
+  { id: 1, title: "همس تحت الرماد", chapter: "الفصل الأول", narrative: "استيقظت الهاوية بعد قرون من الصمت. أثرٌ غامض يقودك إلى أول حارس.", objective: "حقق أول انتصار في القتال.", metric: "wins", target: 1, rewardGold: 120, rewardXP: 60 },
+  { id: 2, title: "أختام الممر", chapter: "الفصل الثاني", narrative: "تتصدع الأختام مع كل طابق تجتازه، ويقترب صوتٌ من قلب الزنزانة.", objective: "اجتز ثلاثة طوابق في زنزانة الهاوية.", metric: "dungeonFloors", target: 3, rewardGold: 240, rewardXP: 120 },
+  { id: 3, title: "برج الحراس", chapter: "الفصل الثالث", narrative: "يحرس البرج خريطةً منسية. لن يمنحك الحراس سرّها بسهولة.", objective: "اهزم حارسيْن في برج الحراس.", metric: "towerFloors", target: 2, rewardGold: 360, rewardXP: 180 },
+  { id: 4, title: "خرائط الغياب", chapter: "الفصل الرابع", narrative: "تقودك الخرائط إلى أطراف العالم، حيث تختبئ بقايا مملكة الرماد.", objective: "أكمل رحلتين استكشافيتين.", metric: "expeditions", target: 2, rewardGold: 520, rewardXP: 260 },
+  { id: 5, title: "قلب الكسوف", chapter: "الفصل الخامس", narrative: "اكتملت العلامات. حان وقت مواجهة القوة التي أيقظت الهاوية.", objective: "بلغ المستوى العاشر واستعد للمواجهة الأخيرة.", metric: "level", target: 10, rewardGold: 900, rewardXP: 450 },
+] as const;
+
 export type QuestMetric = "wins" | "level" | "caveWins" | "dungeonWins" | "towerWins" | "hardWins" | "expeditions" | "equipped";
 export type QuestCategory = "قتال" | "الزنزانة" | "البرج" | "الرحلات" | "العتاد" | "تطور";
 export const DUNGEON_ITEM_POOL_SIZE = 8 * 6 * 6;
