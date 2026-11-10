@@ -13,6 +13,7 @@ export default function TabLayout() {
 
   return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.ink }, animation: "slide_from_right" }}>
     <Stack.Screen name="home" />
+    <Stack.Screen name="character" />
     <Stack.Screen name="expeditions" />
     <Stack.Screen name="gear" />
     <Stack.Screen name="quests" />

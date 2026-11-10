@@ -1,21 +1,12 @@
 import { useState } from "react";
-import { Modal, Platform, Pressable, Share, StyleSheet, Switch, View } from "react-native";
+import { Modal, Platform, Share, StyleSheet, Switch, View } from "react-native";
 import Slider from "@react-native-community/slider";
 import * as DocumentPicker from "expo-document-picker";
 import { AppButton, AppScreen, Card, Icon, InputField, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { useAuth } from "../../src/contexts/AuthContext";
 import { useGame } from "../../src/contexts/GameContext";
-import { CLASS_NAMES, normalizeGameState } from "../../src/game/model";
+import { normalizeGameState } from "../../src/game/model";
 import { palette } from "../../src/theme";
-import { ProfileAvatar } from "../../src/components/ProfileAvatar";
-
-const PROFILE_AVATAR_OPTIONS = [
-  { id: "brand", label: "ختم VORZANE" },
-  { id: "Warrior", label: CLASS_NAMES.Warrior },
-  { id: "Mage", label: CLASS_NAMES.Mage },
-  { id: "Assassin", label: CLASS_NAMES.Assassin },
-  { id: "Archer", label: CLASS_NAMES.Archer },
-] as const;
 
 export default function SettingsScreen() {
   const auth = useAuth();
@@ -27,19 +18,10 @@ export default function SettingsScreen() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [pendingImport, setPendingImport] = useState<ReturnType<typeof normalizeGameState>>(null);
   const [confirmImport, setConfirmImport] = useState(false);
-  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const isGuest = !!auth.user?.is_anonymous;
   const identity = auth.user?.email ?? (isGuest ? "حساب ضيف" : "غير مسجّل");
-  const canEditProfile = game.status === "ready" || game.status === "offline";
 
   const setMusic = (patch: Partial<typeof game.state.settings>) => game.update((current) => ({ ...current, settings: { ...current.settings, ...patch } }));
-  const chooseProfileAvatar = (avatarId: (typeof PROFILE_AVATAR_OPTIONS)[number]["id"]) => {
-    if (!canEditProfile) return;
-    game.update((current) => ({ ...current, profileAvatarId: avatarId }));
-    setAvatarPickerOpen(false);
-    setMessage("تم تغيير الصورة الشخصية؛ سيُحفظ اختيارك مع تقدمك.");
-  };
-
   const linkEmail = async () => {
     setMessage("");
     if (!email.trim() || password.length < 8) { setMessage("أدخل بريدًا صالحًا وكلمة مرور من 8 أحرف على الأقل."); return; }
@@ -115,19 +97,7 @@ export default function SettingsScreen() {
   };
 
   return <AppScreen>
-    <PageTitle eyebrow="تحكم بتجربتك" title="الإعدادات" subtitle="صورتك الشخصية، الصوت، الحساب، والنسخ الاحتياطي لتقدمك." trailing={<Pill label={identity} icon={isGuest ? "person-outline" : "person-circle-outline"} tone={isGuest ? "gold" : "jade"} />} />
-
-    <SectionTitle title="الصورة الشخصية" icon="person-circle-outline" />
-    <Card style={styles.avatarCard}>
-      <View style={styles.avatarPreviewRow}>
-        <ProfileAvatar avatarId={game.state.profileAvatarId} size={70} />
-        <View style={{ flex: 1, alignItems: "flex-end", gap: 4 }}>
-          <Txt style={styles.settingTitle}>صورتك في VORZANE</Txt>
-          <Txt muted style={styles.settingSub}>مستقلة عن صورة البطل وفئته، وتُحفظ مع تقدمك.</Txt>
-        </View>
-      </View>
-      <AppButton label="تغيير الصورة الشخصية" icon="image-outline" variant="secondary" onPress={() => setAvatarPickerOpen(true)} disabled={!canEditProfile} />
-    </Card>
+    <PageTitle eyebrow="تحكم بتجربتك" title="الإعدادات" subtitle="الصوت، الحساب، والنسخ الاحتياطي لتقدمك." trailing={<Pill label={identity} icon={isGuest ? "person-outline" : "person-circle-outline"} tone={isGuest ? "gold" : "jade"} />} />
 
     <SectionTitle title="الموسيقى" icon="musical-notes" />
     <Card style={styles.musicCard}>
@@ -189,45 +159,10 @@ export default function SettingsScreen() {
     <Modal transparent visible={confirmImport} animationType="fade" onRequestClose={() => setConfirmImport(false)}>
       <View style={styles.modalBackdrop}><Card style={styles.confirmCard}><View style={styles.modalIcon}><Icon name="cloud-upload-outline" color={palette.jade} size={24} /></View><Txt style={styles.modalTitle}>استبدال تقدم هذا الحساب؟</Txt><Txt muted style={styles.modalCopy}>سيُرفع ملف الحفظ المختار لحساب اللاعب الحالي، مع بقاء الحفظ المحلي القديم محفوظًا كنسخة منفصلة.</Txt><AppButton label="استيراد ومزامنة" icon="checkmark" variant="jade" onPress={applyImport} disabled={busy} /><AppButton label="إلغاء" variant="secondary" onPress={() => { setConfirmImport(false); setPendingImport(null); }} disabled={busy} /></Card></View>
     </Modal>
-
-    <Modal transparent visible={avatarPickerOpen} animationType="fade" onRequestClose={() => setAvatarPickerOpen(false)}>
-      <View style={styles.modalBackdrop}>
-        <Card style={styles.confirmCard}>
-          <View style={styles.modalIcon}><Icon name="person-circle-outline" color={palette.jade} size={24} /></View>
-          <Txt style={styles.modalTitle}>اختر صورتك الشخصية</Txt>
-          <Txt muted style={styles.modalCopy}>هذا الاختيار يغيّر صورة حساب اللاعب فقط؛ صورة البطل تظل مرتبطة بفئته.</Txt>
-          <View style={styles.avatarOptions}>
-            {PROFILE_AVATAR_OPTIONS.map(({ id, label }) => {
-              const selected = game.state.profileAvatarId === id;
-              return <Pressable
-                key={id}
-                onPress={() => chooseProfileAvatar(id)}
-                accessibilityRole="radio"
-                accessibilityLabel={`الصورة الشخصية: ${label}`}
-                accessibilityState={{ checked: selected }}
-                style={({ pressed }) => [styles.avatarOption, selected && styles.avatarOptionSelected, pressed && { opacity: 0.78 }]}
-              >
-                <ProfileAvatar avatarId={id} size={60} />
-                <Txt style={styles.avatarOptionLabel}>{label}</Txt>
-                {selected ? <Icon name="checkmark-circle" color={palette.jade} size={18} /> : <View style={styles.avatarCheckPlaceholder} />}
-              </Pressable>;
-            })}
-          </View>
-          <AppButton label="إغلاق" variant="secondary" onPress={() => setAvatarPickerOpen(false)} />
-        </Card>
-      </View>
-    </Modal>
   </AppScreen>;
 }
 
 const styles = StyleSheet.create({
-  avatarCard: { gap: 13 },
-  avatarPreviewRow: { flexDirection: "row", alignItems: "center", gap: 14 },
-  avatarOptions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 9, marginVertical: 4 },
-  avatarOption: { width: "30%", minWidth: 76, alignItems: "center", justifyContent: "center", gap: 7, padding: 9, borderRadius: 16, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.midnight },
-  avatarOptionSelected: { borderColor: palette.jade, backgroundColor: "rgba(100,217,197,0.09)" },
-  avatarOptionLabel: { fontSize: 11, fontWeight: "800", textAlign: "center" },
-  avatarCheckPlaceholder: { width: 18, height: 18 },
   musicCard: { gap: 12 },
   settingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   settingCopy: { flex: 1, alignItems: "flex-end", gap: 4 },

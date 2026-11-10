@@ -1,22 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { Image, ImageBackground, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
-import { AppButton, AppScreen, Card, GradientCard, Icon, InputField, Meter, Pill, SectionTitle, StatCard, Txt } from "../../src/components/ui";
+import { AppButton, AppScreen, Card, GradientCard, Icon, InputField, Meter, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { CLASS_ICON, findExpedition, PETS, STARTER_ITEMS } from "../../src/game/catalog";
 import { BrandMark } from "../../src/components/BrandMark";
-import { allocateStatPoint, combatStats, createBattleSequence, createHeroState, type BattleMode, type BattleResult, type BattleSequence } from "../../src/game/engine";
-import { CLASS_DESCRIPTIONS, CLASS_NAMES, CLASS_PASSIVES, type ClassId, type StatKey } from "../../src/game/model";
+import { combatStats, createBattleSequence, createHeroState, type BattleMode, type BattleResult, type BattleSequence } from "../../src/game/engine";
+import { CLASS_DESCRIPTIONS, CLASS_NAMES, CLASS_PASSIVES, type ClassId } from "../../src/game/model";
 import { useGame } from "../../src/contexts/GameContext";
 import { palette } from "../../src/theme";
-import { CLASS_ART } from "../../src/game/art";
 import { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { BattleArena } from "../../src/components/BattleArena";
 import { createItemInstance } from "../../src/game/dungeonItems";
 
 const CLASSES: ClassId[] = ["Warrior", "Mage", "Assassin", "Archer"];
-const APPEARANCE_COLORS = ["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"];
-const STAT_LABELS: Record<StatKey, string> = { str: "القوة", def: "الدفاع", vit: "الحيوية", agi: "الرشاقة", luck: "الحظ" };
-const STAT_KEYS: StatKey[] = ["str", "def", "vit", "agi", "luck"];
 const formatTime = (milliseconds: number) => {
   const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
   const hours = Math.floor(seconds / 3600);
@@ -31,7 +27,6 @@ export default function CampScreen() {
   const [heroName, setHeroName] = useState("");
   const [selectedClass, setSelectedClass] = useState<ClassId>("Warrior");
   const [selectedGender, setSelectedGender] = useState<"male" | "female">("male");
-  const [selectedAppearance, setSelectedAppearance] = useState<0 | 1 | 2 | 3>(0);
   const [battleSequence, setBattleSequence] = useState<BattleSequence | null>(null);
   const [now, setNow] = useState(Date.now());
   const hero = state.hero;
@@ -45,7 +40,7 @@ export default function CampScreen() {
   const createHero = () => {
     if (heroName.trim().length < 2) return;
     const next = createHeroState(heroName, selectedClass);
-    next.characterStyle = { ...next.characterStyle, gender: selectedGender, appearance: selectedAppearance };
+    next.characterStyle = { ...next.characterStyle, gender: selectedGender };
     const firstSword = createItemInstance(STARTER_ITEMS[0], "starter");
     const firstBoots = createItemInstance(STARTER_ITEMS[3], "starter");
     next.equipped[firstSword.slot] = firstSword;
@@ -71,43 +66,22 @@ export default function CampScreen() {
         {CLASSES.map((classId) => {
           const active = classId === selectedClass;
           return <Pressable key={classId} onPress={() => setSelectedClass(classId)} style={[styles.classCard, active && styles.classCardActive]}>
-            <ImageBackground source={{ uri: CLASS_ART[classId] }} resizeMode="cover" style={styles.classCardArt} imageStyle={styles.classCardImage}>
-              <View pointerEvents="none" style={styles.classCardShade} />
+            <View style={styles.classCardArt}>
               <View style={styles.classCardContent}>
                 <View style={[styles.classIcon, active && styles.classIconActive]}><Icon name={CLASS_ICON[classId] as never} size={22} color={active ? palette.ink : palette.jade} /></View>
                 <Txt style={[styles.className, active && { color: palette.gold }]}>{CLASS_NAMES[classId]}</Txt>
                 <Txt muted style={styles.classDesc}>{CLASS_DESCRIPTIONS[classId]}</Txt>
                 <Txt style={styles.classPassive}>{CLASS_PASSIVES[classId].name} • {CLASS_PASSIVES[classId].description}</Txt>
               </View>
-            </ImageBackground>
+            </View>
           </Pressable>;
         })}
-      </View>
-      <View style={styles.creatorPreview}>
-        <View style={[styles.creatorPortrait, { borderColor: APPEARANCE_COLORS[selectedAppearance] }]}>
-          <Image source={{ uri: CLASS_ART[selectedClass] }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: APPEARANCE_COLORS[selectedAppearance], opacity: 0.20 }]} />
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: selectedGender === "male" ? "#80B7D4" : "#D99AC4", opacity: 0.08 }]} />
-          <View style={styles.previewGender}><Txt style={styles.previewGenderText}>{selectedGender === "male" ? "ذكر" : "أنثى"}</Txt></View>
-        </View>
-        <View style={styles.creatorPreviewText}>
-          <Txt style={styles.creatorPreviewTitle}>معاينة شخصيتك</Txt>
-          <Txt muted style={styles.creatorPreviewCopy}>مظهر ثنائي الأبعاد قابل للتخصيص، ويمكنك تغييره لاحقًا.</Txt>
-        </View>
       </View>
       <SectionTitle title="اختيار الشخصية" icon="person-circle-outline" />
       <View style={styles.choiceRow}>
         {([{ id: "male", label: "ذكر", icon: "male" }, { id: "female", label: "أنثى", icon: "female" }] as const).map((option) => <Pressable key={option.id} onPress={() => setSelectedGender(option.id)} style={[styles.choiceButton, selectedGender === option.id && styles.choiceButtonActive]}>
           <Icon name={option.icon as never} size={18} color={selectedGender === option.id ? palette.ink : palette.jade} />
           <Txt style={[styles.choiceLabel, selectedGender === option.id && styles.choiceLabelActive]}>{option.label}</Txt>
-        </Pressable>)}
-      </View>
-      <Txt style={styles.appearanceHeading}>المظهر</Txt>
-      <View style={styles.appearanceRow}>
-        {APPEARANCE_COLORS.map((color, index) => <Pressable key={index} onPress={() => setSelectedAppearance(index as 0 | 1 | 2 | 3)} style={[styles.appearanceOption, { borderColor: selectedAppearance === index ? palette.gold : palette.line }]}>
-          <View style={[styles.appearanceSwatch, { backgroundColor: color }]} />
-          <Txt style={styles.appearanceLabel}>مظهر {index + 1}</Txt>
-          {selectedAppearance === index ? <Icon name="checkmark-circle" size={15} color={palette.gold} /> : null}
         </Pressable>)}
       </View>
       <InputField label="اسم البطل" value={heroName} onChangeText={setHeroName} placeholder="اسمٌ يليق بالأساطير" icon="person-outline" />
@@ -129,7 +103,7 @@ export default function CampScreen() {
         <Pill label={state.gems.toLocaleString("ar-EG")} icon="diamond" tone="jade" />
       </View>
       <View style={styles.brandInline}>
-        <Pressable onPress={() => router.push("/settings")} accessibilityRole="button" accessibilityLabel="فتح إعدادات الصورة الشخصية" style={styles.profileButton}>
+        <Pressable onPress={() => router.push("/profile")} accessibilityRole="button" accessibilityLabel="فتح الملف الشخصي" style={styles.profileButton}>
           <ProfileAvatar avatarId={state.profileAvatarId} size={36} />
         </Pressable>
         <BrandMark size={32} />
@@ -150,44 +124,16 @@ export default function CampScreen() {
           <Txt muted style={styles.heroCaption}>{activePet ? `رفيقك: ${activePet.name}` : "استعد لعبور حدود الرماد"}</Txt>
         </View>
         <View style={styles.heroPortrait}>
-          <Image source={{ uri: CLASS_ART[hero.className] }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityLabel={CLASS_NAMES[hero.className]} />
-          <View pointerEvents="none" style={[styles.heroPortraitShade, { backgroundColor: APPEARANCE_COLORS[state.characterStyle.appearance], opacity: 0.18 }]} />
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: state.characterStyle.gender === "male" ? "#80B7D4" : "#D99AC4", opacity: 0.08 }]} />
-          <View style={styles.portraitAura} />
+          <Icon name={CLASS_ICON[hero.className] as never} size={48} color={palette.gold} />
+          <View style={styles.genderBadge}>
+            <Icon name={state.characterStyle.gender === "male" ? "male" : "female"} size={16} color={palette.jade} />
+            <Txt style={styles.genderBadgeText}>{state.characterStyle.gender === "male" ? "ذكر" : "أنثى"}</Txt>
+          </View>
         </View>
       </View>
       <View style={styles.xpBlock}><View style={styles.xpMeta}><Txt muted style={styles.xpLabel}>الخبرة</Txt><Txt style={styles.xpValue}>{hero.exp} / {stats.xpNeeded}</Txt></View><Meter value={hero.exp} max={stats.xpNeeded} color={palette.gold} height={8} /></View>
       <View style={styles.powerRow}><Pill label={`قوة ${stats.power}`} icon="flash" tone="jade" /><Txt muted style={styles.saveLine}>{saveStatus}</Txt></View>
     </GradientCard>
-
-    <View style={styles.statsRow}>
-      <StatCard label="الصحة" value={stats.maxHP} icon="heart" color={palette.red} />
-      <StatCard label="الهجوم" value={stats.attack} icon="flash" color={palette.gold} />
-      <StatCard label="الدفاع" value={stats.defense} icon="shield-checkmark" color={palette.blue} />
-      <StatCard label="الانتصارات" value={state.wins} icon="trophy" color={palette.jade} />
-    </View>
-
-    {hero.statPoints > 0 ? <>
-      <SectionTitle title="تطوير السمات" icon="bar-chart-outline" action={<Pill label={`${hero.statPoints} نقطة متاحة`} tone="gold" />} />
-      <Card style={styles.statAllocation}>
-        {STAT_KEYS.map((key) => <View key={key} style={styles.statAllocationRow}>
-          <AppButton
-            label="+1"
-            icon="add-circle-outline"
-            variant="jade"
-            small
-            disabled={hero.stats[key] >= 999_999}
-            onPress={() => update((current) => allocateStatPoint(current, key).state)}
-            style={styles.allocateButton}
-          />
-          <View style={styles.statAllocationValue}>
-            <Txt style={styles.statAllocationNumber}>{hero.stats[key]}</Txt>
-            <Txt muted style={styles.statAllocationLabel}>{STAT_LABELS[key]}</Txt>
-          </View>
-        </View>)}
-        
-      </Card>
-    </> : null}
 
     <SectionTitle title="زنزانتك ومعاركك" icon="flash-outline" action={<Pressable onPress={() => router.push("/quests")}><Txt style={styles.actionLink}>مهامك ←</Txt></Pressable>} />
     <Card style={styles.battleCard}>
@@ -236,23 +182,15 @@ const styles = StyleSheet.create({
   heroName: { fontSize: 25, fontWeight: "900", marginTop: 9 },
   heroClass: { fontSize: 14, color: palette.jade, fontWeight: "800", marginTop: 1 },
   heroCaption: { fontSize: 12, marginTop: 5 },
-  heroPortrait: { width: 105, height: 124, borderRadius: 36, backgroundColor: "rgba(230,199,124,0.08)", borderWidth: 1, borderColor: "rgba(230,199,124,0.29)", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  heroPortraitShade: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(8,12,18,0.14)" },
-  portraitAura: { position: "absolute", bottom: -24, width: 116, height: 47, borderRadius: 60, backgroundColor: "rgba(98,216,195,0.12)" },
+  heroPortrait: { width: 105, height: 124, borderRadius: 30, backgroundColor: "rgba(230,199,124,0.08)", borderWidth: 1, borderColor: "rgba(230,199,124,0.29)", alignItems: "center", justifyContent: "center", gap: 10 },
+  genderBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12, backgroundColor: "rgba(8,12,18,0.72)" },
+  genderBadgeText: { color: palette.text, fontSize: 10, fontWeight: "900" },
   xpBlock: { gap: 7, marginTop: 16 },
   xpMeta: { flexDirection: "row", justifyContent: "space-between" },
   xpLabel: { fontSize: 11 },
   xpValue: { fontSize: 11, color: palette.gold, fontWeight: "700" },
   powerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
   saveLine: { fontSize: 10, maxWidth: "62%" },
-  statsRow: { flexDirection: "row", gap: 8 },
-  statAllocation: { gap: 7 },
-  statAllocationRow: { minHeight: 45, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: palette.line, paddingVertical: 4 },
-  allocateButton: { width: 82 },
-  statAllocationValue: { flexDirection: "row", alignItems: "center", gap: 9 },
-  statAllocationNumber: { minWidth: 34, color: palette.gold, fontSize: 15, fontWeight: "900", textAlign: "center" },
-  statAllocationLabel: { fontSize: 13, fontWeight: "800" },
-  statAllocationNote: { fontSize: 11, lineHeight: 17, textAlign: "right" },
   battleCard: { gap: 11 },
   battleIntro: { fontSize: 13 },
   battleButtons: { flexDirection: "row", gap: 8 },
@@ -275,31 +213,17 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 10 },
   summaryDivider: { width: 1, height: 28, backgroundColor: palette.line },
   createHero: { gap: 15, marginTop: 8 },
-  creatorPreview: { flexDirection: "row", alignItems: "center", gap: 14, padding: 12, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.035)" },
-  creatorPortrait: { width: 92, height: 112, borderWidth: 2, borderRadius: 22, overflow: "hidden", backgroundColor: palette.panelRaised },
-  previewGender: { position: "absolute", bottom: 6, right: 6, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, backgroundColor: "rgba(8,12,18,0.82)" },
-  previewGenderText: { fontSize: 10, fontWeight: "900", color: palette.text },
-  creatorPreviewText: { flex: 1, alignItems: "flex-end", gap: 5 },
-  creatorPreviewTitle: { fontSize: 15, fontWeight: "900" },
-  creatorPreviewCopy: { fontSize: 11, lineHeight: 17, textAlign: "right" },
   choiceRow: { flexDirection: "row", gap: 9 },
   choiceButton: { flex: 1, minHeight: 48, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, borderWidth: 1, borderColor: palette.line, borderRadius: 13, backgroundColor: palette.panel },
   choiceButtonActive: { backgroundColor: palette.gold, borderColor: palette.gold },
   choiceLabel: { color: palette.text, fontSize: 13, fontWeight: "800" },
   choiceLabelActive: { color: palette.ink },
-  appearanceHeading: { fontSize: 12, color: palette.muted, fontWeight: "800", textAlign: "right" },
-  appearanceRow: { flexDirection: "row", gap: 7 },
-  appearanceOption: { flex: 1, minHeight: 78, alignItems: "center", justifyContent: "center", gap: 5, borderWidth: 1, borderRadius: 12, backgroundColor: palette.panel, padding: 6 },
-  appearanceSwatch: { width: 24, height: 24, borderRadius: 12 },
-  appearanceLabel: { fontSize: 9, fontWeight: "800", color: palette.text },
   createTitle: { fontSize: 25, fontWeight: "900", marginTop: 2 },
   createCopy: { fontSize: 14, lineHeight: 22, marginTop: -8 },
   classGrid: { flexDirection: "row", flexWrap: "wrap", gap: 9 },
   classCard: { width: "48%", minHeight: 116, borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden" },
   classCardActive: { borderColor: palette.gold },
-  classCardArt: { minHeight: 116, padding: 12, justifyContent: "flex-end" },
-  classCardImage: { borderRadius: 15 },
-  classCardShade: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(8,12,18,0.58)" },
+  classCardArt: { minHeight: 116, padding: 12, justifyContent: "flex-end", backgroundColor: "#15232D" },
   classCardContent: { alignItems: "flex-end", gap: 5 },
   classIcon: { width: 32, height: 32, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(98,216,195,0.10)" },
   classIconActive: { backgroundColor: palette.gold },
