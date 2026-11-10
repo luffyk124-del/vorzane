@@ -3,8 +3,8 @@ import { Image, StyleSheet, View } from "react-native";
 export type CharacterGender = "male" | "female";
 
 const CHARACTER_ART: Record<CharacterGender, string> = {
-  male: "https://raw.githubusercontent.com/luffyk124-del/vorzane/feature/locked-character-art/extracted-vorzane/VORZANE/public/images/characters/hero_male.webp",
-  female: "https://raw.githubusercontent.com/luffyk124-del/vorzane/feature/locked-character-art/extracted-vorzane/VORZANE/public/images/characters/hero_female.webp",
+  male: "https://raw.githubusercontent.com/luffyk124-del/vorzane/main/extracted-vorzane/VORZANE/public/images/characters/hero_male.webp",
+  female: "https://raw.githubusercontent.com/luffyk124-del/vorzane/main/extracted-vorzane/VORZANE/public/images/characters/hero_female.webp",
 };
 
 type CharacterPortraitProps = {
