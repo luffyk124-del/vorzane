@@ -129,7 +129,9 @@ export default function FriendsScreen() {
     }
   };
 
-  const openPlayer = (playerId: string) => router.push((`/player/${playerId}`) as never);\n\n  return <AppScreen>
+  const openPlayer = (playerId: string) => router.push((`/player/${playerId}`) as never);
+
+  return <AppScreen>
     <View style={styles.content}>
       <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء" subtitle="اعثر على اللاعبين وافتح ملفاتهم العامة، وأدر طلبات الصداقة." />
       <AppButton label="صندوق الإشعارات" icon="notifications-outline" onPress={() => router.push("/(tabs)/notifications" as never)} variant="secondary" />
