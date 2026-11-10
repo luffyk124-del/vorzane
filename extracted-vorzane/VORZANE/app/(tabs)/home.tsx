@@ -93,7 +93,7 @@ export default function CampScreen() {
       <InputField label="اسم البطل" value={heroName} onChangeText={setHeroName} placeholder="اسمٌ يليق بالأساطير" icon="person-outline" />
       <AppButton label="ابدأ الرحلة" icon="arrow-back" onPress={createHero} disabled={heroName.trim().length < 2} />
     </GradientCard>
-    <Txt muted style={styles.smallCenter}>اختيار الفئة تجميلي في البداية؛ يمكنك تطوير سماتك من نقاط المستوى.</Txt>
+    <Txt muted style={styles.smallCenter}>الفئة تحدد أسلوب اللعب والقدرات، ولا تغيّر شكل شخصيتك.</Txt>
   </AppScreen>;
 
   const xpProgress = Math.min(100, (hero.exp / stats.xpNeeded) * 100);
