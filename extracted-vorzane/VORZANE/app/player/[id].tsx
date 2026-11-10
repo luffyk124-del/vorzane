@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { CharacterPortrait } from "../../src/components/CharacterPortrait";\nimport { ProfileAvatar } from "../../src/components/ProfileAvatar";
+import { CharacterPortrait } from "../../src/components/CharacterPortrait";
+import { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { getPublicPlayerProfile, type PublicPlayerProfile } from "../../src/lib/social";
 import { CLASS_NAMES, type ClassId } from "../../src/game/model";
 import { palette } from "../../src/theme";
@@ -76,7 +77,8 @@ function MiniStat({ label, value }: { label: string; value: number }) {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: 12, paddingBottom: 28 },\n  titleTrailing: { alignItems: "center", gap: 6 },
+  content: { gap: 12, paddingBottom: 28 },
+  titleTrailing: { alignItems: "center", gap: 6 },
   stateCard: { padding: 22, alignItems: "center", gap: 10 },
   error: { color: palette.red, textAlign: "center" },
   heroCard: { padding: 16, gap: 13, backgroundColor: "#13242C", borderColor: "rgba(98,216,195,0.22)" },
