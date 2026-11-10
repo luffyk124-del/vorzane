@@ -99,6 +99,7 @@ declare
   v_state jsonb;
   v_hero jsonb;
   v_equipped jsonb;
+  v_stats jsonb;
   v_style jsonb;
 begin
   if v_caller is null then
@@ -120,7 +121,20 @@ begin
   where user_id = p_user_id;
 
   v_hero := coalesce(v_state -> 'hero', '{}'::jsonb);
-  v_equipped := coalesce(v_state -> 'equipped', '{}'::jsonb);
+  select coalesce(jsonb_object_agg(e.key, jsonb_build_object(
+    'name', e.value ->> 'name',
+    'rarity', e.value ->> 'rarity'
+  )), '{}'::jsonb)
+  into v_equipped
+  from jsonb_each(coalesce(v_state -> 'equipped', '{}'::jsonb)) e
+  where jsonb_typeof(e.value) = 'object';
+
+  select coalesce(jsonb_object_agg(s.key, s.value), '{}'::jsonb)
+  into v_stats
+  from jsonb_each(coalesce(v_hero -> 'stats', '{}'::jsonb)) s
+  where s.key in ('str', 'def', 'vit', 'agi', 'luck')
+    and jsonb_typeof(s.value) = 'number';
+
   v_style := coalesce(v_state -> 'characterStyle', '{}'::jsonb);
 
   return jsonb_build_object(
