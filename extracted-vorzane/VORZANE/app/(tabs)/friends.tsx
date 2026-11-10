@@ -13,7 +13,6 @@ import {
   saveMyProfile,
   searchPlayers,
   sendFriendRequest,
-  setMyProfileSearchable,
   type FriendSummary,
   type IncomingFriendRequest,
   type PlayerProfile,
