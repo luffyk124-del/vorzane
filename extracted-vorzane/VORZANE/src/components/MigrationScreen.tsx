@@ -26,16 +26,16 @@ export default function MigrationScreen() {
       <View style={styles.icon}><Icon name="git-compare-outline" size={27} color={palette.jade} /></View>
       <Pill label="تعارض مزامنة" tone="gold" icon="cloud-offline-outline" />
       <Txt style={styles.title}>توجد نسختان لهذا اللاعب</Txt>
-      <Txt muted style={styles.copy}>لعبت على هذا الجهاز أثناء انقطاع الاتصال، كما يوجد تقدم أحدث في السحابة. اختر النسخة التي تريد الاحتفاظ بها؛ لن نستبدل نسخة دون موافقتك.</Txt>
+      <Txt muted style={styles.copy}>{migration.cloudMissing ? "لم نعثر على حفظ سحابي لهذا الحساب. ربما أُعيد ضبطه من جهاز آخر. يمكنك استعادة نسخة هذا الجهاز أو بدء حفظ سحابي جديد؛ لن نستبدل أي نسخة دون موافقتك." : "لعبت على هذا الجهاز أثناء انقطاع الاتصال، كما يوجد تقدم أحدث في السحابة. اختر النسخة التي تريد الاحتفاظ بها؛ لن نستبدل نسخة دون موافقتك."}</Txt>
       <View style={styles.compareRow}>
         <View style={styles.compareCard}><Pill label="على الجهاز" tone="jade" /><Txt style={styles.compareLevel}>مستوى {migration.localState.hero?.level ?? 1}</Txt><Txt muted style={styles.compareText}>{migration.localState.gold.toLocaleString("ar-EG")} ذهب • {migration.localState.wins} انتصار</Txt></View>
-        <View style={styles.compareCard}><Pill label="السحابة" tone="gold" /><Txt style={styles.compareLevel}>مستوى {migration.cloudState.hero?.level ?? 1}</Txt><Txt muted style={styles.compareText}>{migration.cloudState.gold.toLocaleString("ar-EG")} ذهب • {migration.cloudState.wins} انتصار</Txt></View>
+        <View style={styles.compareCard}><Pill label={migration.cloudMissing ? "حفظ جديد" : "السحابة"} tone="gold" /><Txt style={styles.compareLevel}>مستوى {migration.cloudState.hero?.level ?? 1}</Txt><Txt muted style={styles.compareText}>{migration.cloudState.gold.toLocaleString("ar-EG")} ذهب • {migration.cloudState.wins} انتصار</Txt></View>
       </View>
       {cloudError ? <Txt style={styles.error}>{cloudError}</Txt> : <Txt muted style={styles.status}>{saveStatus}</Txt>}
       <AppButton label="احتفظ بنسخة الجهاز وارفعها" icon="cloud-upload-outline" onPress={() => choose("local")} loading={busy} disabled={busy} />
-      <AppButton label="احتفظ بالنسخة السحابية" icon="cloud-done-outline" variant="secondary" onPress={() => choose("cloud")} disabled={busy} />
+      <AppButton label={migration.cloudMissing ? "ابدأ بحفظ سحابي جديد" : "احتفظ بالنسخة السحابية"} icon="cloud-done-outline" variant="secondary" onPress={() => choose("cloud")} disabled={busy} />
       {busy ? <View style={styles.busy}><ActivityIndicator color={palette.jade} /><Txt muted>ننتظر تأكيد حفظ اختيارك…</Txt></View> : null}
-      <Txt muted style={styles.footnote}>لن تُمحى نسخة الجهاز عند اعتماد السحابة، ولن تُمحى السحابة قبل تأكيد رفع نسخة الجهاز.</Txt>
+      <Txt muted style={styles.footnote}>{migration.cloudMissing ? "ستبقى نسخة الجهاز محفوظة حتى تختار صراحةً استعادتها أو بدء حفظ جديد." : "لن تُمحى نسخة الجهاز عند اعتماد السحابة، ولن تُمحى السحابة قبل تأكيد رفع نسخة الجهاز."}</Txt>
     </Card>
   </AppScreen>;
 
