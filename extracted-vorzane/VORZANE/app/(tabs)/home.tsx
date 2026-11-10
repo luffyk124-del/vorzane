@@ -152,9 +152,17 @@ export default function CampScreen() {
           <Txt muted style={styles.heroCaption}>{activePet ? `رفيقك: ${activePet.name}` : "استعد لعبور حدود الرماد"}</Txt>
         </View>
         <View style={styles.heroPortrait}>
-          <Image source={{ uri: CLASS_ART[hero.className] }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityLabel={CLASS_NAMES[hero.className]} />
-          <View pointerEvents="none" style={[styles.heroPortraitShade, { backgroundColor: APPEARANCE_COLORS[state.characterStyle.appearance], opacity: 0.18 }]} />
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: state.characterStyle.gender === "male" ? "#80B7D4" : "#D99AC4", opacity: 0.08 }]} />
+          <View style={styles.heroCharacterScale}>
+            <Character2DViewer
+              gender={state.characterStyle.gender}
+              appearance={state.characterStyle.gender === "male" ? 2 : 1}
+              hairstyle={state.characterStyle.gender === "male" ? "short" : "braids"}
+              hairColor={state.characterStyle.gender === "male" ? "obsidian" : "silver"}
+              face={state.characterStyle.gender === "male" ? "weathered" : "noble"}
+              outfit={state.characterStyle.gender === "male" ? "shadow" : "royal"}
+              body={state.characterStyle.gender === "male" ? "sturdy" : "agile"}
+            />
+          </View>
           <View style={styles.portraitAura} />
         </View>
       </View>
@@ -239,7 +247,7 @@ const styles = StyleSheet.create({
   heroClass: { fontSize: 14, color: palette.jade, fontWeight: "800", marginTop: 1 },
   heroCaption: { fontSize: 12, marginTop: 5 },
   heroPortrait: { width: 105, height: 124, borderRadius: 36, backgroundColor: "rgba(230,199,124,0.08)", borderWidth: 1, borderColor: "rgba(230,199,124,0.29)", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  heroPortraitShade: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(8,12,18,0.14)" },
+  heroCharacterScale: { position: "absolute", width: 300, height: 360, top: -118, left: -97, transform: [{ scale: 0.35 }] },
   portraitAura: { position: "absolute", bottom: -24, width: 116, height: 47, borderRadius: 60, backgroundColor: "rgba(98,216,195,0.12)" },
   xpBlock: { gap: 7, marginTop: 16 },
   xpMeta: { flexDirection: "row", justifyContent: "space-between" },
