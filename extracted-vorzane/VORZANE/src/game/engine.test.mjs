@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission } from "./engine.ts";
+import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission } from "./engine.ts";
 import { createFreshState, normalizeGameState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
@@ -102,6 +102,19 @@ test("players can buy high-level companions early but cannot activate them early
 
   const eligible = { ...purchased.state, hero: { ...purchased.state.hero, level: 45 } };
   assert.equal(setPet(eligible, "star-drake").activePet, "star-drake");
+});
+
+test("each level grants exactly one stat point, including multiple levels at once", () => {
+  const state = createHeroState("اختبار", "Warrior");
+  const oneLevel = addExperience(state, 100);
+  assert.equal(oneLevel.levelsGained, 1);
+  assert.equal(oneLevel.state.hero.level, 2);
+  assert.equal(oneLevel.state.hero.statPoints, 1);
+
+  const multipleLevels = addExperience(state, 100 + 160 + 220);
+  assert.equal(multipleLevels.levelsGained, 3);
+  assert.equal(multipleLevels.state.hero.level, 4);
+  assert.equal(multipleLevels.state.hero.statPoints, 3);
 });
 
 test("level-up stat points can be spent exactly once per point", () => {
