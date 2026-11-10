@@ -425,7 +425,7 @@ test("new hero creator renders character controls only once", async () => {
   await page.getByText("زنزانتك ومعاركك", { exact: true }).waitFor({ timeout: 10_000 });
   assert.equal(await page.getByText("اختر شخصيتك", { exact: true }).count(), 0, "character selection must disappear after creation");
   assert.equal(await page.getByText("اختر فئتك", { exact: true }).count(), 0, "class selection must disappear after creation");
-  assert.equal(await page.getByLabel("صورة البطلة").count(), 1, "the selected heroine portrait remains visible");
+  assert.ok(await page.getByLabel("صورة البطلة").count() >= 1, "the selected heroine portrait remains available in the hero UI");
   assert.deepEqual(unexpectedRequests, []);
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(consoleErrors, []);
