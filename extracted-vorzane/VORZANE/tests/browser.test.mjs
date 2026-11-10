@@ -366,11 +366,11 @@ test("primary game navigation stays visible and switches between core screens", 
   assert.equal(await navigation.getByRole("button").count(), 5, "the primary navigation should expose five core destinations");
   const journeys = navigation.getByRole("button", { name: "الرحلات" });
   await journeys.click();
-  await page.waitForURL(/\\/expeditions$/, { timeout: 10_000 });
+  await page.waitForURL((url) => url.pathname.endsWith("/expeditions"), { timeout: 10_000 });
   await page.getByText("اختر وجهتك", { exact: true }).waitFor({ timeout: 10_000 });
   assert.match(page.url(), /expeditions/);
   await navigation.getByRole("button", { name: "المخيم" }).click();
-  await page.waitForURL(/\\/home$/, { timeout: 10_000 });
+  await page.waitForURL((url) => url.pathname.endsWith("/home"), { timeout: 10_000 });
   await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
   assert.match(page.url(), /home/);
 
