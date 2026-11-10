@@ -4,12 +4,17 @@ import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, StatCa
 import { DUNGEON_ITEM_POOL_SIZE, PETS, RARITY_LABELS, STARTER_ITEMS } from "../../src/game/catalog";
 import { buyItem, buyPet, combatStats, equipItem, sellItem, setPet, unequipItem } from "../../src/game/engine";
 import { DUNGEON_ITEMS, findEquipmentTemplate, getEquipmentSellPrice } from "../../src/game/dungeonItems";
-import { SLOT_NAMES } from "../../src/game/model";
+import { SLOT_NAMES, type EquipmentItem } from "../../src/game/model";
 import { rarityColor, palette } from "../../src/theme";
 import { useGame } from "../../src/contexts/GameContext";
 
 type Tab = "equipment" | "shop" | "market";
 type ShopCategory = "all" | "weapons" | "armor" | "accessories" | "companions";
+type InventoryCategory = "all" | "weapons" | "armor" | "accessories";
+type InventorySort = "power" | "rarity" | "level";
+const RARITY_ORDER = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 } as const;
+const BONUS_LABELS = { str: "قوة", def: "دفاع", vit: "حيوية", agi: "رشاقة", luck: "حظ" } as const;
+const itemScore = (item: EquipmentItem) => Object.values(item.bonus).reduce((sum, value) => sum + (value ?? 0), 0);
 const SHOP_CATEGORIES: { id: ShopCategory; label: string }[] = [
   { id: "all", label: "الكل" },
   { id: "weapons", label: "الأسلحة" },
@@ -38,6 +43,19 @@ export default function GearScreen() {
     ...state.inventory.map((item) => ({ item, equipped: false })),
     ...Object.entries(state.equipped).flatMap(([slot, item]) => item ? [{ item, equipped: true, slot }] : []),
   ], [state.inventory, state.equipped]);
+  const visibleInventory = useMemo(() => {
+    const filtered = state.inventory.filter((item) => {
+      if (inventoryCategory === "weapons") return item.slot === "سلاح";
+      if (inventoryCategory === "armor") return ["درع", "خوذة", "قفازات", "حذاء"].includes(item.slot);
+      if (inventoryCategory === "accessories") return ["قلادة", "خاتم أول", "خاتم ثانٍ"].includes(item.slot);
+      return true;
+    });
+    return filtered.slice().sort((a, b) => {
+      if (inventorySort === "rarity") return RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity] || itemScore(b) - itemScore(a);
+      if (inventorySort === "level") return (b.requiredLevel ?? 1) - (a.requiredLevel ?? 1) || itemScore(b) - itemScore(a);
+      return itemScore(b) - itemScore(a);
+    });
+  }, [state.inventory, inventoryCategory, inventorySort]);
   const message = (text: string) => { setNotice(text); setTimeout(() => setNotice(""), 2400); };
 
   const purchaseItem = (id: string) => {
@@ -97,18 +115,35 @@ export default function GearScreen() {
           </Card>;
         })}
       </View>
-      <SectionTitle title={`الحقيبة (${state.inventory.length})`} icon="file-tray-full-outline" />
-      {state.inventory.length ? state.inventory.map((item) => {
+      <SectionTitle title={`الحقيبة (${state.inventory.length})`} icon="file-tray-full-outline" action={<Pill label={`${visibleInventory.length} معروضة`} tone="jade" />} />
+      <View style={styles.shopFilters}>
+        {([{ id: "all", label: "الكل" }, { id: "weapons", label: "الأسلحة" }, { id: "armor", label: "الدروع" }, { id: "accessories", label: "الإكسسوارات" }] as const).map((filter) => <Pressable key={filter.id} onPress={() => setInventoryCategory(filter.id)} style={[styles.shopFilter, inventoryCategory === filter.id && styles.shopFilterActive]}>
+          <Txt style={[styles.shopFilterText, inventoryCategory === filter.id && styles.shopFilterTextActive]}>{filter.label}</Txt>
+        </Pressable>)}
+      </View>
+      <View style={styles.shopFilters}>
+        {([{ id: "power", label: "الأقوى أولاً" }, { id: "rarity", label: "الندرة" }, { id: "level", label: "المستوى" }] as const).map((sort) => <Pressable key={sort.id} onPress={() => setInventorySort(sort.id)} style={[styles.sortChip, inventorySort === sort.id && styles.sortChipActive]}>
+          <Txt style={[styles.sortChipText, inventorySort === sort.id && styles.sortChipTextActive]}>{sort.label}</Txt>
+        </Pressable>)}
+      </View>
+      {visibleInventory.length ? visibleInventory.map((item) => {
         const template = findEquipmentTemplate(item);
         const shown = template ?? item;
         const locked = !template || !state.hero || heroLevel < (shown.requiredLevel ?? 1);
         const required = `مستوى ${shown.requiredLevel ?? 1}`;
+        const equipped = state.equipped[shown.slot];
+        const comparison = equipped ? (["str", "def", "vit", "agi", "luck"] as const).map((key) => ({ key, delta: (shown.bonus[key] ?? 0) - (equipped.bonus[key] ?? 0) })).filter((entry) => entry.delta !== 0) : [];
         return <Card key={item.id} style={styles.itemRow}>
           <AppButton label={locked ? "مقيّد" : "جهّز"} onPress={() => update((current) => equipItem(current, item.id))} variant={locked ? "secondary" : "jade"} small disabled={locked} />
-          <View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt><Txt muted style={styles.itemBonus}>{shown.slot} • {Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>يتطلب {required}</Txt></View>
+          <View style={{ flex: 1, alignItems: "flex-end" }}>
+            <Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt>
+            <Txt muted style={styles.itemBonus}>{shown.slot} • {Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt>
+            <Txt style={styles.requirement}>يتطلب {required}</Txt>
+            <Txt style={styles.comparisonText}>{!equipped ? "فتحة التجهيز فارغة" : comparison.length ? `مقارنة مع ${equipped.name}: ${comparison.map(({ key, delta }) => `${BONUS_LABELS[key]} ${delta > 0 ? "+" : ""}${delta}`).join(" • ")}` : `مطابق لمكافآت ${equipped.name}`}</Txt>
+          </View>
           <Icon name={(shown.icon ?? "ellipse") as never} color={rarityColor[shown.rarity]} size={20} />
         </Card>;
-      }) : <Card style={styles.empty}><Icon name="file-tray-outline" color={palette.dim} size={22} /><Txt muted>حقيبتك فارغة. اختر أول قطعة من متجر العالم.</Txt></Card>}
+      }) : <Card style={styles.empty}><Icon name="file-tray-outline" color={palette.dim} size={22} /><Txt muted>{state.inventory.length ? "لا توجد قطع ضمن هذا التصنيف." : "حقيبتك فارغة. اختر أول قطعة من متجر العالم."}</Txt></Card>}
     </> : null}
 
     {tab === "shop" ? <>
@@ -168,7 +203,7 @@ const styles = StyleSheet.create({
   shopFilter: { paddingHorizontal: 13, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.panel },
   shopFilterActive: { backgroundColor: palette.gold, borderColor: palette.gold },
   shopFilterText: { color: palette.muted, fontSize: 11, fontWeight: "800" },
-  shopFilterTextActive: { color: palette.ink },
+  shopFilterTextActive: { color: palette.ink },\n  sortChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: palette.line, backgroundColor: "rgba(255,255,255,0.025)" },\n  sortChipActive: { borderColor: palette.jade, backgroundColor: "rgba(98,216,195,0.10)" },\n  sortChipText: { color: palette.muted, fontSize: 10, fontWeight: "800" },\n  sortChipTextActive: { color: palette.jade },\n  comparisonText: { color: palette.jade, fontSize: 9, lineHeight: 15, textAlign: "right", marginTop: 3 },
   tab: { flex: 1, minHeight: 43, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 4 },
   tabActive: { backgroundColor: palette.gold },
   tabText: { fontSize: 10, fontWeight: "800", color: palette.muted },
