@@ -7,6 +7,10 @@ insert into auth.users (id) values
   ('00000000-0000-4000-8000-000000000001'),
   ('00000000-0000-4000-8000-000000000002');
 
+insert into public.player_saves (user_id, game_state) values
+  ('00000000-0000-4000-8000-000000000001', '{"hero":{"name":"Alice Hero","className":"Warrior","level":7,"stats":{"str":20,"def":18}},"characterStyle":{"gender":"female"},"equipped":{"سلاح":{"name":"Test Sword","rarity":"epic"}},"wins":9,"battles":12}'::jsonb),
+  ('00000000-0000-4000-8000-000000000002', '{"hero":{"name":"Bob Hero","className":"Mage","level":11,"stats":{"str":30,"def":9}},"characterStyle":{"gender":"male"},"equipped":{"سلاح":{"name":"Arcane Staff","rarity":"legendary"}},"wins":22,"battles":30,"dimas":{"highestFloor":5},"roaming":{"eventsCompleted":14}}'::jsonb);
+
 set local role authenticated;
 
 do $$
@@ -24,11 +28,16 @@ begin
   perform public.set_my_profile_searchable(false);
 
   perform set_config('request.jwt.claim.sub', v_alice::text, true);
-  if exists (select 1 from public.search_players('Bob Test')) then
-    raise exception 'Private profile leaked through search_players';
+  if not exists (select 1 from public.search_players('Bob Test') where user_id = v_bob) then
+    raise exception 'Profile must remain searchable even when legacy toggle is set false';
   end if;
-  if exists (select 1 from public.player_profiles where user_id = v_bob) then
-    raise exception 'Private profile leaked through direct RLS-protected select';
+  if not exists (select 1 from public.player_profiles where user_id = v_bob) then
+    raise exception 'All authenticated players must be able to read public profile rows';
+  end if;
+  if public.get_public_player_profile(v_bob) ->> 'hero_name' <> 'Bob Hero'
+     or public.get_public_player_profile(v_bob) #>> '{equipped,سلاح,name}' <> 'Arcane Staff'
+     or public.get_public_player_profile(v_bob) ->> 'level' <> '11' then
+    raise exception 'Public player profile did not return sanitized hero details and equipped gear';
   end if;
 
   perform set_config('request.jwt.claim.sub', v_bob::text, true);
