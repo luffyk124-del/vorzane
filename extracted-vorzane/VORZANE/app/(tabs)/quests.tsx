@@ -52,7 +52,6 @@ export default function QuestsScreen() {
 
   return <AppScreen>
     <PageTitle eyebrow="سجل التكليفات" title="المهام" subtitle="مهام يومية وأسبوعية وقصصية وإنجازات، إضافة إلى تحديات طويلة مستقلة عن ميادين القتال والتجوال." trailing={<Pill label={`${state.wins} انتصار`} icon="trophy" tone="gold" />} />
-    <PageTitle eyebrow="مسارك في الظلال" title="المهام والإنجازات" subtitle="زنزانة لا تنتهي، خصوم متبدلون، وأهداف تمنح تقدمك معنى." trailing={<Pill label={`${state.wins} انتصار`} icon="trophy" tone="gold" />} />
     <SectionTitle title="حملة الرماد" icon="book-outline" action={<Pill label={`${state.story}/${STORY_CHAPTERS.length} فصول`} tone="gold" />} />
     <Card style={styles.storyIntro}>
       <Txt style={styles.storyIntroTitle}>حكاية عالم VORZANE</Txt>
@@ -233,7 +232,7 @@ export default function QuestsScreen() {
       <SectionTitle title={`مهام ${group.tier}`} icon="flag-outline" action={<Pill label={`${group.quests.filter((q) => q.claimed).length}/${group.quests.length}`} tone={TONES[group.tier]} />} />
       {group.quests.map((quest) => {
         const ready = quest.progress >= quest.target && !quest.claimed;
-        return <Card key={quest.id} style={[styles.quest, ready && styles.questReady, quest.claimed && styles.questClaimed]}>
+        return <Card key={quest.id} style={[styles.longQuest, ready && styles.questReady, quest.claimed && styles.questClaimed]}>
           <View style={styles.questTop}>
             <AppButton label={quest.claimed ? "تم الاستلام" : ready ? "استلام المكافأة" : "قيد التقدم"} icon={quest.claimed ? "checkmark" : "gift-outline"} onPress={() => claim(quest.id)} variant={ready ? "jade" : "secondary"} small disabled={!ready} />
             <View style={styles.longQuestTitleBlock}>
