@@ -235,7 +235,7 @@ export default function QuestsScreen() {
         return <Card key={quest.id} style={[styles.longQuest, ready && styles.questReady, quest.claimed && styles.questClaimed]}>
           <View style={styles.questTop}>
             <AppButton label={quest.claimed ? "تم الاستلام" : ready ? "استلام المكافأة" : "قيد التقدم"} icon={quest.claimed ? "checkmark" : "gift-outline"} onPress={() => claim(quest.id)} variant={ready ? "jade" : "secondary"} small disabled={!ready} />
-            <View style={styles.longQuestTitleBlock}>
+            <View style={styles.questTitleBlock}>
               <Pill label={quest.metric === "days" ? "مهمة طويلة" : group.tier} tone={quest.metric === "days" ? "gold" : TONES[group.tier]} />
               <Txt style={styles.longQuestTitle}>{quest.title}</Txt>
             </View>
