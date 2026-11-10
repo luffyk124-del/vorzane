@@ -159,8 +159,6 @@ export default function SettingsScreen() {
     <Modal transparent visible={confirmImport} animationType="fade" onRequestClose={() => setConfirmImport(false)}>
       <View style={styles.modalBackdrop}><Card style={styles.confirmCard}><View style={styles.modalIcon}><Icon name="cloud-upload-outline" color={palette.jade} size={24} /></View><Txt style={styles.modalTitle}>استبدال تقدم هذا الحساب؟</Txt><Txt muted style={styles.modalCopy}>سيُرفع ملف الحفظ المختار لحساب اللاعب الحالي، مع بقاء الحفظ المحلي القديم محفوظًا كنسخة منفصلة.</Txt><AppButton label="استيراد ومزامنة" icon="checkmark" variant="jade" onPress={applyImport} disabled={busy} /><AppButton label="إلغاء" variant="secondary" onPress={() => { setConfirmImport(false); setPendingImport(null); }} disabled={busy} /></Card></View>
     </Modal>
-
-    </Modal>
   </AppScreen>;
 }
 
