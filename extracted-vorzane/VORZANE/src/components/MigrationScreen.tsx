@@ -24,8 +24,8 @@ export default function MigrationScreen() {
     <View style={styles.brand}><Icon name="shield-half" color={palette.gold} size={23} /><Txt style={styles.wordmark}>VORZANE</Txt></View>
     <Card style={styles.card}>
       <View style={styles.icon}><Icon name="git-compare-outline" size={27} color={palette.jade} /></View>
-      <Pill label="تعارض مزامنة" tone="gold" icon="cloud-offline-outline" />
-      <Txt style={styles.title}>توجد نسختان لهذا اللاعب</Txt>
+      <Pill label={migration.cloudMissing ? "الحفظ السحابي غير موجود" : "تعارض مزامنة"} tone="gold" icon="cloud-offline-outline" />
+      <Txt style={styles.title}>{migration.cloudMissing ? "لا يوجد حفظ سحابي" : "توجد نسختان لهذا اللاعب"}</Txt>
       <Txt muted style={styles.copy}>{migration.cloudMissing ? "لم نعثر على حفظ سحابي لهذا الحساب. ربما أُعيد ضبطه من جهاز آخر. يمكنك استعادة نسخة هذا الجهاز أو بدء حفظ سحابي جديد؛ لن نستبدل أي نسخة دون موافقتك." : "لعبت على هذا الجهاز أثناء انقطاع الاتصال، كما يوجد تقدم أحدث في السحابة. اختر النسخة التي تريد الاحتفاظ بها؛ لن نستبدل نسخة دون موافقتك."}</Txt>
       <View style={styles.compareRow}>
         <View style={styles.compareCard}><Pill label="على الجهاز" tone="jade" /><Txt style={styles.compareLevel}>مستوى {migration.localState.hero?.level ?? 1}</Txt><Txt muted style={styles.compareText}>{migration.localState.gold.toLocaleString("ar-EG")} ذهب • {migration.localState.wins} انتصار</Txt></View>
