@@ -6,8 +6,8 @@ import { useGame } from "../../src/contexts/GameContext";
 import { palette } from "../../src/theme";
 
 const TIERS: LongQuest["tier"][] = ["سهل", "متوسط", "صعب", "نخبوي", "ملحمي"];
-const TONES: Record<LongQuest["tier"], "jade" | "gold" | "red" | "violet" | "muted"> = {
-  "سهل": "jade", "متوسط": "gold", "صعب": "red", "نخبوي": "violet", "ملحمي": "gold",
+const TONES: Record<LongQuest["tier"], "jade" | "gold" | "red" | "gold" | "muted"> = {
+  "سهل": "jade", "متوسط": "gold", "صعب": "red", "نخبوي": "gold", "ملحمي": "gold",
 };
 
 export default function QuestsScreen() {
@@ -51,7 +51,7 @@ export default function QuestsScreen() {
           <View style={styles.questTop}>
             <AppButton label={quest.claimed ? "تم الاستلام" : ready ? "استلام المكافأة" : "قيد التقدم"} icon={quest.claimed ? "checkmark" : "gift-outline"} onPress={() => claim(quest.id)} variant={ready ? "jade" : "secondary"} small disabled={!ready} />
             <View style={styles.questTitleBlock}>
-              <Pill label={quest.metric === "days" ? "مهمة طويلة" : group.tier} tone={quest.metric === "days" ? "violet" : TONES[group.tier]} />
+              <Pill label={quest.metric === "days" ? "مهمة طويلة" : group.tier} tone={quest.metric === "days" ? "gold" : TONES[group.tier]} />
               <Txt style={styles.questTitle}>{quest.title}</Txt>
             </View>
           </View>
@@ -61,7 +61,7 @@ export default function QuestsScreen() {
           <View style={styles.rewards}>
             <Pill label={`+${quest.gold.toLocaleString("en-US")} ذهب`} tone="gold" />
             <Pill label={`+${quest.xp.toLocaleString("en-US")} خبرة`} tone="jade" />
-            {quest.gems ? <Pill label={`+${quest.gems} جوهرة`} tone="violet" /> : null}
+            {quest.gems ? <Pill label={`+${quest.gems} جوهرة`} tone="gold" /> : null}
             {quest.fragments ? <Pill label={`+${quest.fragments} قطعة`} tone="muted" /> : null}
           </View>
         </Card>;
