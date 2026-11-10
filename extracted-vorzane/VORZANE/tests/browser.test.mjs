@@ -91,6 +91,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
   const tableReads = store.tableReads ?? (store.tableReads = []);
   const unexpectedRequests = [];
   const session = mockSession();
+  if (store.state && !store.updatedAt) store.updatedAt = new Date().toISOString();
   // The friends/search browser scenario starts with an existing searchable profile.
   let mockedPlayerProfile = social ? {
     user_id: playerId,
@@ -138,10 +139,11 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
         return;
       }
       if (!store.state) store.state = newPlayerFixture();
+      if (!store.updatedAt) store.updatedAt = new Date().toISOString();
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ state: store.state, updatedAt: new Date().toISOString(), created: true }),
+        body: JSON.stringify({ state: store.state, updatedAt: store.updatedAt, created: true }),
       });
       return;
     }
@@ -166,7 +168,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ state: store.state, updatedAt: store.state ? new Date().toISOString() : null }),
+        body: JSON.stringify({ state: store.state, updatedAt: store.state ? store.updatedAt : null }),
       });
       return;
     }
@@ -175,7 +177,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(store.state ? [{ game_state: store.state, updated_at: new Date().toISOString() }] : []),
+        body: JSON.stringify(store.state ? [{ game_state: store.state, updated_at: store.updatedAt }] : []),
       });
       return;
     }
@@ -185,9 +187,43 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
         return;
       }
       const saved = request.postDataJSON();
+      if (store.state) {
+        await route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({ code: "23505", message: "duplicate key value violates unique constraint" }),
+        });
+        return;
+      }
       writes.push(saved);
       store.state = saved.game_state;
-      await route.fulfill({ status: 204, body: "" });
+      store.updatedAt = saved.updated_at;
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({ updated_at: store.updatedAt }),
+      });
+      return;
+    }
+    if (request.method() === "PATCH" && url.pathname.endsWith("/rest/v1/player_saves")) {
+      if (failSave()) {
+        await route.abort("failed");
+        return;
+      }
+      const expectedVersion = url.searchParams.get("updated_at")?.replace(/^eq\./, "");
+      const saved = request.postDataJSON();
+      if (!store.state || expectedVersion !== store.updatedAt) {
+        await route.fulfill({ status: 200, contentType: "application/json", body: "null" });
+        return;
+      }
+      writes.push(saved);
+      store.state = saved.game_state;
+      store.updatedAt = saved.updated_at;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ updated_at: store.updatedAt }),
+      });
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/rest/v1/player_profiles")) {
@@ -393,6 +429,32 @@ test("offline progress conflict resolves and restores in a clean second context"
   await secondPage.getByText("1 نقطة متاحة", { exact: true }).waitFor();
   assert.equal(await secondPage.getByText("14", { exact: true }).count(), 1);
   await secondContext.close();
+});
+
+test("a remotely deleted save requires an explicit choice before local data can be restored", async () => {
+  const store = { state: saveFixture(), writes: [] };
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  const { writes } = await installSupabaseMock(page, { store });
+
+  await signInWithMock(page);
+  // Simulate another session resetting/deleting the cloud row after this client read it.
+  store.state = null;
+  store.updatedAt = null;
+
+  await page.getByText("+1", { exact: true }).first().click();
+  await page.getByText("لا يوجد حفظ سحابي", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("لم نعثر على حفظ سحابي لهذا الحساب.", { exact: false }).waitFor({ timeout: 5_000 });
+
+  assert.equal(store.state, null, "a missing cloud row must not be recreated automatically from stale local data");
+  assert.equal(writes.length, 0, "no cloud write is allowed before the player chooses");
+
+  await page.getByRole("button", { name: "ابدأ بحفظ سحابي جديد" }).click();
+  await page.getByText("اختر من يسير في الظل", { exact: true }).waitFor({ timeout: 10_000 });
+  assert.ok(store.state, "the explicit new-save choice should create a fresh cloud row");
+  assert.equal(store.state.hero, null, "a fresh save should use the canonical uncreated-hero state");
+  assert.equal(writes.length, 1);
+  await browserContext.close();
 });
 
 test("guest sign-in displays an Arabic message when the network fails", async () => {
