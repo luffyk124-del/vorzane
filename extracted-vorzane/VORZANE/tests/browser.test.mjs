@@ -210,7 +210,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
         await route.abort("failed");
         return;
       }
-      const expectedVersion = url.searchParams.get("updated_at")?.replace(/^eq\\./, "");
+      const expectedVersion = url.searchParams.get("updated_at")?.replace(/^eq\./, "");
       const saved = request.postDataJSON();
       if (!store.state || expectedVersion !== store.updatedAt) {
         await route.fulfill({ status: 200, contentType: "application/json", body: "null" });
