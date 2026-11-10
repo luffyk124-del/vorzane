@@ -140,6 +140,15 @@ export default function CampScreen() {
       <AppButton label="تحدي الكسوف" icon="moon" variant="ghost" onPress={() => enterBattle("hard")} small />
     </Card>
 
+    <Card style={styles.dimasEntry}>
+      <View style={styles.dimasEntryIcon}><Icon name="layers" color={palette.gold} size={24} /></View>
+      <View style={styles.dimasEntryCopy}>
+        <Txt style={styles.dimasEntryTitle}>الديماس • 300 طابق</Txt>
+        <Txt muted style={styles.dimasEntryHint}>تحدٍّ متدرّج بمكافآت خاصة وأسلحة ومرافقين نادرين عند المحطات الكبرى</Txt>
+      </View>
+      <AppButton label="دخول" icon="arrow-back" onPress={() => router.push("/dimas" as never)} small variant="jade" />
+    </Card>
+
     <SectionTitle title="رحلتك النشطة" icon="compass" action={<Pressable onPress={() => router.push("/expeditions")}><Txt style={styles.actionLink}>كل الرحلات ←</Txt></Pressable>} />
     {active && activePlan ? <Card style={styles.expeditionCard}>
       <View style={styles.expeditionTop}><Pill label={formatTime(active.endsAt - now)} icon="time-outline" tone="jade" /><View style={styles.expeditionName}><Txt style={styles.expeditionTitle}>{activePlan.name}</Txt><Txt muted style={styles.expeditionRegion}>{activePlan.region}</Txt></View><Icon name={activePlan.icon as never} size={22} color={palette.gold} /></View>
@@ -180,6 +189,11 @@ const styles = StyleSheet.create({
   xpValue: { fontSize: 11, color: palette.gold, fontWeight: "700" },
   powerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
   saveLine: { fontSize: 10, maxWidth: "62%" },
+  dimasEntry: { padding: 13, flexDirection: "row", alignItems: "center", gap: 10, borderColor: "rgba(230,199,124,0.28)", backgroundColor: "#171C25" },
+  dimasEntryIcon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(230,199,124,0.1)" },
+  dimasEntryCopy: { flex: 1, alignItems: "flex-end", gap: 4 },
+  dimasEntryTitle: { fontSize: 14, fontWeight: "900", color: palette.gold },
+  dimasEntryHint: { fontSize: 10, lineHeight: 15, textAlign: "right" },
   battleCard: { gap: 11 },
   battleIntro: { fontSize: 13 },
   battleButtons: { flexDirection: "row", gap: 8 },
