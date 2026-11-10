@@ -23,7 +23,8 @@ export function Txt({ children, style, muted = false, numberOfLines }: PropsWith
 const primaryNavigation = [
   { label: "المخيم", href: "/(tabs)/home" as const, icon: "home-outline" as const },
   { label: "الشخصية", href: "/(tabs)/character" as const, icon: "person-circle-outline" as const },
-  { label: "التجوال", href: "/(tabs)/expeditions" as const, icon: "compass-outline" as const },\n  { label: "الديماس", href: "/(tabs)/dimas" as const, icon: "trophy-outline" as const },
+  { label: "التجوال", href: "/(tabs)/expeditions" as const, icon: "compass-outline" as const },
+  { label: "الديماس", href: "/(tabs)/dimas" as const, icon: "trophy-outline" as const },
   { label: "العتاد", href: "/(tabs)/gear" as const, icon: "shield-outline" as const },
   { label: "المهام", href: "/(tabs)/quests" as const, icon: "trophy-outline" as const },
 ];
