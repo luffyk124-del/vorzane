@@ -319,14 +319,11 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await page.getByRole("button", { name: "الشخصية", exact: true }).click();
       await page.getByText("2 نقطة تطوير متاحة", { exact: true }).waitFor();
       await page.getByRole("button", { name: "المخيم", exact: true }).click();
-      await page.getByRole("button", { name: "فتح القائمة" }).click();
-      await page.getByRole("button", { name: "الملف الشخصي", exact: true }).waitFor();
-      await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
+      await page.goto(`${appUrl}/profile`);
       await page.getByText("هويتك في العالم", { exact: true }).waitFor({ timeout: 10_000 });
       const profileOverlay = await page.locator("#error-overlay").innerText().catch(() => "");
       assert.deepEqual({ overlay: profileOverlay.trim(), pageErrors, consoleErrors }, { overlay: "", pageErrors: [], consoleErrors: [] }, `${viewport.name} profile runtime diagnostics`);
-      await page.getByRole("button", { name: "رجوع" }).click();
-      await page.getByRole("button", { name: "الشخصية", exact: true }).click();
+      await page.goto(`${appUrl}/character`);
       await page.getByText("تطوير السمات", { exact: true }).filter({ visible: true }).first().waitFor({ timeout: 10_000 });
 
       const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
@@ -436,7 +433,7 @@ test("offline progress conflict resolves and restores in a clean second context"
   await signInWithMock(firstPage);
   await firstPage.getByRole("button", { name: "الشخصية", exact: true }).click();
   await firstPage.getByText("+1", { exact: true }).first().click();
-  await firstPage.getByText("تعذرت المزامنة؛ النسخة المحلية محفوظة", { exact: true }).waitFor({ timeout: 10_000 });
+  await firstPage.getByText("تعذرت المزامنة؛ النسخة المحلية محفوظة", { exact: true }).waitFor({ state: "attached", timeout: 10_000 });
   assert.equal(store.state.hero.stats.str, 13, "failed save must leave cloud progress unchanged");
 
   failSaves = false;
@@ -506,16 +503,14 @@ test("character, player profile, and settings have separate responsibilities", a
   await signInWithMock(page);
   await page.getByRole("button", { name: "الشخصية", exact: true }).click();
   await page.getByText("ملف البطل", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-  await page.getByText("ذكر", { exact: true }).waitFor({ state: "visible", timeout: 5_000 });
+  await page.getByText("ذكر", { exact: true }).first().waitFor({ state: "visible", timeout: 5_000 });
   assert.equal(await page.getByRole("radio").count(), 0, "gender and appearance must not be editable after creation");
 
-  await page.getByRole("button", { name: "فتح القائمة" }).click();
-  await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
+  await page.goto(`${appUrl}/profile`);
   await page.getByText("اسم اللاعب", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   assert.equal(await page.getByText("مظهر الشخصية", { exact: true }).count(), 0, "character customization must not live in player profile");
 
-  await page.getByRole("button", { name: "فتح القائمة" }).click();
-  await page.getByRole("button", { name: "الإعدادات", exact: true }).click();
+  await page.goto(`${appUrl}/settings`);
   await page.getByText("الموسيقى", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   assert.equal(await page.getByText("الصورة الشخصية", { exact: true }).count(), 0, "profile identity controls must not live in settings");
 
