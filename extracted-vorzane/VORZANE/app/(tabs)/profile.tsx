@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { ProfileAvatar } from "../../src/components/ProfileAvatar";
+import { Character2DViewer } from "../../src/components/Character2DViewer";
 import { useAuth } from "../../src/contexts/AuthContext";
 import { useGame } from "../../src/contexts/GameContext";
 import { CLASS_NAMES, type ClassId } from "../../src/game/model";
@@ -22,7 +23,7 @@ function isAvatarId(value: string): value is ClassId | "brand" {
 
 export default function ProfileScreen() {
   const { user } = useAuth();
-  const { state, update } = useGame();
+  const { state } = useGame();
   const [displayName, setDisplayName] = useState("");
   const [avatarId, setAvatarId] = useState<ClassId | "brand">("brand");
   const [isSearchable, setIsSearchable] = useState(true);
@@ -77,13 +78,18 @@ export default function ProfileScreen() {
 
     <SectionTitle title="شخصيتك" icon="shield-checkmark" />
     <Card style={styles.panel}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-        <ProfileAvatar avatarId={avatarId} size={72} />
-        <View style={{ flex: 1, alignItems: "flex-end", gap: 5 }}>
-          <Txt style={styles.heroName}>{state.characterStyle.gender === "male" ? "فارس الظلال" : "حارسة العرش"}</Txt>
-          <Txt muted style={styles.hint}>اختيار ثابت منذ بداية الحساب</Txt>
-          <Pill label="غير قابل للتغيير" tone="gold" icon="lock-closed" />
-        </View>
+      <View style={{ alignItems: "center", gap: 10 }}>
+        <Txt style={styles.heroName}>{state.characterStyle.gender === "male" ? "فارس الظلال" : "حارسة العرش"}</Txt>
+        <Pill label="اختيار نهائي — غير قابل للتغيير" tone="gold" icon="lock-closed" />
+        <Character2DViewer
+          gender={state.characterStyle.gender}
+          appearance={state.characterStyle.gender === "male" ? 2 : 1}
+          hairstyle={state.characterStyle.gender === "male" ? "short" : "braids"}
+          hairColor={state.characterStyle.gender === "male" ? "obsidian" : "silver"}
+          face={state.characterStyle.gender === "male" ? "weathered" : "noble"}
+          outfit={state.characterStyle.gender === "male" ? "shadow" : "royal"}
+          body={state.characterStyle.gender === "male" ? "sturdy" : "agile"}
+        />
       </View>
     </Card>
 
