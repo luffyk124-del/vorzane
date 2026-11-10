@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { CharacterPortrait } from "../../src/components/CharacterPortrait";
+import { CharacterPortrait } from "../../src/components/CharacterPortrait";\nimport { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { getPublicPlayerProfile, type PublicPlayerProfile } from "../../src/lib/social";
 import { CLASS_NAMES, type ClassId } from "../../src/game/model";
 import { palette } from "../../src/theme";
@@ -35,7 +35,7 @@ export default function PublicPlayerScreen() {
   const className = (Object.hasOwn(CLASS_NAMES, profile.class_name) ? CLASS_NAMES[profile.class_name as ClassId] : "مغامر");
   return <AppScreen>
     <ScrollView contentContainerStyle={styles.content}>
-      <PageTitle eyebrow="ملف لاعب عام" title={profile.display_name} subtitle="هذه البيانات متاحة لجميع لاعبي VORZANE." trailing={<Pill label={`المستوى ${profile.level.toLocaleString("en-US")}`} tone="gold" />} />
+      <PageTitle eyebrow="ملف لاعب عام" title={profile.display_name} subtitle="هذه البيانات متاحة لجميع لاعبي VORZANE." trailing={<View style={styles.titleTrailing}><ProfileAvatar avatarId={profile.avatar_id as ClassId | "brand"} size={46} /><Pill label={`المستوى ${profile.level.toLocaleString("en-US")}`} tone="gold" /></View>} />
       <Card style={styles.heroCard}>
         <View style={styles.heroRow}>
           <CharacterPortrait gender={profile.character_gender === "female" ? "female" : "male"} width={112} height={146} />
@@ -76,7 +76,7 @@ function MiniStat({ label, value }: { label: string; value: number }) {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: 12, paddingBottom: 28 },
+  content: { gap: 12, paddingBottom: 28 },\n  titleTrailing: { alignItems: "center", gap: 6 },
   stateCard: { padding: 22, alignItems: "center", gap: 10 },
   error: { color: palette.red, textAlign: "center" },
   heroCard: { padding: 16, gap: 13, backgroundColor: "#13242C", borderColor: "rgba(98,216,195,0.22)" },
