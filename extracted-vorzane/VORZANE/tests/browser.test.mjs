@@ -341,12 +341,12 @@ test("game-state read falls back to the RLS-scoped table query when the Edge Fun
   await browserContext.close();
 });
 
-test("new hero creator renders character controls only once", async () => {
+test("new hero creator offers two fixed heroes and saves a valid starter loadout", async () => {
   const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await browserContext.newPage();
   const pageErrors = [];
   const consoleErrors = [];
-  const { unexpectedRequests } = await installSupabaseMock(page, { store: { state: null, writes: [] } });
+  const { unexpectedRequests, store } = await installSupabaseMock(page, { store: { state: null, writes: [] } });
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
 
@@ -356,9 +356,36 @@ test("new hero creator renders character controls only once", async () => {
   await page.getByRole("button", { name: "متابعة بالبريد" }).click();
   await page.getByText("اختر من يسير في الظل", { exact: true }).waitFor({ timeout: 15_000 });
 
-  assert.equal(await page.getByText("اختيار الشخصية", { exact: true }).count(), 1);
-  assert.equal(await page.getByText("معاينة شخصيتك", { exact: true }).count(), 1);
-  assert.equal(await page.getByText("المظهر", { exact: true }).count(), 1);
+  assert.equal(await page.getByText("اختر بطلك — اختيار نهائي", { exact: true }).count(), 1);
+  const heroChoices = page.getByRole("radio");
+  assert.equal(await heroChoices.count(), 2, "only the two fixed hero choices should be available");
+  const shadowHero = heroChoices.filter({ hasText: "فارس الظلال" });
+  const throneHero = heroChoices.filter({ hasText: "حارسة العرش" });
+  assert.equal(await shadowHero.getAttribute("aria-checked"), "true", "the shadow hero should be selected by default");
+  await throneHero.click();
+  assert.equal(await throneHero.getAttribute("aria-checked"), "true", "the throne hero should become selected");
+  assert.equal(await shadowHero.getAttribute("aria-checked"), "false");
+  assert.equal(await page.getByText("شخصية ثابتة", { exact: true }).count(), 1);
+
+  await page.getByPlaceholder("اسمٌ يليق بالأساطير").fill("حارسة الاختبار");
+  await page.getByRole("button", { name: "ابدأ الرحلة" }).click();
+  await page.getByText("حارسة الاختبار", { exact: true }).waitFor({ timeout: 10_000 });
+
+  const deadline = Date.now() + 10_000;
+  while ((!store.writes.length || !store.state?.inventory?.some((item) => item.id === "boots1")) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.deepEqual(store.state.characterStyle, {
+    gender: "female",
+    appearance: 1,
+    hairstyle: "braids",
+    hairColor: "silver",
+    face: "noble",
+    outfit: "royal",
+    body: "agile",
+  });
+  assert.ok(store.state.inventory.some((item) => item.id === "boots1"), "the starter inventory must contain boots1, not a higher-level armor item");
+  assert.equal(store.state.equipped["سلاح"]?.id, "sword1", "the starter sword should be equipped");
   assert.deepEqual(unexpectedRequests, []);
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(consoleErrors, []);
@@ -433,74 +460,59 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
 });
 
 
-test("2D character appearance choices persist in the cloud save and restore after reload", async () => {
-  const store = { state: saveFixture(), writes: [] };
+test("premium hero identity is locked in profile and persists after reload", async () => {
+  const expectedStyle = {
+    gender: "female",
+    appearance: 1,
+    hairstyle: "braids",
+    hairColor: "silver",
+    face: "noble",
+    outfit: "royal",
+    body: "agile",
+  };
+  const store = { state: { ...saveFixture(), characterStyle: expectedStyle }, writes: [] };
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
-  const { writes, unexpectedRequests } = await installSupabaseMock(page, { store });
+  const { unexpectedRequests } = await installSupabaseMock(page, { store });
+
+  const openProfile = async () => {
+    await page.getByRole("button", { name: "فتح القائمة" }).click();
+    await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
+    await page.getByText("شخصيتك", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByLabel("إغلاق القائمة").waitFor({ state: "hidden", timeout: 5_000 });
+  };
 
   await signInWithMock(page);
-  await page.getByRole("button", { name: "فتح القائمة" }).click();
-  await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
-  await page.getByText("مظهر الشخصية", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-  await page.getByLabel("إغلاق القائمة").waitFor({ state: "hidden", timeout: 5_000 });
+  await openProfile();
+  await page.getByText("حارسة العرش", { exact: true }).waitFor({ state: "visible" });
+  await page.getByText("اختيار نهائي — غير قابل للتغيير", { exact: true }).waitFor({ state: "visible" });
   const portrait = page.getByLabel("معاينة الشخصية ثنائية الأبعاد");
   await portrait.scrollIntoViewIfNeeded();
   await portrait.waitFor({ state: "visible", timeout: 5_000 });
-  const appearanceOverlay = await page.locator("#error-overlay").innerText().catch(() => "");
-  assert.equal(appearanceOverlay.trim(), "", `2D character page runtime overlay: ${appearanceOverlay}`);
-
-  await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).click();
-  assert.ok(await page.locator("svg").count() > 0, "the 2D SVG portrait must render");
-  await page.getByRole("radio", { name: "درجة اللون 3" }).click();
-  await page.getByRole("radio", { name: "تسريحة الشعر: ضفائر" }).click();
-  await page.getByRole("radio", { name: "لون الشعر: فضي" }).click();
-  await page.getByRole("radio", { name: "ملامح الوجه: نبيل" }).click();
-  assert.equal(await page.locator('[data-testid="adventurer-circlet"]').count(), 1, "adventurer outfit must show its circlet");
-  await page.getByRole("radio", { name: "الملابس: ملكي" }).click();
-  assert.equal(await page.locator('[data-testid="royal-crown"]').count(), 1, "royal outfit must show its crown");
-  assert.equal(await page.locator('[data-testid="adventurer-circlet"]').count(), 0, "royal outfit must replace the adventurer circlet");
-  await page.getByRole("radio", { name: "الملابس: داكن" }).click();
-  assert.equal(await page.locator('[data-testid="shadow-hood"]').count(), 1, "shadow outfit must show its hood");
-  await page.getByRole("radio", { name: "الملابس: ملكي" }).click();
-  assert.equal(await page.locator('[data-testid="royal-crown"]').count(), 1, "switching back must restore the royal crown");
-  await page.getByRole("radio", { name: "بنية الجسم: متين" }).click();
-
-  const deadline = Date.now() + 10_000;
-  while ((!writes.length
-    || store.state.characterStyle?.gender !== "female"
-    || store.state.characterStyle?.hairstyle !== "braids"
-    || store.state.characterStyle?.hairColor !== "silver"
-    || store.state.characterStyle?.outfit !== "royal"
-    || store.state.characterStyle?.body !== "sturdy") && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.ok(await page.locator("svg").count() > 0, "the fixed 2D hero portrait must render");
+  for (const label of [
+    /تفضيل الشخصية/,
+    /درجة اللون/,
+    /تسريحة الشعر/,
+    /لون الشعر/,
+    /ملامح الوجه/,
+    /الملابس:/,
+    /بنية الجسم:/,
+  ]) {
+    assert.equal(await page.getByRole("radio", { name: label }).count(), 0, `character customization control ${label} must not be available`);
   }
-  assert.equal(store.state.characterStyle.gender, "female");
-  assert.equal(store.state.characterStyle.appearance, 2);
-  assert.equal(store.state.characterStyle.hairstyle, "braids");
-  assert.equal(store.state.characterStyle.hairColor, "silver");
-  assert.equal(store.state.characterStyle.face, "noble");
-  assert.equal(store.state.characterStyle.outfit, "royal");
-  assert.equal(store.state.characterStyle.body, "sturdy");
-  assert.deepEqual(unexpectedRequests, []);
+  assert.equal(await page.getByText("مظهر الشخصية", { exact: true }).count(), 0);
+  assert.deepEqual(store.state.characterStyle, expectedStyle);
 
   await page.reload();
-  await page.getByRole("button", { name: "فتح القائمة" }).click();
-  await page.getByRole("button", { name: "الملف الشخصي", exact: true }).click();
-  await page.getByText("مظهر الشخصية", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-  await page.getByLabel("إغلاق القائمة").waitFor({ state: "hidden", timeout: 5_000 });
+  await openProfile();
+  await page.getByText("حارسة العرش", { exact: true }).waitFor({ state: "visible" });
+  await page.getByText("اختيار نهائي — غير قابل للتغيير", { exact: true }).waitFor({ state: "visible" });
   const restoredPortrait = page.getByLabel("معاينة الشخصية ثنائية الأبعاد");
   await restoredPortrait.scrollIntoViewIfNeeded();
   await restoredPortrait.waitFor({ state: "visible", timeout: 5_000 });
-  await page.getByRole("radio", { name: "تفضيل الشخصية: أنثى" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "درجة اللون 3" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "تسريحة الشعر: ضفائر" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "لون الشعر: فضي" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "ملامح الوجه: نبيل" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "الملابس: ملكي" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  await page.getByRole("radio", { name: "بنية الجسم: متين" }).getAttribute("aria-checked").then((value) => assert.equal(value, "true"));
-  assert.ok(await page.locator("svg").count() > 0, "the restored 2D portrait must render");
+  assert.deepEqual(store.state.characterStyle, expectedStyle);
+  assert.deepEqual(unexpectedRequests, []);
   await restoredPortrait.screenshot({ path: "/tmp/vorzane-profile-2d-mobile.png" });
-
   await context.close();
 });
