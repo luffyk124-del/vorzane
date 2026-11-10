@@ -418,12 +418,14 @@ test("new hero creator renders character controls only once", async () => {
   assert.equal(await page.getByText("البطلة", { exact: true }).count(), 1);
   assert.equal(await page.getByText("معاينة شخصيتك", { exact: true }).count(), 0, "the old appearance preview must not return");
   assert.equal(await page.getByText("المظهر", { exact: true }).count(), 0, "appearance customization must not be offered during creation");
-  await page.getByPlaceholder("اسمٌ يليق بالأساطير").fill("بطل الاختبار");
+  await page.getByText("البطلة", { exact: true }).click();
+  await page.getByText("الساحر", { exact: true }).click();
+  await page.getByPlaceholder("اسمٌ يليق بالأساطير").fill("بطلة الاختبار");
   await page.getByRole("button", { name: "ابدأ الرحلة" }).click();
   await page.getByText("زنزانتك ومعاركك", { exact: true }).waitFor({ timeout: 10_000 });
   assert.equal(await page.getByText("اختر شخصيتك", { exact: true }).count(), 0, "character selection must disappear after creation");
   assert.equal(await page.getByText("اختر فئتك", { exact: true }).count(), 0, "class selection must disappear after creation");
-  assert.equal(await page.getByLabel("صورة البطل").count(), 1, "the selected hero portrait remains visible");
+  assert.equal(await page.getByLabel("صورة البطلة").count(), 1, "the selected heroine portrait remains visible");
   assert.deepEqual(unexpectedRequests, []);
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(consoleErrors, []);
