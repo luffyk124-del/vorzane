@@ -77,7 +77,7 @@ export default function CampScreen() {
                 <View style={[styles.classIcon, active && styles.classIconActive]}><Icon name={CLASS_ICON[classId] as never} size={22} color={active ? palette.ink : palette.jade} /></View>
                 <Txt style={[styles.className, active && { color: palette.gold }]}>{CLASS_NAMES[classId]}</Txt>
                 <Txt muted style={styles.classDesc}>{CLASS_DESCRIPTIONS[classId]}</Txt>
-                <Txt style={styles.classPassive}>{CLASS_PASSIVES[classId].name}</Txt>
+                <Txt style={styles.classPassive}>{CLASS_PASSIVES[classId].name} • {CLASS_PASSIVES[classId].description}</Txt>
               </View>
             </ImageBackground>
           </Pressable>;
