@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Image, ImageBackground, Pressable, StyleSheet, View } from "react-native";
+import { ImageBackground, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, GradientCard, Icon, InputField, Meter, Pill, SectionTitle, StatCard, Txt } from "../../src/components/ui";
 import { CLASS_ICON, findExpedition, PETS, STARTER_ITEMS } from "../../src/game/catalog";
@@ -12,9 +12,9 @@ import { CLASS_ART } from "../../src/game/art";
 import { ProfileAvatar } from "../../src/components/ProfileAvatar";
 import { BattleArena } from "../../src/components/BattleArena";
 import { createItemInstance } from "../../src/game/dungeonItems";
+import { Character2DViewer } from "../../src/components/Character2DViewer";
 
 const CLASSES: ClassId[] = ["Warrior", "Mage", "Assassin", "Archer"];
-const APPEARANCE_COLORS = ["#62D8C3", "#E6C77C", "#A99AE8", "#E67970"];
 const STAT_LABELS: Record<StatKey, string> = { str: "القوة", def: "الدفاع", vit: "الحيوية", agi: "الرشاقة", luck: "الحظ" };
 const STAT_KEYS: StatKey[] = ["str", "def", "vit", "agi", "luck"];
 const formatTime = (milliseconds: number) => {
@@ -31,7 +31,6 @@ export default function CampScreen() {
   const [heroName, setHeroName] = useState("");
   const [selectedClass, setSelectedClass] = useState<ClassId>("Warrior");
   const [selectedGender, setSelectedGender] = useState<"male" | "female">("male");
-  const [selectedAppearance, setSelectedAppearance] = useState<0 | 1 | 2 | 3>(0);
   const [battleSequence, setBattleSequence] = useState<BattleSequence | null>(null);
   const [now, setNow] = useState(Date.now());
   const hero = state.hero;
@@ -45,9 +44,14 @@ export default function CampScreen() {
   const createHero = () => {
     if (heroName.trim().length < 2) return;
     const next = createHeroState(heroName, selectedClass);
-    next.characterStyle = { ...next.characterStyle, gender: selectedGender, appearance: selectedAppearance };
-    const firstSword = createItemInstance(STARTER_ITEMS[0], "starter");
-    const firstBoots = createItemInstance(STARTER_ITEMS[3], "starter");
+    next.characterStyle = selectedGender === "male"
+      ? { gender: "male", appearance: 2, hairstyle: "short", hairColor: "obsidian", face: "weathered", outfit: "shadow", body: "sturdy" }
+      : { gender: "female", appearance: 1, hairstyle: "braids", hairColor: "silver", face: "noble", outfit: "royal", body: "agile" };
+    const starterSword = STARTER_ITEMS.find((item) => item.id === "sword1");
+    const starterBoots = STARTER_ITEMS.find((item) => item.id === "boots1");
+    if (!starterSword || !starterBoots) throw new Error("The starter equipment catalog is incomplete.");
+    const firstSword = createItemInstance(starterSword, "starter");
+    const firstBoots = createItemInstance(starterBoots, "starter");
     next.equipped[firstSword.slot] = firstSword;
     next.inventory.push(firstBoots);
     update(() => next);
@@ -82,32 +86,34 @@ export default function CampScreen() {
           </Pressable>;
         })}
       </View>
-      <View style={styles.creatorPreview}>
-        <View style={[styles.creatorPortrait, { borderColor: APPEARANCE_COLORS[selectedAppearance] }]}>
-          <Image source={{ uri: CLASS_ART[selectedClass] }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: APPEARANCE_COLORS[selectedAppearance], opacity: 0.20 }]} />
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: selectedGender === "male" ? "#80B7D4" : "#D99AC4", opacity: 0.08 }]} />
-          <View style={styles.previewGender}><Txt style={styles.previewGenderText}>{selectedGender === "male" ? "ذكر" : "أنثى"}</Txt></View>
-        </View>
-        <View style={styles.creatorPreviewText}>
-          <Txt style={styles.creatorPreviewTitle}>معاينة شخصيتك</Txt>
-          <Txt muted style={styles.creatorPreviewCopy}>مظهر ثنائي الأبعاد قابل للتخصيص، ويمكنك تغييره لاحقًا.</Txt>
-        </View>
-      </View>
-      <SectionTitle title="اختيار الشخصية" icon="person-circle-outline" />
+      <SectionTitle title="اختر بطلك — اختيار نهائي" icon="shield-checkmark" />
+      <Txt muted style={styles.characterLockHint}>اختر واحدة من الشخصيتين. هذا القرار يثبت على حسابك ولا يمكن تغييره لاحقًا.</Txt>
       <View style={styles.choiceRow}>
-        {([{ id: "male", label: "ذكر", icon: "male" }, { id: "female", label: "أنثى", icon: "female" }] as const).map((option) => <Pressable key={option.id} onPress={() => setSelectedGender(option.id)} style={[styles.choiceButton, selectedGender === option.id && styles.choiceButtonActive]}>
-          <Icon name={option.icon as never} size={18} color={selectedGender === option.id ? palette.ink : palette.jade} />
-          <Txt style={[styles.choiceLabel, selectedGender === option.id && styles.choiceLabelActive]}>{option.label}</Txt>
-        </Pressable>)}
+        {([{ id: "male", label: "فارس الظلال", subtitle: "درع فولاذي • عباءة داكنة", icon: "male" }, { id: "female", label: "حارسة العرش", subtitle: "زي ملكي • ضفائر فضية", icon: "female" }] as const).map((option) => {
+          const selected = selectedGender === option.id;
+          return <Pressable key={option.id} onPress={() => setSelectedGender(option.id)} accessibilityRole="radio" accessibilityState={{ checked: selected }} aria-checked={selected} style={[styles.characterChoice, selected && styles.characterChoiceActive]}>
+            <View style={styles.characterChoiceIcon}><Icon name={option.icon as never} size={21} color={selected ? palette.gold : palette.jade} /></View>
+            <Txt style={[styles.characterChoiceTitle, selected && { color: palette.gold }]}>{option.label}</Txt>
+            <Txt muted style={styles.characterChoiceSubtitle}>{option.subtitle}</Txt>
+            {selected ? <Pill label="تم الاختيار" tone="gold" icon="checkmark-circle" /> : <Txt muted style={styles.characterChoiceSelect}>اضغط للاختيار</Txt>}
+          </Pressable>;
+        })}
       </View>
-      <Txt style={styles.appearanceHeading}>المظهر</Txt>
-      <View style={styles.appearanceRow}>
-        {APPEARANCE_COLORS.map((color, index) => <Pressable key={index} onPress={() => setSelectedAppearance(index as 0 | 1 | 2 | 3)} style={[styles.appearanceOption, { borderColor: selectedAppearance === index ? palette.gold : palette.line }]}>
-          <View style={[styles.appearanceSwatch, { backgroundColor: color }]} />
-          <Txt style={styles.appearanceLabel}>مظهر {index + 1}</Txt>
-          {selectedAppearance === index ? <Icon name="checkmark-circle" size={15} color={palette.gold} /> : null}
-        </Pressable>)}
+      <View style={styles.premiumCharacterPreview}>
+        <View style={styles.premiumPreviewHeader}>
+          <Txt style={styles.creatorPreviewTitle}>{selectedGender === "male" ? "فارس الظلال" : "حارسة العرش"}</Txt>
+          <Pill label="شخصية ثابتة" tone="jade" icon="lock-closed" />
+        </View>
+        <Character2DViewer
+          gender={selectedGender}
+          appearance={selectedGender === "male" ? 2 : 1}
+          hairstyle={selectedGender === "male" ? "short" : "braids"}
+          hairColor={selectedGender === "male" ? "obsidian" : "silver"}
+          face={selectedGender === "male" ? "weathered" : "noble"}
+          outfit={selectedGender === "male" ? "shadow" : "royal"}
+          body={selectedGender === "male" ? "sturdy" : "agile"}
+        />
+        <Txt muted style={styles.characterLockHint}>لا توجد خيارات لتعديل الوجه أو الشعر أو الملابس بعد إنشاء البطل.</Txt>
       </View>
       <InputField label="اسم البطل" value={heroName} onChangeText={setHeroName} placeholder="اسمٌ يليق بالأساطير" icon="person-outline" />
       <AppButton label="ابدأ الرحلة" icon="arrow-back" onPress={createHero} disabled={heroName.trim().length < 2} />
@@ -148,9 +154,17 @@ export default function CampScreen() {
           <Txt muted style={styles.heroCaption}>{activePet ? `رفيقك: ${activePet.name}` : "استعد لعبور حدود الرماد"}</Txt>
         </View>
         <View style={styles.heroPortrait}>
-          <Image source={{ uri: CLASS_ART[hero.className] }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityLabel={CLASS_NAMES[hero.className]} />
-          <View pointerEvents="none" style={[styles.heroPortraitShade, { backgroundColor: APPEARANCE_COLORS[state.characterStyle.appearance], opacity: 0.18 }]} />
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: state.characterStyle.gender === "male" ? "#80B7D4" : "#D99AC4", opacity: 0.08 }]} />
+          <View style={styles.heroCharacterScale}>
+            <Character2DViewer
+              gender={state.characterStyle.gender}
+              appearance={state.characterStyle.gender === "male" ? 2 : 1}
+              hairstyle={state.characterStyle.gender === "male" ? "short" : "braids"}
+              hairColor={state.characterStyle.gender === "male" ? "obsidian" : "silver"}
+              face={state.characterStyle.gender === "male" ? "weathered" : "noble"}
+              outfit={state.characterStyle.gender === "male" ? "shadow" : "royal"}
+              body={state.characterStyle.gender === "male" ? "sturdy" : "agile"}
+            />
+          </View>
           <View style={styles.portraitAura} />
         </View>
       </View>
@@ -235,7 +249,7 @@ const styles = StyleSheet.create({
   heroClass: { fontSize: 14, color: palette.jade, fontWeight: "800", marginTop: 1 },
   heroCaption: { fontSize: 12, marginTop: 5 },
   heroPortrait: { width: 105, height: 124, borderRadius: 36, backgroundColor: "rgba(230,199,124,0.08)", borderWidth: 1, borderColor: "rgba(230,199,124,0.29)", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  heroPortraitShade: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(8,12,18,0.14)" },
+  heroCharacterScale: { position: "absolute", width: 300, height: 360, top: -118, left: -97, transform: [{ scale: 0.35 }] },
   portraitAura: { position: "absolute", bottom: -24, width: 116, height: 47, borderRadius: 60, backgroundColor: "rgba(98,216,195,0.12)" },
   xpBlock: { gap: 7, marginTop: 16 },
   xpMeta: { flexDirection: "row", justifyContent: "space-between" },
@@ -273,23 +287,17 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 10 },
   summaryDivider: { width: 1, height: 28, backgroundColor: palette.line },
   createHero: { gap: 15, marginTop: 8 },
-  creatorPreview: { flexDirection: "row", alignItems: "center", gap: 14, padding: 12, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.035)" },
-  creatorPortrait: { width: 92, height: 112, borderWidth: 2, borderRadius: 22, overflow: "hidden", backgroundColor: palette.panelRaised },
-  previewGender: { position: "absolute", bottom: 6, right: 6, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, backgroundColor: "rgba(8,12,18,0.82)" },
-  previewGenderText: { fontSize: 10, fontWeight: "900", color: palette.text },
-  creatorPreviewText: { flex: 1, alignItems: "flex-end", gap: 5 },
   creatorPreviewTitle: { fontSize: 15, fontWeight: "900" },
-  creatorPreviewCopy: { fontSize: 11, lineHeight: 17, textAlign: "right" },
   choiceRow: { flexDirection: "row", gap: 9 },
-  choiceButton: { flex: 1, minHeight: 48, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, borderWidth: 1, borderColor: palette.line, borderRadius: 13, backgroundColor: palette.panel },
-  choiceButtonActive: { backgroundColor: palette.gold, borderColor: palette.gold },
-  choiceLabel: { color: palette.text, fontSize: 13, fontWeight: "800" },
-  choiceLabelActive: { color: palette.ink },
-  appearanceHeading: { fontSize: 12, color: palette.muted, fontWeight: "800", textAlign: "right" },
-  appearanceRow: { flexDirection: "row", gap: 7 },
-  appearanceOption: { flex: 1, minHeight: 78, alignItems: "center", justifyContent: "center", gap: 5, borderWidth: 1, borderRadius: 12, backgroundColor: palette.panel, padding: 6 },
-  appearanceSwatch: { width: 24, height: 24, borderRadius: 12 },
-  appearanceLabel: { fontSize: 9, fontWeight: "800", color: palette.text },
+  characterChoice: { flex: 1, minHeight: 142, alignItems: "center", justifyContent: "center", gap: 8, padding: 12, borderWidth: 1, borderColor: palette.line, borderRadius: 16, backgroundColor: palette.panel },
+  characterChoiceActive: { borderColor: palette.gold, backgroundColor: "rgba(230,199,124,0.09)" },
+  characterChoiceIcon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(98,216,195,0.10)" },
+  characterChoiceTitle: { fontSize: 14, fontWeight: "900", textAlign: "center" },
+  characterChoiceSubtitle: { fontSize: 10, textAlign: "center", lineHeight: 15 },
+  characterChoiceSelect: { fontSize: 9 },
+  characterLockHint: { fontSize: 11, lineHeight: 18, textAlign: "right" },
+  premiumCharacterPreview: { gap: 10, padding: 10, borderRadius: 18, borderWidth: 1, borderColor: "rgba(230,199,124,0.28)", backgroundColor: "rgba(255,255,255,0.025)" },
+  premiumPreviewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   createTitle: { fontSize: 25, fontWeight: "900", marginTop: 2 },
   createCopy: { fontSize: 14, lineHeight: 22, marginTop: -8 },
   classGrid: { flexDirection: "row", flexWrap: "wrap", gap: 9 },
