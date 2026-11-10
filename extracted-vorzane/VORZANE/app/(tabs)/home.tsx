@@ -105,16 +105,10 @@ export default function CampScreen() {
   return <AppScreen>
     <View style={styles.topline}>
       <View style={styles.currencyRow}>
-        <Pill label={state.gold.toLocaleString("ar-EG")} icon="logo-usd" tone="gold" />
-        <Pill label={state.gems.toLocaleString("ar-EG")} icon="diamond" tone="jade" />
+        <Pill label={state.gold.toLocaleString("en-US")} icon="logo-usd" tone="gold" />
+        <Pill label={state.gems.toLocaleString("en-US")} icon="diamond" tone="jade" />
       </View>
-      <View style={styles.brandInline}>
-        <Pressable onPress={() => router.push("/profile")} accessibilityRole="button" accessibilityLabel="فتح الملف الشخصي" style={styles.profileButton}>
-          <CharacterPortrait gender={state.characterStyle.gender} width={36} height={42} compact />
-        </Pressable>
-        <BrandMark size={32} />
-        <Txt style={styles.wordmark}>VORZANE</Txt>
-      </View>
+      <Txt style={styles.wordmark}>VORZANE</Txt>
     </View>
 
     {status === "offline" ? <Card style={styles.offlineBanner}><Icon name="cloud-offline-outline" color={palette.red} size={18} /><Txt style={styles.offlineText}>أنت في وضع محلي مؤقت — {saveStatus}</Txt></Card> : null}
@@ -132,7 +126,7 @@ export default function CampScreen() {
         <CharacterPortrait gender={state.characterStyle.gender} width={104} height={132} />
       </View>
       <View style={styles.xpBlock}><View style={styles.xpMeta}><Txt muted style={styles.xpLabel}>الخبرة</Txt><Txt style={styles.xpValue}>{hero.exp} / {stats.xpNeeded}</Txt></View><Meter value={hero.exp} max={stats.xpNeeded} color={palette.gold} height={8} /></View>
-      <View style={styles.powerRow}><Pill label={`قوة ${stats.power}`} icon="flash" tone="jade" /><Txt muted style={styles.saveLine}>{saveStatus}</Txt></View>
+      <View style={styles.powerRow}><Pill label={`قوة ${stats.power}`} icon="fist" tone="jade" /><Txt muted style={styles.saveLine}>{saveStatus}</Txt></View>
     </GradientCard>
 
     <SectionTitle title="زنزانتك ومعاركك" icon="flash-outline" action={<Pressable onPress={() => router.push("/quests")}><Txt style={styles.actionLink}>مهامك ←</Txt></Pressable>} />
