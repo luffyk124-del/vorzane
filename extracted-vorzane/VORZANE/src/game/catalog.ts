@@ -8,7 +8,7 @@ export const PETS: { id: string; name: string; icon: string; bonus: Partial<Reco
   { id: "dragon", name: "تنين الياقوت", icon: "flame", bonus: { str: 9 }, price: 700, requiredLevel: 15, description: "رفيق متقدم يرفع القوة الهجومية بعد المستوى الخامس عشر." },
   { id: "owl", name: "بومة الحكمة", icon: "eye", bonus: { luck: 18, agi: 8 }, price: 18_000, requiredLevel: 20, description: "رفيق نادر يزيد الحظ وسرعة الحركة." },
   { id: "moon-deer", name: "أيل القمر", icon: "moon", bonus: { vit: 35, def: 12 }, price: 90_000, requiredLevel: 30, description: "رفيق أسطوري يمنح الحيوية والصمود." },
-  { id: "star-drake", name: "تنين الشهب", icon: "star", bonus: { str: 60, luck: 24 }, price: 450_000, requiredLevel: 45, description: "رفيق عظيم يعزز القوة والحظ." },
+  { id: "star-drake", name: "تنين الشهب", icon: "star", bonus: { str: 60, luck: 24 }, price: 450_000, requiredLevel: 45, description: "رفيق عظيم يعزز القوة والحظ." },\n  { id: "dimas-royal-drake", name: "تنين العرش الأزلي", icon: "flame", bonus: { str: 180, def: 90, vit: 140, luck: 80 }, price: 0, requiredLevel: 75, description: "رفيق أسطوري لا يُمنح إلا لمن يبلغ قمة الديماس." },
 ];
 
 export const STARTER_ITEMS: EquipmentItem[] = [
