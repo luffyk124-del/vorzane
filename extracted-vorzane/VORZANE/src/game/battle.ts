@@ -1,7 +1,7 @@
 import { BATTLE_ENEMIES } from "./catalog.ts";
 import { createItemInstance, getDungeonDrop, getEquipmentSellPrice } from "./dungeonItems.ts";
 import { addExperience, combatStats } from "./stats.ts";
-import type { BattleMode, ClassId, EquipmentItem, GameState } from "./model.ts";
+import { CLASS_PASSIVES, type BattleMode, type ClassId, type EquipmentItem, type GameState } from "./model.ts";
 import type { EnemyBlueprint } from "./catalog.ts";
 
 export type BattleTurn = {
@@ -28,7 +28,7 @@ export type BattleSequence = {
   id: string;
   mode: BattleMode;
   modeLabel: string;
-  hero: { name: string; className: ClassId; level: number; attack: number };
+  hero: { name: string; className: ClassId; level: number; attack: number; passiveName: string };
   enemy: EnemyBlueprint & { level: number; defense: number };
   heroMaxHP: number;
   enemyMaxHP: number;
@@ -78,26 +78,13 @@ export function createBattleSequence(state: GameState, mode: BattleMode, random:
   let enemyHP = enemyMaxHP;
   let nextActor: "hero" | "enemy" = heroFirst ? "hero" : "enemy";
   const turns: BattleTurn[] = [];
+  let heroAttackCount = 0;
   const maxActions = 200;
 
   while (heroHP > 0 && enemyHP > 0 && turns.length < maxActions) {
     let damage = 0;
     let critical = false;
-    if (nextActor === "hero") {
-      damage = damageAmount(player.attack, enemyDefense);
-      const criticalChance = clamp(0.04 + player.stats.luck * 0.004, 0.04, 0.30);
-      critical = random() < criticalChance;
-      if (critical) damage = Math.floor(damage * 1.55);
-      enemyHP = Math.max(0, enemyHP - damage);
-    } else {
-      damage = damageAmount(enemyAttack, player.defense);
-      heroHP = Math.max(0, heroHP - damage);
-    }
-    const round = Math.ceil((turns.length + 1) / 2);
-    const message = nextActor === "hero"
-      ? `${hero.name} يهاجم ${enemy.name} ويسبب ${damage} ضرر${critical ? " بضربة حرجة!" : "."}`
-      : `${enemy.name} يردّ بضربة ويسبب ${damage} ضررًا.`;
-    turns.push({ index: turns.length + 1, round, actor: nextActor, damage, critical, heroHP, enemyHP, message });
+    let passiveNote = "";\n    if (nextActor === "hero") {\n      heroAttackCount += 1;\n      damage = damageAmount(player.attack, enemyDefense);\n      if (hero.className === "Archer" && heroAttackCount === 1) { damage = Math.floor(damage * 1.3); passiveNote = " عين الصياد: ضربة افتتاحية!"; }\n      if (hero.className === "Mage" && heroAttackCount % 3 === 0) { damage = Math.floor(damage * 1.45); passiveNote = " نبض الأثير: انفجار سحري!"; }\n      const criticalBonus = hero.className === "Assassin" ? 0.10 : 0;\n      const criticalChance = clamp(0.04 + player.stats.luck * 0.004 + criticalBonus, 0.04, 0.40);\n      critical = random() < criticalChance;\n      if (critical) { damage = Math.floor(damage * (hero.className === "Assassin" ? 1.7 : 1.55)); if (hero.className === "Assassin") passiveNote = " حدس قاتل: ضربة حرجة!"; }\n      enemyHP = Math.max(0, enemyHP - damage);\n    } else {\n      damage = damageAmount(enemyAttack, player.defense);\n      if (hero.className === "Warrior") { damage = Math.max(1, Math.floor(damage * 0.88)); passiveNote = " درع الصمود: خفّف الضربة."; }\n      heroHP = Math.max(0, heroHP - damage);\n    }\n    const round = Math.ceil((turns.length + 1) / 2);\n    const message = nextActor === "hero"\n      ? hero.name + " يهاجم " + enemy.name + " ويسبب " + damage + " ضرر" + (critical ? " بضربة حرجة!" : ".") + passiveNote\n      : enemy.name + " يردّ بضربة ويسبب " + damage + " ضررًا." + passiveNote;\n    turns.push({ index: turns.length + 1, round, actor: nextActor, damage, critical, heroHP, enemyHP, message });
     nextActor = nextActor === "hero" ? "enemy" : "hero";
   }
 
@@ -151,7 +138,7 @@ export function createBattleSequence(state: GameState, mode: BattleMode, random:
     id: `battle-${Date.now()}-${Math.floor(random() * 1_000_000)}`,
     mode,
     modeLabel: MODE_LABELS[mode],
-    hero: { name: hero.name, className: hero.className, level: hero.level, attack: player.attack },
+    hero: { name: hero.name, className: hero.className, level: hero.level, attack: player.attack, passiveName: CLASS_PASSIVES[hero.className].name },
     enemy: { ...enemy, name: enemyTemplate.name, title: mode === "dungeon" ? `الطابق ${floor} • ${enemyTemplate.title}` : enemyTemplate.title },
     heroMaxHP,
     enemyMaxHP,
