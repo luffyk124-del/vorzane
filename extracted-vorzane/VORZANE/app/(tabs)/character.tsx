@@ -1,4 +1,5 @@
 import { StyleSheet, View } from "react-native";
+import { CharacterPortrait } from "../../src/components/CharacterPortrait";
 import { useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, StatCard, Txt } from "../../src/components/ui";
 import ProgressRing from "../../src/components/ProgressRing";
@@ -27,8 +28,6 @@ export default function CharacterScreen() {
   </AppScreen>;
 
   const stats = combatStats(state);
-  const genderLabel = state.characterStyle.gender === "male" ? "ذكر" : "أنثى";
-  const genderIcon = state.characterStyle.gender === "male" ? "male" : "female";
 
   return <AppScreen>
     <PageTitle eyebrow="ملف البطل" title="الشخصية" subtitle="بيانات البطل وتقدمه وتطوير سماته." trailing={
@@ -42,13 +41,7 @@ export default function CharacterScreen() {
           <Txt muted style={styles.heroDescription}>{CLASS_DESCRIPTIONS[hero.className]}</Txt>
           <Pill label={CLASS_PASSIVES[hero.className].name} icon="sparkles" tone="jade" />
         </View>
-        <View style={styles.genderPanel}>
-          <Icon name={CLASS_ICON[hero.className] as never} size={46} color={palette.gold} />
-          <View style={styles.genderBadge}>
-            <Icon name={genderIcon as never} size={16} color={palette.jade} />
-            <Txt style={styles.genderText}>{genderLabel}</Txt>
-          </View>
-        </View>
+        <CharacterPortrait gender={state.characterStyle.gender} width={112} height={148} />
       </View>
       <View style={styles.progressRow}>
         <ProgressRing progress={stats.xpNeeded > 0 ? hero.exp / stats.xpNeeded : 0} size={112} strokeWidth={8} color={palette.gold} trackColor={palette.line} label="تقدم الخبرة إلى المستوى التالي">
@@ -83,14 +76,6 @@ export default function CharacterScreen() {
       {hero.statPoints > 0 ? <Txt muted style={styles.statHint}>كل نقطة تُحفظ تلقائيًا مع تقدمك.</Txt> : <Txt muted style={styles.statHint}>ستحصل على نقاط جديدة عند الترقّي بالمستوى.</Txt>}
     </Card>
 
-    <SectionTitle title="هوية الشخصية" icon="lock-closed-outline" />
-    <Card style={styles.fixedCard}>
-      <View style={styles.fixedRow}>
-        <Icon name={genderIcon as never} size={22} color={palette.jade} />
-        <Txt style={styles.fixedText}>الجنس المختار عند إنشاء الشخصية: {genderLabel}</Txt>
-      </View>
-      <Txt muted style={styles.statHint}>لا توجد خيارات لتغيير الشكل أو الملامح بعد الإنشاء.</Txt>
-    </Card>
   </AppScreen>;
 }
 
@@ -105,9 +90,6 @@ const styles = StyleSheet.create({
   heroName: { fontSize: 22, fontWeight: "900" },
   heroClass: { color: palette.jade, fontSize: 14, fontWeight: "900" },
   heroDescription: { fontSize: 11, lineHeight: 18, textAlign: "right" },
-  genderPanel: { width: 96, height: 108, alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 22, backgroundColor: palette.midnight, borderWidth: 1, borderColor: palette.line },
-  genderBadge: { flexDirection: "row", alignItems: "center", gap: 4 },
-  genderText: { fontSize: 10, fontWeight: "900" },
   progressRow: { flexDirection: "row", alignItems: "center", gap: 15, paddingTop: 13, borderTopWidth: 1, borderTopColor: palette.line },
   progressCopy: { flex: 1, alignItems: "flex-end", gap: 7 },
   progressTitle: { fontSize: 14, fontWeight: "900" },
@@ -122,7 +104,4 @@ const styles = StyleSheet.create({
   statNumber: { minWidth: 34, color: palette.gold, fontSize: 15, fontWeight: "900", textAlign: "center" },
   statLabel: { fontSize: 13, fontWeight: "800" },
   statHint: { fontSize: 11, lineHeight: 18, textAlign: "right" },
-  fixedCard: { gap: 8, backgroundColor: "#13242C" },
-  fixedRow: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 9 },
-  fixedText: { fontSize: 12, fontWeight: "800" },
 });
