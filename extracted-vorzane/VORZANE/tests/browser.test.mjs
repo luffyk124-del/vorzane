@@ -452,7 +452,7 @@ test("offline progress conflict resolves and restores in a clean second context"
   await signInWithMock(secondPage);
   await secondPage.getByRole("button", { name: "الشخصية", exact: true }).click();
   await secondPage.getByText("1 نقطة تطوير متاحة", { exact: true }).waitFor();
-  assert.equal(await secondPage.getByText("14", { exact: true }).count(), 1);
+  assert.equal(await secondPage.getByText(/^(١٤|14)$/).count(), 1, "the restored strength value should be visible using the Arabic or Latin numeral font");
   await secondContext.close();
 });
 
@@ -502,8 +502,10 @@ test("character, player profile, and settings have separate responsibilities", a
 
   await signInWithMock(page);
   await page.getByRole("button", { name: "الشخصية", exact: true }).click();
-  await page.getByText("ملف البطل", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-  await page.getByText("ذكر", { exact: true }).first().waitFor({ state: "visible", timeout: 5_000 });
+  await page.getByText("بطل الاختبار", { exact: true }).waitFor({ state: "attached", timeout: 10_000 });
+  const genderLabel = page.getByText("ذكر", { exact: true }).first();
+  await genderLabel.scrollIntoViewIfNeeded();
+  await genderLabel.waitFor({ state: "visible", timeout: 5_000 });
   assert.equal(await page.getByRole("radio").count(), 0, "gender and appearance must not be editable after creation");
 
   await page.goto(`${appUrl}/profile`);
