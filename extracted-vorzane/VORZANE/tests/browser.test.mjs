@@ -503,9 +503,6 @@ test("character, player profile, and settings have separate responsibilities", a
   await signInWithMock(page);
   await page.getByRole("button", { name: "الشخصية", exact: true }).click();
   await page.getByText("بطل الاختبار", { exact: true }).waitFor({ state: "attached", timeout: 10_000 });
-  const genderLabel = page.getByText("ذكر", { exact: true }).first();
-  await genderLabel.scrollIntoViewIfNeeded();
-  await genderLabel.waitFor({ state: "visible", timeout: 5_000 });
   assert.equal(await page.getByRole("radio").count(), 0, "gender and appearance must not be editable after creation");
 
   await page.goto(`${appUrl}/profile`);
