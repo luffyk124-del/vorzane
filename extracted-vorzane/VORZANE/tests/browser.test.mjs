@@ -233,7 +233,15 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
 
 async function signInWithMock(page) {
   await page.goto(`${appUrl}/login`);
-  await page.getByPlaceholder("name@example.com").fill("player@example.test");
+  const emailField = page.getByPlaceholder("name@example.com");
+  try {
+    await emailField.waitFor({ state: "visible", timeout: 12_000 });
+  } catch (error) {
+    const diagnostic = await page.locator("body").innerText().catch(() => "<body unavailable>");
+    const title = await page.title().catch(() => "<title unavailable>");
+    throw new Error(`Login screen did not become interactive. URL=${page.url()} title=${title} body=${diagnostic.slice(0, 3000)}; cause=${error instanceof Error ? error.message : String(error)}`);
+  }
+  await emailField.fill("player@example.test");
   await page.getByPlaceholder("8 أحرف على الأقل").fill("local-test-password");
   await page.getByRole("button", { name: "متابعة بالبريد" }).click();
   await page.getByText("ميادين القتال", { exact: true }).waitFor({ timeout: 15_000 });
