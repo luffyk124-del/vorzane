@@ -306,7 +306,7 @@ export function normalizeGameState(value: unknown): GameState | null {
       merchantRefreshAt: finite(source.roaming?.merchantRefreshAt, 0, 0),
     },
     dimas: {
-      highestFloor: finite(source.dimas?.highestFloor, finite(source.tower, 0), 0, 300),
+      highestFloor: finite(source.dimas?.highestFloor, 0, 0, 300),
       claimedMilestones: Array.isArray(source.dimas?.claimedMilestones) ? source.dimas.claimedMilestones.filter((floor): floor is number => Number.isInteger(floor) && floor > 0 && floor <= 300).slice(0, 100) : [],
       lastCompletedAt: finite(source.dimas?.lastCompletedAt, 0, 0),
     },
