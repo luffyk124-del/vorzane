@@ -341,12 +341,12 @@ test("game-state read falls back to the RLS-scoped table query when the Edge Fun
   await browserContext.close();
 });
 
-test("new hero creator renders character controls only once", async () => {
+test("new hero creator renders controls once and saves valid starter equipment", async () => {
   const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await browserContext.newPage();
   const pageErrors = [];
   const consoleErrors = [];
-  const { unexpectedRequests } = await installSupabaseMock(page, { store: { state: null, writes: [] } });
+  const { unexpectedRequests, store } = await installSupabaseMock(page, { store: { state: null, writes: [] } });
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
 
@@ -359,6 +359,16 @@ test("new hero creator renders character controls only once", async () => {
   assert.equal(await page.getByText("اختيار الشخصية", { exact: true }).count(), 1);
   assert.equal(await page.getByText("معاينة شخصيتك", { exact: true }).count(), 1);
   assert.equal(await page.getByText("المظهر", { exact: true }).count(), 1);
+  await page.getByPlaceholder("اسمٌ يليق بالأساطير").fill("بطل البداية");
+  await page.getByRole("button", { name: "ابدأ الرحلة" }).click();
+  await page.getByText("بطل البداية", { exact: true }).waitFor({ timeout: 10_000 });
+
+  const deadline = Date.now() + 10_000;
+  while ((!store.writes.length || !store.state?.inventory?.some((item) => item.catalogId === "boots1")) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.ok(store.state.inventory.some((item) => item.catalogId === "boots1"), "new heroes must receive the level-one boots, not armor30");
+  assert.equal(store.state.equipped["سلاح"]?.catalogId, "sword1", "new heroes must start with the level-one sword equipped");
   assert.deepEqual(unexpectedRequests, []);
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(consoleErrors, []);
