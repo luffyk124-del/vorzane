@@ -183,11 +183,14 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (outcome.kind === "failed") throw outcome.error;
       cloudVersionRef.current = outcome.updatedAt;
       await clearOfflineSavePending(userId, offlineMarkerStorage(), markerToken);
+      if (activeUserRef.current !== userId) return false;
       setCloudError("");
       setSaveStatus("تم حفظ تقدمك بأمان");
       return true;
     }).catch(async (caught: unknown) => {
+      if (activeUserRef.current !== userId) return false;
       await markOfflineSavePending(userId, offlineMarkerStorage());
+      if (activeUserRef.current !== userId) return false;
       const message = caught instanceof Error ? caught.message : "تعذر حفظ تقدمك الآن. سنحاول مجددًا عند عودة الاتصال.";
       setCloudError(message);
       setSaveStatus("تعذرت المزامنة؛ النسخة المحلية محفوظة");
