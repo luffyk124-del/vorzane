@@ -443,7 +443,7 @@ test("a remotely deleted save requires an explicit choice before local data can 
   store.updatedAt = null;
 
   await page.getByText("+1", { exact: true }).first().click();
-  await page.getByText("توجد نسختان لهذا اللاعب", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("لا يوجد حفظ سحابي", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("لم نعثر على حفظ سحابي لهذا الحساب.", { exact: false }).waitFor({ timeout: 5_000 });
 
   assert.equal(store.state, null, "a missing cloud row must not be recreated automatically from stale local data");
