@@ -1,9 +1,9 @@
 # VORZANE — Project Status
 
-> Last updated: 2026-11-09 (verified after PR #26/#27 merges)
+> Last updated: 2026-11-10 (reconciled against current main and open PRs)
 > Main branch: `main`
-> Latest main documentation commit: this file's current revision on `main` (see GitHub file history for its SHA)
-> Latest merged application commit: `29b25592bdc831a739216f967f0c7a3bc55dd4cf`
+> Current main application commit: `badc1d5c8276e756e89efd53596a268a961bfcdc`
+> Latest verified GitHub Pages deployment: workflow `42775586590` succeeded for `badc1d5c8276e756e89efd53596a268a961bfcdc`
 
 This file records the actual state of the VORZANE project. Update it after each meaningful implementation, test result, deployment, or blocker. Only mark work complete when supported by verification.
 
@@ -211,3 +211,28 @@ After every meaningful development batch, update the relevant sections above wit
 - No Supabase production migration, Edge Function deployment, Auth/RLS change, feature-flag change, or player-save mutation was performed in this update.
 - Existing player saves were not modified or deleted. Manus remains unchanged.
 - Keep PR #16 unmerged; it is stale and must not be merged wholesale. Do not reintroduce FPS.ms or Google sign-in.
+
+
+## Verified continuation — 2026-11-10
+
+### Main branch and deployment
+- Current main head at this audit: `badc1d5c8276e756e89efd53596a268a961bfcdc` (PR #31: one stat point per level).
+- Main Pages workflow `42775586590` completed successfully for that exact SHA: build, isolated social-db, and deploy jobs all succeeded. This is the currently verified live Pages version; PR branches below are not deployed.
+- Original Manus deployment remains preserved and was not accessed or modified in this continuation.
+
+### PR #20 — recovery quarantine (already merged)
+- PR #20 is closed and merged as `946e7f6ae64b0a56f9a38947a36c760e78d5037e`; merged head was `749838cf768fcf1267567966c85bf916b4caaa0b`.
+- Fresh exact-head workflows `42586714454` (build + isolated social-db) and `42586714743` (dedicated isolated social-db) both passed. The successful social-db job `129058189493` explicitly executed `supabase/tests/player_saves_rls.sql` before the recovery privacy/quota and command-receipt SQL tests.
+- The restored RLS test remains referenced in current `.github/workflows/pages.yml` (blob `dc22994573277246b0e2e28533417952fa32b81a`). PR #20's deploy job was skipped. Its migration/function remain source-only and were not applied/deployed to production.
+
+### Open PR review and exact heads
+- PR #16 remains open and Draft at head `a340fda41facabaf281fd6207c4d2bd9ec82d0b3`, with base `a36ae7cad7f46feb17242f170fcc7227c72a8128`. Compared with current main it is 43 commits ahead and 24 behind (merge base `a36ae7cad7f46feb17242f170fcc7227c72a8128`); no workflow run was found for its latest head. It still contains the generic full-state upsert, direct-delete reset path, and pre-command snapshot flush. `SERVER_ECONOMY_COMMANDS_ENABLED` remains hard-coded `false`. Do not merge or rebase this branch wholesale.
+- PR #29 remains open and Draft at head `7cfb742c4c37efa0850a2c94e855d4ff2b7e201d`. Exact-head workflow `42771387007` passed build and isolated social-db jobs. The branch is 23 commits ahead and 3 behind current main, with merge base `1025e024c47cacf3e91079cc162c0cb54cd3269e`. It adds insert-only / version-conditional whole-snapshot writes and a safer conflict choice, but it still accepts arbitrary client GameState snapshots. Its reset UI now depends on the `economy-command` function/RPC, which are not deployed to production. Keep it unmerged until reconciled with current main and the deployment dependency is resolved under explicit approval.
+- PR #32 remains open at head `88bfb0536ce192784530c9eaee5d125dc9a7378a`, based on current main. Earlier exact-head run `42792940672` failed only in browser assertions: the new hero radio lacked explicit `aria-checked`, and a profile locator matched two headings. Both were corrected in the latest head; fresh run `42793497028` is pending at this update. This PR removes profile appearance editing and maps existing male/female saves to fixed hero presets; although it does not mutate save rows, it changes the visible appearance of existing players. Do not merge until the product compatibility impact is explicitly reviewed; it is not a purely additive change.
+- PR #33 is open at head `c06d8e01f9c5fac2e0a122e3f1aba374475b42ec`, based on current main. It replaces positional starter-item indexing with stable catalog lookups for `sword1` and `boots1`, and adds a mobile new-player regression assertion. Fresh workflow `42793311838` is pending at this update. If all exact-head checks pass, this narrow starter-loadout correction is eligible for merge.
+
+### Production and server-authority boundary
+- No Supabase production migration, Edge Function deployment, Auth/RLS change, feature-gate activation, or `public.player_saves` insert/update/delete was performed in this continuation.
+- No existing player record was changed. The original Manus deployment remains untouched. GitHub Pages was not redeployed from any PR branch.
+- The generic client snapshot write path, offline/import/recovery restore, mission-period bookkeeping, and client-side battle generation/settlement still block a safe server-authoritative cutover.
+- The Supabase skill registry returned no installed skills in this session. Do not begin Supabase-specific implementation until the required Supabase skill is available and current official docs have been consulted.
