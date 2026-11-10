@@ -9,7 +9,7 @@ import { palette } from "../../src/theme";
 
 export default function ProfileScreen() {
   const { user } = useAuth();
-  const { state, update } = useGame();
+  const { state } = useGame();
   const [displayName, setDisplayName] = useState("");
   const [isSearchable, setIsSearchable] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -43,7 +43,7 @@ export default function ProfileScreen() {
   };
 
   return <AppScreen>
-    <PageTitle eyebrow="هويتك في العالم" title="الملف الشخصي" subtitle="اسم اللاعب، رمزه، وخصوصية ظهوره في البحث." trailing={<CharacterPortrait gender={state.characterStyle.gender} width={62} height={82} />} />
+    <PageTitle eyebrow="هويتك في العالم" title="الملف الشخصي" subtitle="شخصيتك الثابتة واسم اللاعب وخصوصية ظهوره في البحث." trailing={<CharacterPortrait gender={state.characterStyle.gender} width={62} height={82} />} />
     <SectionTitle title="هوية اللاعب" icon="person-circle-outline" />
     <Card style={styles.panel}>
       <View style={styles.identityRow}>
