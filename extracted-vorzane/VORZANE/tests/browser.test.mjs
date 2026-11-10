@@ -450,8 +450,9 @@ test("a remotely deleted save requires an explicit choice before local data can 
   assert.equal(writes.length, 0, "no cloud write is allowed before the player chooses");
 
   await page.getByRole("button", { name: "ابدأ بحفظ سحابي جديد" }).click();
-  await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByText("اختر من يسير في الظل", { exact: true }).waitFor({ timeout: 10_000 });
   assert.ok(store.state, "the explicit new-save choice should create a fresh cloud row");
+  assert.equal(store.state.hero, null, "a fresh save should use the canonical uncreated-hero state");
   assert.equal(writes.length, 1);
   await browserContext.close();
 });
