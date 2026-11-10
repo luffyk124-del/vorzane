@@ -131,7 +131,7 @@ begin
     'hero_name', coalesce(v_hero ->> 'name', v_profile.display_name),
     'class_name', coalesce(v_hero ->> 'className', 'Warrior'),
     'level', coalesce((substring(v_hero ->> 'level' from '^[0-9]{1,4}'))::integer, 1),
-    'stats', coalesce(v_hero -> 'stats', '{}'::jsonb),
+    'stats', v_stats,
     'equipped', v_equipped,
     'active_pet', v_state ->> 'activePet',
     'wins', coalesce((substring(v_state ->> 'wins' from '^[0-9]{1,10}'))::integer, 0),
