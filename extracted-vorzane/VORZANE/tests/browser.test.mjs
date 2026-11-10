@@ -506,7 +506,7 @@ test("character, player profile, and settings have separate responsibilities", a
   assert.equal(await page.getByRole("radio").count(), 0, "gender and appearance must not be editable after creation");
 
   await page.goto(`${appUrl}/profile`);
-  await page.getByText("اسم اللاعب", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByText("هويتك في العالم", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   assert.equal(await page.getByText("مظهر الشخصية", { exact: true }).count(), 0, "character customization must not live in player profile");
 
   await page.goto(`${appUrl}/settings`);
