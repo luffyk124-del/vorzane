@@ -41,7 +41,7 @@ export function addExperience(state: GameState, amount: number): { state: GameSt
   while (next.hero.exp >= 100 + (next.hero.level - 1) * 60) {
     next.hero.exp -= 100 + (next.hero.level - 1) * 60;
     next.hero.level += 1;
-    next.hero.statPoints += 5;
+    next.hero.statPoints += 1;
     levelsGained += 1;
   }
   if (next.hero.level >= 5) next.achievements.level = true;
