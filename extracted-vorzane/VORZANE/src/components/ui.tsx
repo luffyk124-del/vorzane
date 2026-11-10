@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   headerPage: { fontSize: 10 },
   headerBackPlaceholder: { width: 74, height: 44 },
   backButton: { position: "absolute", left: 17, top: 9, width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  bottomNav: { position: "absolute", bottom: 0, width: "100%", maxWidth: 560, minHeight: 70, paddingHorizontal: 8, paddingTop: 8, paddingBottom: 7, flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-around", backgroundColor: "#0D141E", borderTopWidth: 1, borderTopColor: palette.line, zIndex: 10 },
+  bottomNav: { position: "absolute", left: 0, bottom: 0, width: "100%", maxWidth: 560, minHeight: 70, paddingHorizontal: 8, paddingTop: 8, paddingBottom: 7, flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-around", backgroundColor: "#0D141E", borderTopWidth: 1, borderTopColor: palette.line, zIndex: 10 },
   bottomNavItem: { flex: 1, minWidth: 0, minHeight: 52, borderRadius: 13, alignItems: "center", justifyContent: "center", gap: 3 },
   bottomNavItemActive: { backgroundColor: "rgba(230,199,124,0.10)" },
   bottomNavLabel: { color: palette.muted, fontSize: 10, fontWeight: "700" },
