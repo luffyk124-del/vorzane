@@ -30,6 +30,14 @@ const gameMenuItems = [
   { label: "الإعدادات", href: "/(tabs)/settings" as const, icon: "settings-outline" as const },
 ];
 
+const primaryNavigation = [
+  { label: "المخيم", href: "/(tabs)/home" as const, icon: "home-outline" as const },
+  { label: "الرحلات", href: "/(tabs)/expeditions" as const, icon: "compass-outline" as const },
+  { label: "العتاد", href: "/(tabs)/gear" as const, icon: "shield-outline" as const },
+  { label: "المهام", href: "/(tabs)/quests" as const, icon: "trophy-outline" as const },
+  { label: "البطل", href: "/(tabs)/profile" as const, icon: "person-circle-outline" as const },
+];
+
 export function AppScreen({ children, scroll = true, contentStyle, safe = true }: PropsWithChildren<{ scroll?: boolean; contentStyle?: StyleProp<ViewStyle>; safe?: boolean }>) {
   const pathname = usePathname();
   const router = useRouter();
@@ -54,6 +62,22 @@ export function AppScreen({ children, scroll = true, contentStyle, safe = true }
       {pathname.endsWith("/home") ? <View style={styles.headerBackPlaceholder} /> : <Pressable accessibilityRole="button" accessibilityLabel="رجوع" onPress={() => router.back()} style={styles.backButton}><Icon name="arrow-forward" size={21} color={palette.text} /></Pressable>}
     </View> : null}
     {body}
+    {showGameNavigation ? <View style={styles.bottomNav} accessibilityRole="navigation" accessibilityLabel="التنقل الرئيسي">
+      {primaryNavigation.map((item) => {
+        const active = pathname.endsWith(item.href.split("/").at(-1) ?? "");
+        return <Pressable
+          key={item.href}
+          accessibilityRole="button"
+          accessibilityLabel={item.label}
+          accessibilityState={{ selected: active }}
+          onPress={() => { if (!active) router.push(item.href); }}
+          style={[styles.bottomNavItem, active && styles.bottomNavItemActive]}
+        >
+          <Icon name={item.icon} size={20} color={active ? palette.gold : palette.muted} />
+          <Txt style={[styles.bottomNavLabel, active && styles.bottomNavLabelActive]}>{item.label}</Txt>
+        </Pressable>;
+      })}
+    </View> : null}
     <Modal transparent visible={menuOpen} animationType="fade" onRequestClose={() => setMenuOpen(false)}>
       <View style={styles.drawerRoot}>
         <Pressable style={styles.drawerScrim} accessibilityRole="button" accessibilityLabel="إغلاق القائمة" onPress={() => setMenuOpen(false)} />
@@ -194,6 +218,11 @@ const styles = StyleSheet.create({
   headerPage: { fontSize: 10 },
   headerBackPlaceholder: { width: 74, height: 44 },
   backButton: { position: "absolute", left: 17, top: 9, width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  bottomNav: { position: "absolute", bottom: 0, width: "100%", maxWidth: 560, minHeight: 70, paddingHorizontal: 8, paddingTop: 8, paddingBottom: 7, flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-around", backgroundColor: "#0D141E", borderTopWidth: 1, borderTopColor: palette.line, zIndex: 10 },
+  bottomNavItem: { flex: 1, minWidth: 0, minHeight: 52, borderRadius: 13, alignItems: "center", justifyContent: "center", gap: 3 },
+  bottomNavItemActive: { backgroundColor: "rgba(230,199,124,0.10)" },
+  bottomNavLabel: { color: palette.muted, fontSize: 10, fontWeight: "700" },
+  bottomNavLabelActive: { color: palette.gold, fontWeight: "900" },
   drawerRoot: { flex: 1, flexDirection: "row-reverse" },
   drawerScrim: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.68)" },
   drawerPanel: { position: "absolute", right: 0, top: 0, bottom: 0, width: "82%", maxWidth: 340, height: "100%", paddingTop: 54, paddingHorizontal: 18, paddingBottom: 24, backgroundColor: "#101A24", borderLeftWidth: 1, borderLeftColor: palette.line, gap: 8, elevation: 24 },
