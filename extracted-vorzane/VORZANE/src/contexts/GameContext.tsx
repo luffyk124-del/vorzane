@@ -12,7 +12,7 @@ const LEGACY_DECLINE_PREFIX = "vorzane_legacy_save_declined_";
 type LoadStatus = "auth" | "loading" | "migration" | "conflict" | "ready" | "offline";
 type MigrationChoice =
   | { kind: "legacy"; state: GameState }
-  | { kind: "offline"; localState: GameState; cloudState: GameState }
+  | { kind: "offline"; localState: GameState; cloudState: GameState; cloudMissing?: boolean }
   | null;
 type Resolution = "import" | "fresh" | "local" | "cloud";
 
@@ -169,7 +169,12 @@ export function GameProvider({ children }: PropsWithChildren) {
             setCloudError("لم نستبدل الحفظ السحابي؛ توجد نسخة أحدث من جلسة أخرى.");
           } else {
             cloudVersionRef.current = null;
-            setCloudError("تغير الحفظ السحابي أثناء المزامنة. نسختك المحلية محفوظة؛ أعد تحميل الحساب للتحقق.");
+            stateRef.current = safeSnapshot;
+            setState(safeSnapshot);
+            setMigration({ kind: "offline", localState: safeSnapshot, cloudState: createFreshState(), cloudMissing: true });
+            setStatus("conflict");
+            setSaveStatus("لم نعثر على حفظ سحابي؛ اختر ما إذا كنت تريد استعادة نسخة الجهاز أو بدء حفظ جديد");
+            setCloudError("الحفظ السحابي غير موجود. لم نعد رفع النسخة المحلية تلقائيًا حتى لا نلغي إعادة ضبط تمت من جهاز آخر.");
           }
         } catch (caught) {
           if (activeUserRef.current !== userId) return false;
@@ -241,6 +246,16 @@ export function GameProvider({ children }: PropsWithChildren) {
         setSaveStatus("تم استعادة تقدمك");
         setStatus("ready");
         if (cloudProgress.reports.length) await persistSnapshot(cloudProgress.state, userId);
+        return;
+      }
+
+      if (cached && hasOfflineChanges) {
+        setMigration({ kind: "offline", localState: cached, cloudState: createFreshState(), cloudMissing: true });
+        stateRef.current = cached;
+        setState(cached);
+        setStatus("conflict");
+        setSaveStatus("يوجد حفظ محلي غير متزامن، لكن لا توجد نسخة سحابية؛ اختر الاستعادة أو البدء من جديد");
+        setCloudError("لم نرفع النسخة المحلية تلقائيًا لأن الحفظ السحابي غير موجود.");
         return;
       }
 
