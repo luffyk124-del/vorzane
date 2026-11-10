@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission } from "./engine.ts";
+import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter } from "./engine.ts";
 import { createFreshState, normalizeGameState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
@@ -12,6 +12,28 @@ test("quest rewards are one-time and require completed progress", () => {
   const claimed = claimQuest(ready, "first");
   assert.equal(claimed.gold, ready.gold + 100);
   assert.equal(claimQuest(claimed, "first").gold, claimed.gold);
+});
+
+test("Ashen World campaign chapters unlock in order and pay rewards once", () => {
+  const state = createHeroState("رحّالة الرماد", "Warrior");
+  assert.equal(getStoryChapterProgress(state, 1), 0);
+  assert.equal(canClaimStoryChapter(state, 1), false);
+
+  state.wins = 1;
+  assert.equal(canClaimStoryChapter(state, 1), true);
+  const first = claimStoryChapter(state, 1);
+  assert.equal(first.story, 1);
+  assert.equal(first.gold, state.gold + 120);
+  assert.equal(claimStoryChapter(first, 1).gold, first.gold, "a completed chapter must not pay twice");
+
+  first.dungeonFloor = 4;
+  assert.equal(getStoryChapterProgress(first, 2), 3);
+  assert.equal(canClaimStoryChapter(first, 2), true);
+  assert.equal(canClaimStoryChapter(first, 3), false, "later chapters must remain locked until the previous chapter is claimed");
+  const second = claimStoryChapter(first, 2);
+  assert.equal(second.story, 2);
+  assert.equal(second.gold, first.gold + 240);
+  assert.equal(state.story, 0, "claiming story chapters must not mutate the original save");
 });
 
 test("shop rejects unknown items without changing the save", () => {
@@ -156,6 +178,33 @@ test("winning a dungeon battle advances the floor and grants catalog loot", () =
   assert.equal(battle.result.state.inventory.length, 1);
   assert.ok(battle.result.gold > 0);
   assert.ok(battle.result.xp > 0);
+});
+
+test("each hero class has a distinct passive that appears in combat", () => {
+  const prepare = (className, agility = 10_000) => {
+    const state = createHeroState("اختبار الفئات", className);
+    state.hero.stats = { str: 1, def: 0, vit: 10_000, agi: agility, luck: 0 };
+    state.hero.baseStats = { ...state.hero.stats };
+    return state;
+  };
+
+  const archer = createBattleSequence(prepare("Archer"), "cave", () => 0.99);
+  assert.equal(archer.hero.passiveName, "عين الصياد");
+  assert.match(archer.turns[0].message, /عين الصياد/);
+
+  const mage = createBattleSequence(prepare("Mage"), "cave", () => 0.99);
+  assert.equal(mage.hero.passiveName, "نبض الأثير");
+  assert.ok(mage.turns.filter((turn) => turn.actor === "hero").some((turn) => turn.message.includes("نبض الأثير")));
+
+  const assassin = createBattleSequence(prepare("Assassin"), "cave", () => 0.01);
+  assert.equal(assassin.hero.passiveName, "حدس قاتل");
+  assert.ok(assassin.turns.some((turn) => turn.message.includes("حدس قاتل")));
+
+  const warrior = createBattleSequence(prepare("Warrior", 0), "cave", () => 0.99);
+  const mageWithSlowStart = createBattleSequence(prepare("Mage", 0), "cave", () => 0.99);
+  assert.equal(warrior.hero.passiveName, "درع الصمود");
+  assert.match(warrior.turns[0].message, /درع الصمود/);
+  assert.ok(warrior.turns[0].damage < mageWithSlowStart.turns[0].damage, "Warrior passive should reduce the incoming hit");
 });
 
 test("dungeon victories can yield no item when the random drop roll fails", () => {

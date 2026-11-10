@@ -268,8 +268,34 @@ before(async () => {
 after(async () => {
   await browser?.close();
   if (serverProcess && serverProcess.exitCode === null) {
+    const exited = new Promise((resolve) => {
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          resolve(false);
+        }
+      }, 5_000);
+      serverProcess.once("exit", () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        resolve(true);
+      });
+    });
     try { process.kill(-serverProcess.pid, "SIGTERM"); } catch { serverProcess.kill("SIGTERM"); }
-    await new Promise((resolve) => serverProcess.once("exit", resolve));
+    const stopped = await exited;
+    if (!stopped && serverProcess.exitCode === null) {
+      serverProcess.kill("SIGKILL");
+      await new Promise((resolve) => {
+        if (serverProcess.exitCode !== null) return resolve();
+        const timeout = setTimeout(resolve, 2_000);
+        serverProcess.once("exit", () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      });
+    }
   }
 });
 
@@ -298,7 +324,7 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       const profileOverlay = await page.locator("#error-overlay").innerText().catch(() => "");
       assert.deepEqual({ overlay: profileOverlay.trim(), pageErrors, consoleErrors }, { overlay: "", pageErrors: [], consoleErrors: [] }, `${viewport.name} profile runtime diagnostics`);
       await page.getByRole("button", { name: "رجوع" }).click();
-      await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
+      await page.getByText("تطوير السمات", { exact: true }).filter({ visible: true }).first().waitFor({ timeout: 10_000 });
 
       const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
       assert.equal(hasHorizontalOverflow, false, `${viewport.name} layout has horizontal overflow`);
@@ -324,6 +350,36 @@ test("mocked account save and stat allocation work on desktop and mobile", async
       await browserContext.close();
     });
   }
+});
+
+test("primary game navigation stays visible and switches between core screens", async () => {
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  const pageErrors = [];
+  const consoleErrors = [];
+  const { unexpectedRequests } = await installSupabaseMock(page);
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+
+  await signInWithMock(page);
+  const navigation = page.getByRole("navigation", { name: "التنقل الرئيسي" });
+  assert.equal(await navigation.getByRole("button").count(), 5, "the primary navigation should expose five core destinations");
+  const journeys = navigation.getByRole("button", { name: "الرحلات" });
+  await journeys.click();
+  await page.waitForURL((url) => url.pathname.endsWith("/expeditions"), { timeout: 10_000 });
+  await page.getByText("اختر وجهتك", { exact: true }).waitFor({ timeout: 10_000 });
+  assert.match(page.url(), /expeditions/);
+  await navigation.getByRole("button", { name: "المخيم" }).click();
+  await page.waitForURL((url) => url.pathname.endsWith("/home"), { timeout: 10_000 });
+  await page.getByText("بطل الاختبار", { exact: true }).filter({ visible: true }).first().waitFor({ timeout: 10_000 });
+  assert.match(page.url(), /home/);
+
+  const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  assert.equal(hasHorizontalOverflow, false, "the mobile navigation must not introduce horizontal overflow");
+  assert.deepEqual(unexpectedRequests, []);
+  assert.deepEqual(pageErrors, []);
+  assert.deepEqual(consoleErrors, []);
+  await browserContext.close();
 });
 
 test("game-state read falls back to the RLS-scoped table query when the Edge Function is unavailable", async () => {
