@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, Meter, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { QUESTS } from "../../src/game/catalog";
-import { canClaimQuest, claimQuest, createBattleSequence, getQuestProgress, EXPLORATION_ACHIEVEMENTS, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, EXPEDITION_TASKS, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, type MissionScope, type BattleResult, type BattleSequence, type BattleMode } from "../../src/game/engine";
+import { QUESTS, STORY_CHAPTERS } from "../../src/game/catalog";
+import { canClaimQuest, claimQuest, createBattleSequence, getQuestProgress, EXPLORATION_ACHIEVEMENTS, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, EXPEDITION_TASKS, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter, type MissionScope, type BattleResult, type BattleSequence, type BattleMode } from "../../src/game/engine";
 import { BattleArena } from "../../src/components/BattleArena";
 import { useGame } from "../../src/contexts/GameContext";
 import { palette } from "../../src/theme";
@@ -36,6 +36,36 @@ export default function QuestsScreen() {
 
   return <AppScreen>
     <PageTitle eyebrow="مسارك في الظلال" title="المهام والإنجازات" subtitle="زنزانة لا تنتهي، خصوم متبدلون، وأهداف تمنح تقدمك معنى." trailing={<Pill label={`${state.wins} انتصار`} icon="trophy" tone="gold" />} />
+    <SectionTitle title="حملة الرماد" icon="book-outline" action={<Pill label={`${state.story}/${STORY_CHAPTERS.length} فصول`} tone="gold" />} />
+    <Card style={styles.storyIntro}>
+      <Txt style={styles.storyIntroTitle}>حكاية عالم VORZANE</Txt>
+      <Txt muted style={styles.cardCopy}>خمسة فصول تربط معاركك ورحلاتك بقصة واحدة. افتح كل فصل بالتقدم، ثم استلم مكافأته لمواصلة الحكاية.</Txt>
+    </Card>
+    {STORY_CHAPTERS.map((chapter) => {
+      const progress = Math.min(getStoryChapterProgress(state, chapter.id), chapter.target);
+      const completed = state.story >= chapter.id;
+      const available = canClaimStoryChapter(state, chapter.id);
+      const tone = completed ? "jade" : available ? "gold" : "muted";
+      return <Card key={chapter.id} style={[styles.storyCard, completed && styles.storyComplete]}>
+        <View style={styles.storyTop}>
+          <Pill label={completed ? "مكتمل" : available ? "جاهز للاستلام" : chapter.id === state.story + 1 ? "قيد التقدم" : "مغلق"} tone={tone} />
+          <Txt muted style={styles.storyChapter}>{chapter.chapter}</Txt>
+        </View>
+        <Txt style={styles.storyTitle}>{chapter.title}</Txt>
+        <Txt muted style={styles.storyNarrative}>{chapter.narrative}</Txt>
+        <Txt style={styles.storyObjective}>{chapter.objective}</Txt>
+        <View style={styles.storyProgress}>
+          <Txt muted style={styles.progressLabel}>{progress} / {chapter.target}</Txt>
+          <Meter value={progress} max={chapter.target} color={completed ? palette.jade : palette.gold} height={6} />
+        </View>
+        <View style={styles.storyFooter}>
+          <Pill label={`+${chapter.rewardGold} ذهب`} tone="gold" />
+          <Pill label={`+${chapter.rewardXP} خبرة`} tone="jade" />
+          <AppButton label={completed ? "تم الفصل" : available ? "استلام المكافأة" : "واصل التقدم"} icon={completed ? "checkmark" : "gift-outline"} onPress={() => update((current) => claimStoryChapter(current, chapter.id))} variant={available ? "jade" : "secondary"} small disabled={!available} />
+        </View>
+      </Card>;
+    })}
+
     <Card style={styles.dungeonCard}>
       <View style={styles.dungeonIcon}><Icon name="skull" color={palette.gold} size={22} /></View>
       <View style={styles.dungeonBody}>
@@ -176,6 +206,17 @@ export default function QuestsScreen() {
 }
 
 const styles = StyleSheet.create({
+  storyIntro: { padding: 14, gap: 5, borderColor: "rgba(230,199,124,0.22)", backgroundColor: "#141C27" },
+  storyIntroTitle: { fontSize: 14, fontWeight: "900", color: palette.gold },
+  storyCard: { padding: 13, gap: 8, backgroundColor: "#111A25" },
+  storyComplete: { borderColor: "rgba(98,216,195,0.28)" },
+  storyTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  storyChapter: { fontSize: 10, fontWeight: "800" },
+  storyTitle: { fontSize: 16, fontWeight: "900", color: palette.text },
+  storyNarrative: { fontSize: 11, lineHeight: 18, textAlign: "right" },
+  storyObjective: { fontSize: 11, lineHeight: 17, fontWeight: "800", color: palette.jade, textAlign: "right" },
+  storyProgress: { width: "100%", flexDirection: "row", alignItems: "center", gap: 8 },
+  storyFooter: { flexDirection: "row-reverse", alignItems: "center", flexWrap: "wrap", gap: 7 },
   dungeonCard: { padding: 15, flexDirection: "row", alignItems: "center", gap: 10, borderColor: "rgba(230,199,124,0.28)", backgroundColor: "#171C25" },
   dungeonIcon: { width: 43, height: 43, borderRadius: 15, backgroundColor: "rgba(230,199,124,0.11)", alignItems: "center", justifyContent: "center" },
   dungeonBody: { flex: 1, alignItems: "flex-end", gap: 4 },
