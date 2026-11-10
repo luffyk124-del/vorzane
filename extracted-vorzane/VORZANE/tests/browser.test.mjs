@@ -432,6 +432,7 @@ test("offline progress conflict resolves and restores in a clean second context"
   await installSupabaseMock(firstPage, { store, failSave: () => failSaves });
 
   await signInWithMock(firstPage);
+  await firstPage.getByRole("button", { name: "الشخصية", exact: true }).click();
   await firstPage.getByText("+1", { exact: true }).first().click();
   await firstPage.getByText("تعذرت المزامنة؛ النسخة المحلية محفوظة", { exact: true }).waitFor({ timeout: 10_000 });
   assert.equal(store.state.hero.stats.str, 13, "failed save must leave cloud progress unchanged");
@@ -440,6 +441,7 @@ test("offline progress conflict resolves and restores in a clean second context"
   await firstPage.reload();
   await firstPage.getByText("توجد نسختان لهذا اللاعب", { exact: true }).waitFor({ timeout: 15_000 });
   await firstPage.getByRole("button", { name: "احتفظ بنسخة الجهاز وارفعها" }).click();
+  await firstPage.getByRole("button", { name: "الشخصية", exact: true }).click();
   await firstPage.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
   assert.equal(store.state.hero.stats.str, 14);
   assert.equal(store.state.hero.statPoints, 1);
@@ -449,6 +451,7 @@ test("offline progress conflict resolves and restores in a clean second context"
   const secondPage = await secondContext.newPage();
   await installSupabaseMock(secondPage, { store });
   await signInWithMock(secondPage);
+  await secondPage.getByRole("button", { name: "الشخصية", exact: true }).click();
   await secondPage.getByText("1 نقطة تطوير متاحة", { exact: true }).waitFor();
   assert.equal(await secondPage.getByText("14", { exact: true }).count(), 1);
   await secondContext.close();
