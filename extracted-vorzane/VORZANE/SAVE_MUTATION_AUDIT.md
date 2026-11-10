@@ -22,7 +22,7 @@ No feature flag, RLS policy, client database privilege, production Edge Function
 | Offline conflict resolution | `resolveMigration` can upload the chosen local or cloud snapshot | No server command for accepting a complete arbitrary snapshot | **Blocker.** Keep both copies until a validated restore/merge protocol exists. |
 | Legacy save import | `resolveMigration` uploads the selected normalized legacy state | Quarantine staging exists, but no reviewed restore command | **Blocker.** Stage first, validate server-side, require explicit owner choice, and never delete the source copy before confirmed commit. |
 | JSON import in Settings | `settings.tsx` calls `game.update(() => pendingImport)` | No reviewed import/replace command | **Blocker.** Must use quarantine + validated restore flow; never route arbitrary imported state through a generic command. |
-| Save reset | `resetPlayerSave` directly calls `player_saves.delete` | `resetSave` now resets the existing row to canonical server-generated state | Command exists; **client is not wired**. Replace direct delete only after exact-head tests and client error/retry handling. |
+| Save reset | `resetPlayerSave` invokes the typed `resetSave` command with the observed `updated_at`; validates the returned canonical state/version, then updates the local cache only after server confirmation | `resetSave` resets the existing row to canonical server-generated state through the transactional command RPC | **Wired on this development branch.** A missing/unavailable command or stale version leaves local cache intact; verify exact-head tests and confirm the Edge Function/RPC are deployed before enabling this client path in production. |
 | Expedition start | `expeditions.tsx` calls generic `update` after `beginOrQueueExpedition` | `beginExpedition` command exists | Candidate for isolated typed-command wiring. |
 | Expedition completion / reports | Expedition clock can advance local state; report dismissal uses `clearReport` / generic update | `advanceExpeditions` and `dismissReport` commands exist | Candidate for isolated typed-command wiring; verify server time, retry behavior, and report idempotency. |
 | Gear / pet purchases and equipment | `gear.tsx` calls generic `update` for buy/sell/equip/unequip/pet changes | Typed commands already exist in `economy-command` | Existing PR #16 is not a safe wholesale merge. Reconcile only reviewed callsites against current main. |
@@ -47,7 +47,7 @@ No feature flag, RLS policy, client database privilege, production Edge Function
 1. Add a typed client command transport with command IDs, expected save version, authenticated invocation, strict response validation, retry/replay handling, and stale-version UX. Keep it disabled by default.
 2. Wire one low-risk non-combat slice at a time: settings/profile appearance, report dismissal, expedition start/progression, then reward claims. Keep local cache until the server confirms each commit.
 3. Add a server-owned mission-period transition for `ensureMissionPeriods`; do not silently keep this as a generic client write.
-4. Implement the client reset path using the existing `resetSave` command; verify the row remains present and becomes canonical fresh state.
+4. Reset client wiring is implemented on this development branch using the existing `resetSave` command; verify the row remains present and becomes canonical fresh state in an isolated integration test, then confirm deployed Edge Function/RPC availability before rollout.
 5. Design validated import/recovery separately: quarantine untrusted source, explicit owner selection, server validation, version check, atomic commit, and retain the original local/quarantine copy until confirmation.
 6. Only after all mutation paths are accounted for and tested may generic `player_saves.upsert` be removed and client write privileges be reconsidered.
 
@@ -76,3 +76,12 @@ No feature flag, RLS policy, client database privilege, production Edge Function
 - On conflict, the client preserves its local cache and pending marker, pauses further cloud writes, and fetches the latest cloud snapshot. If the row still exists, it exposes the local/cloud choice; if the row is missing (for example, another session reset it), it requires an explicit choice between restoring the local copy and starting a fresh cloud save rather than silently recreating the deleted row.
 - New versions are monotonic relative to the observed version, avoiding a same-millisecond update that would leave the concurrency token unchanged.
 - This is a **client-side optimistic-concurrency safeguard**, not server authority: it does not validate game rules, remove client snapshot writes, change RLS, alter schema, deploy functions, or mutate production data. It must pass exact-head CI and review before merge.
+
+
+## Save reset client wiring — development branch
+
+- `resetPlayerSave` no longer deletes the `player_saves` row directly.
+- It submits the existing typed `resetSave` command with the currently observed save version and validates the response before changing local state/cache.
+- A stale version, missing function, malformed response, or other server error leaves the device cache and pending marker untouched; the user can reload and retry.
+- On confirmed success, the existing row is expected to contain the server-generated canonical fresh state, and the client updates its cache/version to that returned state.
+- This change only updates the development branch. It does not deploy the Edge Function/RPC or mutate production player data.
