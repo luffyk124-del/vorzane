@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { CharacterPortrait } from "../../src/components/CharacterPortrait";
 import { getPublicPlayerProfile, type PublicPlayerProfile } from "../../src/lib/social";
@@ -10,7 +10,7 @@ import { palette } from "../../src/theme";
 const STAT_LABELS: Record<string, string> = { str: "القوة", def: "الدفاع", vit: "الحيوية", agi: "الرشاقة", luck: "الحظ" };
 
 export default function PublicPlayerScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();\n  const router = useRouter();
   const [profile, setProfile] = useState<PublicPlayerProfile | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -65,7 +65,7 @@ export default function PublicPlayerScreen() {
         </View>) : <Txt muted style={styles.empty}>لا يوجد عتاد مجهّز حاليًا.</Txt>}
       </Card>
       {profile.active_pet ? <Card style={styles.petCard}><Icon name="paw" color={palette.gold} size={20} /><Txt style={styles.petText}>الرفيق النشط: {profile.active_pet}</Txt></Card> : null}
-      <AppButton label="العودة" icon="arrow-back" variant="secondary" onPress={() => {}} />
+      <AppButton label="العودة" icon="arrow-back" variant="secondary" onPress={() => router.back()} />
     </ScrollView>
   </AppScreen>;
 }
