@@ -70,6 +70,10 @@ export type GameState = {
   hero: Hero | null;
   characterStyle: CharacterStyle;
   missionPeriods: MissionPeriods;
+  roaming: RoamingState;
+  dimas: DimasState;
+  longQuestStartedAt: number;
+  claimedLongQuestIds: string[];
   profileAvatarId: ClassId | "brand";
   gold: number;
   gems: number;
