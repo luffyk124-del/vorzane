@@ -371,7 +371,7 @@ test("primary game navigation stays visible and switches between core screens", 
   assert.match(page.url(), /expeditions/);
   await navigation.getByRole("button", { name: "المخيم" }).click();
   await page.waitForURL((url) => url.pathname.endsWith("/home"), { timeout: 10_000 });
-  await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByText("تطوير السمات", { exact: true }).first().waitFor({ timeout: 10_000 });
   assert.match(page.url(), /home/);
 
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
