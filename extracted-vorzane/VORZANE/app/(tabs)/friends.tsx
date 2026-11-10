@@ -107,10 +107,6 @@ export default function FriendsScreen() {
       setNotice("أنشئ ملف اللاعب أولًا قبل البحث عن الأصدقاء.");
       return;
     }
-    if (!profile.is_searchable) {
-      setNotice("فعّل ظهور ملفك في البحث قبل استخدام المجتمع.");
-      return;
-    }
     const searchTerm = typeof query === "string" ? query.trim() : "";
     if (searchTerm.length < 3) {
       setNotice("اكتب ثلاثة أحرف على الأقل للبحث.");
