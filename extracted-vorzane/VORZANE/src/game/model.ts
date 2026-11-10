@@ -53,6 +53,18 @@ export type CharacterStyle = { gender: "male" | "female"; appearance: 0 | 1 | 2 
 export type MissionSnapshot = { wins: number; expeditions: number; level: number };
 export type MissionPeriod = { key: string; baseline: MissionSnapshot; claimed: Record<string, boolean> };
 export type MissionPeriods = { daily: MissionPeriod; weekly: MissionPeriod; season: MissionPeriod };
+export type RoamingState = {
+  health: number;
+  maxHealth: number;
+  fragments: number;
+  eventsCompleted: number;
+  eventsSeen: string[];
+  activeChain: string | null;
+  chainStage: number;
+  lastEventAt: number;
+  merchantRefreshAt: number;
+};
+export type DimasState = { highestFloor: number; claimedMilestones: number[]; lastCompletedAt: number };
 
 export type GameState = {
   hero: Hero | null;
@@ -132,6 +144,10 @@ export function createFreshState(): GameState {
       weekly: { key: missionWeekKey(), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
       season: { key: new Date().toISOString().slice(0, 7), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
     },
+    roaming: { health: 100, maxHealth: 100, fragments: 0, eventsCompleted: 0, eventsSeen: [], activeChain: null, chainStage: 0, lastEventAt: 0, merchantRefreshAt: 0 },
+    dimas: { highestFloor: 0, claimedMilestones: [], lastCompletedAt: 0 },
+    longQuestStartedAt: Date.now(),
+    claimedLongQuestIds: [],
     profileAvatarId: "brand",
     gold: 500,
     gems: 50,
@@ -274,6 +290,24 @@ export function normalizeGameState(value: unknown): GameState | null {
       body: (["balanced", "sturdy", "agile"].includes(String(source.characterStyle?.body)) ? source.characterStyle?.body : fresh.characterStyle.body) as CharacterStyle["body"],
     },
     missionPeriods: normalizeMissionPeriods(source.missionPeriods, finite(source.wins, 0), finite(source.expeditionsCompleted, 0), hero?.level ?? 1),
+    roaming: {
+      health: finite(source.roaming?.health, 100, 0, 100_000),
+      maxHealth: finite(source.roaming?.maxHealth, 100, 1, 100_000),
+      fragments: finite(source.roaming?.fragments, 0, 0, 1_000_000_000),
+      eventsCompleted: finite(source.roaming?.eventsCompleted, 0, 0, 1_000_000_000),
+      eventsSeen: Array.isArray(source.roaming?.eventsSeen) ? source.roaming.eventsSeen.filter((id): id is string => typeof id === "string").slice(-500) : [],
+      activeChain: typeof source.roaming?.activeChain === "string" ? source.roaming.activeChain.slice(0, 80) : null,
+      chainStage: finite(source.roaming?.chainStage, 0, 0, 100),
+      lastEventAt: finite(source.roaming?.lastEventAt, 0, 0),
+      merchantRefreshAt: finite(source.roaming?.merchantRefreshAt, 0, 0),
+    },
+    dimas: {
+      highestFloor: finite(source.dimas?.highestFloor, finite(source.tower, 0), 0, 300),
+      claimedMilestones: Array.isArray(source.dimas?.claimedMilestones) ? source.dimas.claimedMilestones.filter((floor): floor is number => Number.isInteger(floor) && floor > 0 && floor <= 300).slice(0, 100) : [],
+      lastCompletedAt: finite(source.dimas?.lastCompletedAt, 0, 0),
+    },
+    longQuestStartedAt: finite(source.longQuestStartedAt, Date.now(), 0),
+    claimedLongQuestIds: Array.isArray(source.claimedLongQuestIds) ? source.claimedLongQuestIds.filter((id): id is string => typeof id === "string").slice(0, 500) : [],
     profileAvatarId: ["brand", "Warrior", "Mage", "Assassin", "Archer"].includes(String(source.profileAvatarId)) ? source.profileAvatarId as ClassId | "brand" : "brand",
     gold: finite(source.gold, fresh.gold, 0, 1_000_000_000),
     gems: finite(source.gems, fresh.gems, 0, 1_000_000_000),
