@@ -67,7 +67,6 @@ export default function CampScreen() {
           const active = classId === selectedClass;
           return <Pressable key={classId} onPress={() => setSelectedClass(classId)} style={[styles.classCard, active && styles.classCardActive]}>
             <View style={styles.classCardArt}>
-              <View pointerEvents="none" style={styles.classCardShade} />
               <View style={styles.classCardContent}>
                 <View style={[styles.classIcon, active && styles.classIconActive]}><Icon name={CLASS_ICON[classId] as never} size={22} color={active ? palette.ink : palette.jade} /></View>
                 <Txt style={[styles.className, active && { color: palette.gold }]}>{CLASS_NAMES[classId]}</Txt>
