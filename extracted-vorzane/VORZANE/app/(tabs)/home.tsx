@@ -129,10 +129,10 @@ export default function CampScreen() {
       <View style={styles.powerRow}><Pill label={`قوة ${stats.power}`} icon="fist" tone="jade" /><Txt muted style={styles.saveLine}>{saveStatus}</Txt></View>
     </GradientCard>
 
-    <SectionTitle title="زنزانتك ومعاركك" icon="flash-outline" action={<Pressable onPress={() => router.push("/quests")}><Txt style={styles.actionLink}>مهامك ←</Txt></Pressable>} />
+    <SectionTitle title="ميادين القتال" icon="shield-outline" action={<Pressable onPress={() => router.push("/quests")}><Txt style={styles.actionLink}>مهامك ←</Txt></Pressable>} />
     <Card style={styles.battleCard}>
-      <Txt muted style={styles.battleIntro}>كل ضربة تظهر أمامك. واصل الزنزانة تلقائيًا؛ يتجدد دمك بين الأعداء وتزداد قوتهم تدريجيًا.</Txt>
-      <AppButton label={`انزل إلى الزنزانة • الطابق ${state.dungeonFloor}`} icon="skull" onPress={() => enterBattle("dungeon")} variant="jade" />
+      <Txt muted style={styles.battleIntro}>اختر ساحة القتال المناسبة لقوتك. كل ميدان له خصومه وإيقاعه ومكافآته الخاصة.</Txt>
+      <AppButton label={`ساحة الحراس • المرحلة ${state.dungeonFloor}`} icon="shield" onPress={() => enterBattle("dungeon")} variant="jade" />
       <View style={styles.battleButtons}>
         <AppButton label="كهف الرماد" icon="bonfire" onPress={() => enterBattle("cave")} small style={{ flex: 1 }} />
         <AppButton label="برج الحراس" icon="business" variant="secondary" onPress={() => enterBattle("tower")} small style={{ flex: 1 }} />
