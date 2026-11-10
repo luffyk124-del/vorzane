@@ -165,8 +165,6 @@ export default function CampScreen() {
 const styles = StyleSheet.create({
   topline: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
   currencyRow: { flexDirection: "row", gap: 7 },
-  brandInline: { flexDirection: "row", alignItems: "center", gap: 8 },
-  profileButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center" },
   wordmark: { color: palette.gold, fontSize: 20, fontWeight: "900", fontFamily: "Cinzel_700Bold", letterSpacing: 2.1 },
   offlineBanner: { padding: 11, flexDirection: "row", alignItems: "center", gap: 8, borderColor: "rgba(230,121,112,0.28)", backgroundColor: "rgba(230,121,112,0.06)" },
   offlineText: { flex: 1, color: palette.red, fontSize: 12, lineHeight: 18 },
