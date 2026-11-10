@@ -81,15 +81,17 @@ export const ROAMING_EVENT_PREVIEW = SCENES.flatMap((scene, sceneIndex) => VARIA
 
 export function getRoamingEvent(state: GameState, seed = Date.now()): RoamingEvent {
   const roaming = state.roaming;
-  if (roaming.activeChain && roaming.chainStage > 0 && roaming.eventsCompleted > 0 && roaming.eventsCompleted % 5 === 0) {
+  if (roaming.activeChain && roaming.eventsCompleted > 0 && roaming.eventsCompleted % 5 === 0) {
     const chain = CHAINS.find((item) => item.id === roaming.activeChain);
     if (chain) {
       const stage = Math.min(chain.stages.length - 1, roaming.chainStage);
       return {
         id: `chain-${chain.id}-${stage}`,
-        title: chain.stages[stage],
+        title: `${chain.stages[stage]} • ${roaming.chainRoute === "cautious" ? "مسار الحكمة" : "مسار المواجهة"}`,
         region: REGIONS[(stage * 3 + roaming.eventsCompleted) % REGIONS.length],
-        story: CHAIN_STORIES[stage],
+        story: roaming.chainRoute === "cautious"
+          ? `${CHAIN_STORIES[stage]} اخترت التروي، فتكشف لك الحكاية أدلة خفية وممرات بديلة.`
+          : `${CHAIN_STORIES[stage]} اخترت المواجهة، فتقودك الحكاية إلى اختبارات أشد وغنائم أعلى.`,
         kind: "chain",
         chainId: chain.id,
         chainStage: stage,
@@ -128,9 +130,11 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   if (event.chainId && reward.chainEnd) {
     next.roaming.activeChain = null;
     next.roaming.chainStage = 0;
+    next.roaming.chainRoute = null;
   } else if (reward.chain) {
     next.roaming.activeChain = reward.chain;
-    next.roaming.chainStage = event.chainId ? (event.chainStage ?? 0) + 1 : 1;
+    next.roaming.chainStage = event.chainId ? (event.chainStage ?? 0) + 1 : 0;
+    next.roaming.chainRoute = ["careful", "study", "sneak", "pray", "help", "trade"].includes(choice.id) ? "cautious" : "bold";
   }
   if (next.roaming.health <= 0) {
     next.roaming.health = Math.max(1, Math.floor(next.roaming.maxHealth * 0.35));
