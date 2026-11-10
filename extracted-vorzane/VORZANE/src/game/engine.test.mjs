@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission } from "./engine.ts";
+import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter } from "./engine.ts";
 import { createFreshState, normalizeGameState } from "./model.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
@@ -12,6 +12,28 @@ test("quest rewards are one-time and require completed progress", () => {
   const claimed = claimQuest(ready, "first");
   assert.equal(claimed.gold, ready.gold + 100);
   assert.equal(claimQuest(claimed, "first").gold, claimed.gold);
+});
+
+test("Ashen World campaign chapters unlock in order and pay rewards once", () => {
+  const state = createHeroState("رحّالة الرماد", "Warrior");
+  assert.equal(getStoryChapterProgress(state, 1), 0);
+  assert.equal(canClaimStoryChapter(state, 1), false);
+
+  state.wins = 1;
+  assert.equal(canClaimStoryChapter(state, 1), true);
+  const first = claimStoryChapter(state, 1);
+  assert.equal(first.story, 1);
+  assert.equal(first.gold, state.gold + 120);
+  assert.equal(claimStoryChapter(first, 1).gold, first.gold, "a completed chapter must not pay twice");
+
+  first.dungeonFloor = 4;
+  assert.equal(getStoryChapterProgress(first, 2), 3);
+  assert.equal(canClaimStoryChapter(first, 2), true);
+  assert.equal(canClaimStoryChapter(first, 3), false, "later chapters must remain locked until the previous chapter is claimed");
+  const second = claimStoryChapter(first, 2);
+  assert.equal(second.story, 2);
+  assert.equal(second.gold, first.gold + 240);
+  assert.equal(state.story, 0, "claiming story chapters must not mutate the original save");
 });
 
 test("shop rejects unknown items without changing the save", () => {
