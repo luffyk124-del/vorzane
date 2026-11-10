@@ -5,7 +5,7 @@ import { AppButton, AppScreen, Card, GradientCard, Icon, InputField, Meter, Pill
 import { CLASS_ICON, findExpedition, PETS, STARTER_ITEMS } from "../../src/game/catalog";
 import { BrandMark } from "../../src/components/BrandMark";
 import { allocateStatPoint, combatStats, createBattleSequence, createHeroState, type BattleMode, type BattleResult, type BattleSequence } from "../../src/game/engine";
-import { CLASS_DESCRIPTIONS, CLASS_NAMES, type ClassId, type StatKey } from "../../src/game/model";
+import { CLASS_DESCRIPTIONS, CLASS_NAMES, CLASS_PASSIVES, type ClassId, type StatKey } from "../../src/game/model";
 import { useGame } from "../../src/contexts/GameContext";
 import { palette } from "../../src/theme";
 import { CLASS_ART } from "../../src/game/art";
@@ -77,6 +77,7 @@ export default function CampScreen() {
                 <View style={[styles.classIcon, active && styles.classIconActive]}><Icon name={CLASS_ICON[classId] as never} size={22} color={active ? palette.ink : palette.jade} /></View>
                 <Txt style={[styles.className, active && { color: palette.gold }]}>{CLASS_NAMES[classId]}</Txt>
                 <Txt muted style={styles.classDesc}>{CLASS_DESCRIPTIONS[classId]}</Txt>
+                <Txt style={styles.classPassive}>{CLASS_PASSIVES[classId].name}</Txt>
               </View>
             </ImageBackground>
           </Pressable>;
@@ -303,6 +304,7 @@ const styles = StyleSheet.create({
   classIconActive: { backgroundColor: palette.gold },
   className: { fontSize: 13, fontWeight: "900" },
   classDesc: { fontSize: 10, lineHeight: 15 },
+  classPassive: { color: palette.gold, fontSize: 10, fontWeight: "900", marginTop: 3 },
   smallCenter: { textAlign: "center", fontSize: 11, lineHeight: 17 },
   modalBackdrop: { flex: 1, justifyContent: "center", alignItems: "center", padding: 22, backgroundColor: "rgba(0,0,0,0.70)" },
   battleReport: { width: "100%", maxWidth: 420, padding: 20, gap: 13, alignItems: "stretch" },
