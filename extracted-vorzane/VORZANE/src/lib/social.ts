@@ -17,7 +17,7 @@ export type PublicPlayerProfile = {
   class_name: string;
   level: number;
   stats: Record<string, number>;
-  equipped: Record<string, { name?: string; rarity?: string; bonus?: Record<string, number> } | null>;
+  equipped: Record<string, { name?: string; rarity?: string } | null>;
   active_pet: string | null;
   wins: number;
   battles: number;
