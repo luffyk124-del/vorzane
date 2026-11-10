@@ -311,7 +311,14 @@ Deno.test("resetSave replaces the caller's state with a canonical fresh state wi
   assert(response.status === 200, "server reset should succeed");
   const args = calls.args as Record<string, unknown>;
   const saved = args.p_game_state as GameState;
-  assert(JSON.stringify(saved) === JSON.stringify(createFreshState()), "reset must use canonical fresh state, not a client snapshot");
+  const canonical = createFreshState();
+  // createFreshState intentionally stamps the current date/time, so compare
+  // all canonical game data while carrying over only those generated values.
+  canonical.lastSeenAt = saved.lastSeenAt;
+  canonical.missionPeriods.daily.key = saved.missionPeriods.daily.key;
+  canonical.missionPeriods.weekly.key = saved.missionPeriods.weekly.key;
+  canonical.missionPeriods.season.key = saved.missionPeriods.season.key;
+  assert(JSON.stringify(saved) === JSON.stringify(canonical), "reset must use canonical fresh state, not a client snapshot");
   assert(args.p_expected_updated_at === "2026-11-08T20:00:00.000Z", "reset must use the current save version");
   assert(args.p_result && (args.p_result as Record<string, unknown>).commandType === "resetSave", "reset must be recorded as an idempotent command");
   assert((calls.tables as string[]).includes("player_saves"), "reset must operate on the existing save row");
