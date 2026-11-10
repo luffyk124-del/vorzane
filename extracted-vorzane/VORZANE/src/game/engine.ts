@@ -1,5 +1,5 @@
 import { CLASS_STATS, createFreshState, type ActiveExpedition, type ClassId, type EquipmentItem, type GameState, type OfflineReport, type StatKey, type MissionPeriod, type MissionPeriods } from "./model.ts";
-import { EXPEDITIONS, findExpedition, PETS, QUESTS, STARTER_ITEMS } from "./catalog.ts";
+import { EXPEDITIONS, findExpedition, PETS, QUESTS, STARTER_ITEMS, STORY_CHAPTERS } from "./catalog.ts";
 import { DUNGEON_ITEMS, createItemInstance, findEquipmentTemplate, getEquipmentSellPrice } from "./dungeonItems.ts";
 import { addExperience } from "./stats.ts";
 
@@ -89,6 +89,34 @@ export function advanceExpeditions(state: GameState, now = Date.now()): { state:
 
 export function dismissOfflineReport(state: GameState, id: string): GameState {
   return { ...state, offlineSummary: state.offlineSummary.filter((item) => item.id !== id) };
+}
+
+export function getStoryChapterProgress(state: GameState, chapterId: number): number {
+  const chapter = STORY_CHAPTERS.find((item) => item.id === chapterId);
+  if (!chapter) return 0;
+  switch (chapter.metric) {
+    case "wins": return state.wins;
+    case "dungeonFloors": return Math.max(0, state.dungeonFloor - 1);
+    case "towerFloors": return state.tower;
+    case "expeditions": return state.expeditionsCompleted;
+    case "level": return state.hero?.level ?? 1;
+    default: return 0;
+  }
+}
+
+export function canClaimStoryChapter(state: GameState, chapterId: number): boolean {
+  const chapter = STORY_CHAPTERS.find((item) => item.id === chapterId);
+  return !!chapter && chapter.id === state.story + 1 && getStoryChapterProgress(state, chapterId) >= chapter.target;
+}
+
+export function claimStoryChapter(state: GameState, chapterId: number): GameState {
+  if (!canClaimStoryChapter(state, chapterId)) return state;
+  const chapter = STORY_CHAPTERS.find((item) => item.id === chapterId);
+  if (!chapter) return state;
+  const next = clone(state);
+  next.story = chapter.id;
+  next.gold = Math.min(1_000_000_000, next.gold + chapter.rewardGold);
+  return addExperience(next, chapter.rewardXP).state;
 }
 
 export function getQuestProgress(state: GameState, questId: string): number {
