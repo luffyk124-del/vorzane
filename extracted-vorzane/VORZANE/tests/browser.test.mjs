@@ -236,7 +236,7 @@ async function signInWithMock(page) {
   await page.getByPlaceholder("name@example.com").fill("player@example.test");
   await page.getByPlaceholder("8 أحرف على الأقل").fill("local-test-password");
   await page.getByRole("button", { name: "متابعة بالبريد" }).click();
-  await page.getByText("تطوير السمات", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("زنزانتك ومعاركك", { exact: true }).waitFor({ timeout: 15_000 });
 }
 
 async function waitForServer() {
@@ -416,8 +416,10 @@ test("new hero creator renders character controls only once", async () => {
   await page.getByText("اختر من يسير في الظل", { exact: true }).waitFor({ timeout: 15_000 });
 
   assert.equal(await page.getByText("اختيار الشخصية", { exact: true }).count(), 1);
-  assert.equal(await page.getByText("معاينة شخصيتك", { exact: true }).count(), 1);
-  assert.equal(await page.getByText("المظهر", { exact: true }).count(), 1);
+  assert.equal(await page.getByText("ذكر", { exact: true }).count(), 1);
+  assert.equal(await page.getByText("أنثى", { exact: true }).count(), 1);
+  assert.equal(await page.getByText("معاينة شخصيتك", { exact: true }).count(), 0, "the old appearance preview must not return");
+  assert.equal(await page.getByText("المظهر", { exact: true }).count(), 0, "appearance customization must not be offered during creation");
   assert.deepEqual(unexpectedRequests, []);
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(consoleErrors, []);
