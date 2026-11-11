@@ -50,7 +50,7 @@ export default function DimasScreen() {
         <Pill label={`+${current.xp.toLocaleString("en-US")} خبرة`} tone="jade" />
       </View>
       {current.reward ? <Card style={styles.milestone}><Pill label="مكافأة محطة مميزة" tone="gold" /><Txt style={styles.milestoneText}>{milestoneLabel(current.reward)}</Txt></Card> : null}
-      <AppButton label={selected <= state.dimas.highestFloor ? "تم اجتيازه" : selected === state.dimas.highestFloor + 1 ? "ابدأ تحدي الطابق" : "افتح الطوابق بالتتابع"} icon="sword" onPress={challenge} disabled={!state.hero || selected !== state.dimas.highestFloor + 1 || power < current.requiredPower} />
+      <AppButton label={selected <= state.dimas.highestFloor ? "تم اجتيازه" : selected === state.dimas.highestFloor + 1 ? "ابدأ تحدي الطابق" : "افتح الطوابق بالتتابع"} icon="sword" onPress={challenge} disabled={!state.hero || !!event || selected !== state.dimas.highestFloor + 1 || power < current.requiredPower} />
       {power < current.requiredPower && selected === state.dimas.highestFloor + 1 ? <Txt muted style={styles.warning}>تحتاج إلى {current.requiredPower - power} قوة إضافية لتجاوز هذا الطابق.</Txt> : null}
     </Card>
 
