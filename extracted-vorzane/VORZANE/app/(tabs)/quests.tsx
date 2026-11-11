@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   overviewStat: { flex: 1, alignItems: "center", gap: 4 },
   overviewValue: { fontSize: 20, fontWeight: "900", color: palette.gold },
   overviewLabel: { fontSize: 9, textAlign: "center" },
-  overviewDivider: { width: 1, height: 30, backgroundColor: palette.border },
+  overviewDivider: { width: 1, height: 30, backgroundColor: palette.line },
   overviewFootnote: { fontSize: 10, lineHeight: 16, textAlign: "right" },
   storyIntro: { padding: 14, gap: 5, borderColor: "rgba(230,199,124,0.22)", backgroundColor: "#141C27" },
   storyIntroTitle: { fontSize: 14, fontWeight: "900", color: palette.gold },
