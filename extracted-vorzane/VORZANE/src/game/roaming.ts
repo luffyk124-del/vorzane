@@ -315,7 +315,14 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
     damage ? `تضررت ${damage} صحة` : "",
     lootName ? `غنيمة: ${lootName}` : "",
   ].filter(Boolean).join(" • ");
-  return { state: next, message: rewards || "تابعت طريقك دون غنيمة." };
+  const continuation = event.title.includes("اللصوص")
+    ? (gold > 0 || lootName
+      ? "اندفعت من بين اللصوص وكسرت تطويقهم. تراجعوا بعد أن فقدوا القدرة على مواصلة المواجهة، فجمعت الذهب والغنائم التي تركوها خلفهم ثم تابعت طريقك."
+      : "لم تجد فرصة آمنة لقلب الموقف؛ ابتعدت عن اللصوص وتابعت الطريق بحذر دون مكسب يُذكر.")
+    : event.kind === "encounter" && (gold > 0 || lootName)
+      ? "هدأ المكان بعد المواجهة. تفقدت ما تركه خصمك، وجمعت ما استطعت حمله قبل أن تواصل رحلتك."
+      : "";
+  return { state: next, message: [continuation, rewards || "تابعت طريقك دون غنيمة."].filter(Boolean).join("\\n\\n") };
 }
 
 export function getTravellingMerchant(state: GameState, now = Date.now()): RoamingMerchantItem[] {
