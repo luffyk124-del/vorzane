@@ -3,7 +3,7 @@ import test from "node:test";
 import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter, getQuestProgress } from "./engine.ts";
 import { QUESTS } from "./catalog.ts";
 import { createFreshState, normalizeGameState } from "./model.ts";
-import { buyRoamingHealthRefill } from "./roaming.ts";
+import { buyRoamingHealthRefill, refreshRoamingHealth } from "./roaming.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
   const state = createHeroState("اختبار", "Warrior");
@@ -380,4 +380,17 @@ test("current quest catalog tracks Dimas, roaming, and companion progression", (
   assert.equal(getQuestProgress(state, "roaming-path"), 3);
   assert.equal(getQuestProgress(state, "companion"), 1);
   assert.ok(QUESTS.every((quest) => !["cave", "tower", "hard"].includes(quest.id)));
+});
+
+
+test("roaming health regenerates one point per minute and stops at its cap", () => {
+  const now = Date.UTC(2026, 10, 11, 12, 0, 0);
+  const state = createHeroState("اختبار الصحة", "Warrior");
+  state.roaming.health = 10;
+  state.roaming.healthUpdatedAt = now;
+  const afterThree = refreshRoamingHealth(state, now + 3 * 60_000 + 59_000);
+  assert.equal(afterThree.roaming.health, 13);
+  assert.equal(afterThree.roaming.healthUpdatedAt, now + 3 * 60_000);
+  const capped = refreshRoamingHealth({ ...afterThree, roaming: { ...afterThree.roaming, health: afterThree.roaming.maxHealth - 1 } }, now + 20 * 60_000);
+  assert.equal(capped.roaming.health, capped.roaming.maxHealth);
 });
