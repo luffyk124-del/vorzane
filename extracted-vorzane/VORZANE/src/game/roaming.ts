@@ -437,22 +437,14 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   return { state: next, message: storyResult, rewards: rewards || "لم تحصل على مكافآت في هذا الاختيار." };
 }
 
-export function getTravellingMerchant(state: GameState, now = Date.now()): RoamingMerchantItem[] {
+export function getTravellingMerchant(state: GameState, now = Date.now(), random: () => number = Math.random): RoamingMerchantItem[] {
   const level = Math.max(1, state.hero?.level ?? 1);
   const scale = 1 + Math.log2(level) * 0.22;
-  let randomState = (Math.floor(now) ^ Math.imul(level, 0x9e3779b1)) >>> 0;
-  const random = () => {
-    randomState = (randomState + 0x6d2b79f5) >>> 0;
-    let value = randomState;
-    value = Math.imul(value ^ (value >>> 15), value | 1);
-    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
-  };
   const stock: RoamingMerchantItem[] = [];
   const usedGear = new Set<string>();
   for (let index = 0; index < 3; index += 1) {
     let template = getDungeonDrop(0, level, random);
-    for (let attempt = 0; attempt < 8 && usedGear.has(template.id); attempt += 1) template = getDungeonDrop(0, level, random);
+    for (let attempt = 0; attempt < 12 && usedGear.has(template.id); attempt += 1) template = getDungeonDrop(0, level, random);
     usedGear.add(template.id);
     stock.push({
       id: `merchant-gear-${Math.floor(now)}-${index}`,
@@ -470,7 +462,6 @@ export function getTravellingMerchant(state: GameState, now = Date.now()): Roami
   );
   return stock;
 }
-
 export function buyMerchantItem(state: GameState, item: RoamingMerchantItem) {
   if (!item) return { state, error: "هذا المنتج غير متاح." };
   if (!state.hero) return { state, error: "أنشئ شخصيتك أولًا." };
