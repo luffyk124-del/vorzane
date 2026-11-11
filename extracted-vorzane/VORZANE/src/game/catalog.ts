@@ -1,6 +1,20 @@
 import type { BattleMode, ClassId, EquipmentItem, StatKey } from "./model.ts";
 
-export const PETS: { id: string; name: string; icon: string; bonus: Partial<Record<StatKey, number>>; price: number; requiredLevel: number; description: string; shopAvailable?: boolean }[] = [
+export type CompanionRarity = "rare" | "epic" | "legendary" | "mythic";
+export type Companion = { id: string; name: string; icon: string; bonus: Partial<Record<StatKey, number>>; price: number; requiredLevel: number; description: string; rarity: CompanionRarity; source: string; shopAvailable: false };
+export const PETS: Companion[] = [
+  { id: "wolf", name: "ذئب الرماد", icon: "paw", bonus: { agi: 18, vit: 10 }, price: 45_000, requiredLevel: 40, rarity: "rare", description: "رفيق سريع يحمي أطراف القوافل من مفترسات البراري.", source: "حدث أثر الذئب الجريح في التجوال", shopAvailable: false },
+  { id: "golem", name: "حارس الصخر", icon: "shield", bonus: { def: 32, vit: 25 }, price: 95_000, requiredLevel: 45, rarity: "rare", description: "حارس حجري بطيء لكنه شديد الصمود.", source: "حدث قلب الحارس الحجري في التجوال", shopAvailable: false },
+  { id: "fox", name: "ثعلب السراب", icon: "sparkles", bonus: { luck: 38, agi: 26 }, price: 210_000, requiredLevel: 50, rarity: "epic", description: "يتلاعب بالمسارات ويقود صاحبه إلى الفرص الخفية.", source: "حدث صفقة ثعلب السراب في التجوال", shopAvailable: false },
+  { id: "phoenix", name: "عنقاء الفجر", icon: "sunny", bonus: { vit: 62, def: 22, luck: 20 }, price: 480_000, requiredLevel: 60, rarity: "epic", description: "تجدد ناري يمنح الحيوية والثبات.", source: "حدث رماد العنقاء في التجوال", shopAvailable: false },
+  { id: "dragon", name: "تنين الياقوت", icon: "flame", bonus: { str: 65, vit: 38, def: 18 }, price: 720_000, requiredLevel: 65, rarity: "epic", description: "تنين صغير يحرس جوهرة ياقوتية قديمة.", source: "حدث بيضة تنين الياقوت في التجوال", shopAvailable: false },
+  { id: "owl", name: "بومة الحكمة", icon: "eye", bonus: { luck: 58, agi: 32, vit: 18 }, price: 1_350_000, requiredLevel: 70, rarity: "legendary", description: "تقرأ حركة الخصم قبل أن يبدأ هجومه.", source: "جائزة اجتياز الطابق 75 من الديماس", shopAvailable: false },
+  { id: "fairy-warden", name: "حارسة الندى", icon: "flower", bonus: { vit: 58, luck: 44, agi: 38 }, price: 2_250_000, requiredLevel: 75, rarity: "legendary", description: "حارسة قبيلة الجنيات، تحفظ عهد من أنقذها.", source: "لقاء الجنية اللاحق بعد إنقاذها في التجوال", shopAvailable: false },
+  { id: "moon-deer", name: "أيل القمر", icon: "moon", bonus: { vit: 100, def: 58, luck: 28 }, price: 2_800_000, requiredLevel: 80, rarity: "legendary", description: "روح غابية تعزز الصمود وتوازن الطاقة.", source: "جائزة اجتياز الطابق 150 من الديماس", shopAvailable: false },
+  { id: "star-drake", name: "تنين الشهب", icon: "star", bonus: { str: 125, luck: 72, agi: 35 }, price: 5_200_000, requiredLevel: 90, rarity: "mythic", description: "تنين سماوي يضاعف القوة والحدس.", source: "جائزة اجتياز الطابق 225 من الديماس", shopAvailable: false },
+  { id: "dimas-royal-drake", name: "تنين العرش الأزلي", icon: "flame", bonus: { str: 210, def: 155, vit: 185, luck: 90 }, price: 18_000_000, requiredLevel: 100, rarity: "mythic", description: "رفيق العرش الذي لا يظهر إلا بعد إتمام الديماس.", source: "الجائزة الحصرية لاجتياز الطابق 300 من الديماس", shopAvailable: false },
+  { id: "shattered-echo", name: "الــصــدى المـتـشـظّ", icon: "sparkles", bonus: { str: 320, def: 250, vit: 290, agi: 190, luck: 170 }, price: 55_000_000, requiredLevel: 120, rarity: "mythic", description: "وجود متشظٍّ لا يستجيب إلا لمن يثبت اتزانه.", source: "اجتياز اختباراته العشرة في الحدث المميز", shopAvailable: false },
+];
   { id: "wolf", name: "ذئب الرماد", icon: "paw", bonus: { agi: 2 }, price: 300, requiredLevel: 1, description: "رفيق البداية؛ يرفع الرشاقة قليلًا." },
   { id: "golem", name: "حارس الصخر", icon: "shield", bonus: { def: 4 }, price: 450, requiredLevel: 4, description: "درع حيّ يمنح صمودًا أكبر من المستوى الرابع." },
   { id: "fox", name: "ثعلب السراب", icon: "sparkles", bonus: { luck: 9 }, price: 540, requiredLevel: 7, description: "حظّه الأقوى يرافق الصيادين بعد المستوى السابع." },

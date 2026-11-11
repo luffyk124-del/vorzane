@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, StatCard, Txt } from "../../src/components/ui";
 import { DUNGEON_ITEM_POOL_SIZE, PETS, RARITY_LABELS, STARTER_ITEMS } from "../../src/game/catalog";
-import { buyItem, buyPet, combatStats, equipItem, sellItem, setPet, unequipItem } from "../../src/game/engine";
+import { autoEquipArmor, buyItem, buyPet, combatStats, equipItem, sellItem, setPet, unequipItem } from "../../src/game/engine";
 import { DUNGEON_ITEMS, findEquipmentTemplate, getEquipmentSellPrice } from "../../src/game/dungeonItems";
 import { SLOT_NAMES, type EquipmentItem } from "../../src/game/model";
 import { rarityColor, palette } from "../../src/theme";
@@ -12,6 +12,7 @@ type Tab = "equipment" | "shop" | "market";
 type ShopCategory = "all" | "weapons" | "armor" | "accessories" | "companions";
 type InventoryCategory = "all" | "weapons" | "armor" | "accessories";
 type InventorySort = "power" | "rarity" | "level";
+type ShopSort = "level" | "rarity" | "power" | "price-low" | "price-high";
 const RARITY_ORDER = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 } as const;
 const BONUS_LABELS = { str: "قوة", def: "دفاع", vit: "حيوية", agi: "رشاقة", luck: "حظ" } as const;
 const itemScore = (item: EquipmentItem) => Object.values(item.bonus).reduce((sum, value) => sum + (value ?? 0), 0);
@@ -30,17 +31,33 @@ export default function GearScreen() {
   const [shopCategory, setShopCategory] = useState<ShopCategory>("all");
   const [inventoryCategory, setInventoryCategory] = useState<InventoryCategory>("all");
   const [inventorySort, setInventorySort] = useState<InventorySort>("power");
+  const [shopSort, setShopSort] = useState<ShopSort>("power");
   const [notice, setNotice] = useState("");
   const stats = combatStats(state);
   const heroLevel = state.hero?.level ?? 0;
   const equippedCount = useMemo(() => Object.values(state.equipped).filter(Boolean).length, [state.equipped]);
   const shopItems = useMemo(() => [...STARTER_ITEMS, ...DUNGEON_ITEMS], []);
   const visibleShopItems = useMemo(() => {
-    if (shopCategory === "all" || shopCategory === "companions") return shopCategory === "all" ? shopItems : [];
-    if (shopCategory === "weapons") return shopItems.filter((item) => item.slot === "سلاح");
-    if (shopCategory === "armor") return shopItems.filter((item) => item.slot === "درع" || item.slot === "خوذة");
-    return shopItems.filter((item) => !["سلاح", "درع", "خوذة"].includes(item.slot));
-  }, [shopCategory, shopItems]);
+    const filtered = shopCategory === "all" ? shopItems
+      : shopCategory === "weapons" ? shopItems.filter((item) => item.slot === "سلاح")
+      : shopCategory === "armor" ? shopItems.filter((item) => ["درع", "خوذة", "قفازات", "حذاء"].includes(item.slot))
+      : shopCategory === "accessories" ? shopItems.filter((item) => ["قلادة", "خاتم أول", "خاتم ثانٍ"].includes(item.slot)) : [];
+    return filtered.slice().sort((a, b) => {
+      if (shopSort === "rarity") return RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity] || itemScore(b) - itemScore(a);
+      if (shopSort === "level") return (b.requiredLevel ?? 1) - (a.requiredLevel ?? 1) || itemScore(b) - itemScore(a);
+      if (shopSort === "price-low") return a.price - b.price;
+      if (shopSort === "price-high") return b.price - a.price;
+      return itemScore(b) - itemScore(a);
+    });
+  }, [shopCategory, shopItems, shopSort]);
+  const visiblePets = useMemo(() => PETS.slice().sort((a, b) => {
+    const petScore = (bonus: Partial<Record<"str" | "def" | "vit" | "agi" | "luck", number>>) => Object.values(bonus).reduce((sum, value) => sum + (value ?? 0), 0);
+    if (shopSort === "rarity") return RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity] || petScore(b.bonus) - petScore(a.bonus);
+    if (shopSort === "level") return b.requiredLevel - a.requiredLevel;
+    if (shopSort === "price-low") return a.price - b.price;
+    if (shopSort === "price-high") return b.price - a.price;
+    return petScore(b.bonus) - petScore(a.bonus);
+  }), [shopSort]);
   const marketItems = useMemo(() => [
     ...state.inventory.map((item) => ({ item, equipped: false })),
     ...Object.entries(state.equipped).flatMap(([slot, item]) => item ? [{ item, equipped: true, slot }] : []),
@@ -101,7 +118,7 @@ export default function GearScreen() {
     {notice ? <Card style={styles.notice}><Icon name="checkmark-circle" color={palette.jade} size={17} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
 
     {tab === "equipment" ? <>
-      <SectionTitle title={`أماكن التجهيز (${equippedCount}/8)`} icon="grid-outline" />
+      <SectionTitle title={`أماكن التجهيز (${equippedCount}/8)`} icon="grid-outline" action={<AppButton label="تجهيز أقوى الدروع" icon="shield-checkmark" onPress={() => { update((current) => autoEquipArmor(current)); message("تم تجهيز أقوى الدروع المتاحة لمستواك."); }} variant="jade" small />} />
       <View style={styles.slots}>
         {SLOT_NAMES.map((slot) => {
           const item = state.equipped[slot];
@@ -156,7 +173,12 @@ export default function GearScreen() {
           <Txt style={[styles.shopFilterText, shopCategory === category.id && styles.shopFilterTextActive]}>{category.label}</Txt>
         </Pressable>)}
       </View>
-      {visibleShopItems.map((item) => {
+      <View style={styles.shopFilters}>
+         {([{ id: "level", label: "المستوى" }, { id: "rarity", label: "الندرة" }, { id: "power", label: "القوة" }, { id: "price-low", label: "أقل سعر" }, { id: "price-high", label: "أعلى سعر" }] as const).map((sort) => <Pressable key={sort.id} onPress={() => setShopSort(sort.id)} style={[styles.sortChip, shopSort === sort.id && styles.sortChipActive]}>
+           <Txt style={[styles.sortChipText, shopSort === sort.id && styles.sortChipTextActive]}>{sort.label}</Txt>
+         </Pressable>)}
+       </View>
+       {visibleShopItems.map((item) => {
         const canAfford = state.gold >= item.price;
         const levelLocked = heroLevel < (item.requiredLevel ?? 1);
         return <Card key={item.id} style={styles.itemRow}>
@@ -174,8 +196,8 @@ export default function GearScreen() {
         const canAfford = state.gold >= pet.price;
         return <Card key={pet.id} style={styles.petCard}>
           <View style={styles.petBadge}><Icon name={pet.icon as never} color={active ? palette.gold : palette.jade} size={23} /></View>
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : locked ? <Pill label={`تفعيل مستوى ${pet.requiredLevel}`} tone="muted" /> : null}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, locked && { color: palette.red }]}>المستوى المطلوب: {pet.requiredLevel}</Txt></View>
-           {owned ? <AppButton label={locked ? "تفعيل" : active ? "النشط" : "تفعيل"} onPress={() => locked ? message("لم تصل للمستوى المطلوب.") : update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active} /> : <AppButton label={locked ? "تفعيل" : `شراء ${pet.price.toLocaleString("en-US")}`} onPress={() => locked ? message("لم تصل للمستوى المطلوب.") : canAfford ? purchasePet(pet.id) : message("لا تملك ذهبًا كافيًا.")} variant={locked || !canAfford ? "secondary" : "jade"} small icon="cart-outline" />}
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : <Pill label={pet.rarity === "mythic" ? "خرافي" : pet.rarity === "legendary" ? "أسطوري" : pet.rarity === "epic" ? "ملحمي" : "نادر"} tone="gold" />}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, locked && { color: palette.red }]}>المستوى المطلوب: {pet.requiredLevel} • القيمة: {pet.price.toLocaleString("en-US")} ذهب</Txt><Txt muted style={styles.petDescription}>مصدر الحصول: {pet.source}</Txt></View>
+           {owned ? <AppButton label={locked ? "تفعيل" : active ? "النشط" : "تفعيل"} onPress={() => locked ? message("لم تصل للمستوى المطلوب.") : update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active} /> : <Pill label="مكافأة نادرة" tone="muted" />}
         </Card>;
       })}
       </> : null}
