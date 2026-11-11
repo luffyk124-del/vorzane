@@ -10,7 +10,7 @@ const milestoneLabel = (reward?: { kind: string; name: string; amount?: number }
   if (!reward) return "";
   if (reward.kind === "weapon") return `سلاح نادر: ${reward.name}`;
   if (reward.kind === "companion") return `مرافق نادر: ${reward.name}`;
-  return `+${reward.amount ?? 0} ${reward.kind === "gems" ? "جوهرة" : "قطعة"}`;
+  return reward.kind === "gems" ? `+${reward.amount ?? 0} جوهرة` : reward.name;
 };
 
 export default function DimasScreen() {

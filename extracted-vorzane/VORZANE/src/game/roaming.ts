@@ -5,7 +5,7 @@ import { createItemInstance, getDungeonDrop } from "./dungeonItems.ts";
 export type RoamingOutcome = { gold?: number; gems?: number; xp?: number; damage?: number; heal?: number; chain?: string; chainEnd?: boolean; gear?: boolean };
 export type RoamingChoice = { id: string; label: string; hint: string; outcome: RoamingOutcome };
 export type RoamingEvent = { id: string; title: string; region: string; story: string; kind: "encounter" | "traveler" | "cache" | "omen" | "chain" | "merchant"; choices: RoamingChoice[]; chainId?: string; chainStage?: number };
-type RoamingMerchantItem = { id: string; name: string; description: string; price: number; currency: "gold" | "fragments"; stock: number; gear?: boolean; heal?: number; gems?: number; gold?: number; xp?: number };
+type RoamingMerchantItem = { id: string; name: string; description: string; price: number; currency: "gold"; stock: number; gear?: boolean; heal?: number; gems?: number; gold?: number; xp?: number };
 
 const REGIONS = ["غابة الرماد", "سهول الزجاج", "مستنقع الهمس", "طريق الملوك", "وادي الشهب", "أطلال القمر", "مرتفعات الصقيع", "ساحل العظام", "سراديب النور", "حدود العاصفة", "بساتين الظلال", "ممرّ العمالقة"];
 const SCENES = [
@@ -179,6 +179,7 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   }
   next.roaming.eventsCompleted += 1;
   next.roaming.lastEventAt = now;
+  next.roaming.healthUpdatedAt = now;
   next.roaming.healthUpdatedAt = now;
   next.roaming.eventsSeen = [...next.roaming.eventsSeen.filter((id) => id !== event.id), event.id].slice(-500);
   if (event.chainId && reward.chainEnd) {
