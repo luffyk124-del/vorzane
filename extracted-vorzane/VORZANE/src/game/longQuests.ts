@@ -31,7 +31,7 @@ const rows: Omit<LongQuest, "id">[] = [
   { title: "مئة أثر", description: "أكمل 100 حدث تجوال.", tier: "نخبوي", metric: "roaming", target: 100, gold: 13_000, xp: 7_000, gems: 45 },
   { title: "طريق الطوابق", description: "تجاوز الطابق 75 في الديماس.", tier: "نخبوي", metric: "dimas", target: 75, gold: 15_000, xp: 8_000, fragments: 50 },
   { title: "قوة لا تلين", description: "بلغ المستوى 35.", tier: "نخبوي", metric: "level", target: 35, gold: 17_000, xp: 9_000, gems: 60 },
-  { title: "عشرة أيام في البراري", description: "أكمل أكمل 10 أيام منذ بدء رحلتك.", tier: "نخبوي", metric: "days", target: 10, gold: 18_000, xp: 10_000, fragments: 60 },
+  { title: "عشرة أيام في البراري", description: "أكمل 10 أيام منذ بدء رحلتك.", tier: "نخبوي", metric: "days", target: 10, gold: 18_000, xp: 10_000, fragments: 60 },
   { title: "حارس العتاد", description: "جهّز 8 قطع في جميع الخانات.", tier: "نخبوي", metric: "gear", target: 8, gold: 20_000, xp: 11_000, gems: 65 },
   { title: "حكاية لا تنتهي", description: "أكمل 160 حدث تجوال.", tier: "ملحمي", metric: "roaming", target: 160, gold: 55_000, xp: 25_000, gems: 120, fragments: 100 },
   { title: "مئة وخمسون انتصارًا", description: "اربح 150 معركة.", tier: "ملحمي", metric: "wins", target: 150, gold: 60_000, xp: 28_000, gems: 140 },
