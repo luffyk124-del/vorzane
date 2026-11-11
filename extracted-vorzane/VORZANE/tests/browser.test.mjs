@@ -430,7 +430,7 @@ test("roaming lore archive unlocks a story page with relic shards", async () => 
   await page.getByRole("button", { name: "افتح الوثيقة • 3 شظايا" }).click();
   await page.getByText("فُتحت وثيقة «سجل الملاح الأول» وأضيفت إلى أرشيفك.", { exact: true }).waitFor({ timeout: 10_000 });
   await page.getByText(/لم تكن خريطة الملاح الأول ترسم الطرق/).waitFor({ timeout: 10_000 });
-  await page.getByText("0 شظية أثر", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByText("0 شظية أثر", { exact: true }).first().waitFor({ timeout: 10_000 });
 
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   assert.equal(hasHorizontalOverflow, false, "the lore archive must fit a narrow mobile viewport");
