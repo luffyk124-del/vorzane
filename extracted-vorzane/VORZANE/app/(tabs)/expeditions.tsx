@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, Meter, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, buyRoamingHealthRefill, refreshRoamingHealth, ROAMING_EVENT_COUNT, type RoamingEvent } from "../../src/game/roaming";
+import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, buyRoamingHealthRefill, refreshRoamingHealth, ROAMING_EVENT_COUNT, type RoamingEvent, type RoamingMerchantItem } from "../../src/game/roaming";
 import { useGame } from "../../src/contexts/GameContext";
 import { BattleArena } from "../../src/components/BattleArena";
 import { createBattleSequence, type BattleSequence, type BattleResult } from "../../src/game/engine";
@@ -13,18 +13,21 @@ export default function RoamingScreen() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [merchantBought, setMerchantBought] = useState<string[]>([]);
+  const [merchantStock, setMerchantStock] = useState<RoamingMerchantItem[]>([]);
   const [eventResult, setEventResult] = useState("");
   const [eventRewards, setEventRewards] = useState("");
   const [battleSequence, setBattleSequence] = useState<BattleSequence | null>(null);
   const [clock, setClock] = useState(Date.now());
   useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer); }, []);
   useEffect(() => { const timer = setInterval(() => update((current) => refreshRoamingHealth(current)), 60_000); update((current) => refreshRoamingHealth(current)); return () => clearInterval(timer); }, [update]);
-  const merchant = useMemo(() => getTravellingMerchant(state), [state.roaming.eventsCompleted, state.gold, state.hero?.level]);
   const explore = () => {
     if (!state.hero) { setNotice("أنشئ شخصيتك أولًا."); return; }
     if (state.roaming.health < 20) { setNotice("تحتاج إلى 20 صحة على الأقل لبدء التجوال."); return; }
     setMerchantBought([]);
-    setEvent(getRoamingEvent(state, Date.now() + state.roaming.eventsCompleted * 97));
+    const eventSeed = Date.now() + state.roaming.eventsCompleted * 97;
+    const nextEvent = getRoamingEvent(state, eventSeed);
+    setEvent(nextEvent);
+    setMerchantStock(nextEvent.kind === "merchant" ? getTravellingMerchant(state, eventSeed) : []);
     setNotice("");
     setEventResult("");
     setEventRewards("");
@@ -42,8 +45,8 @@ export default function RoamingScreen() {
     setEvent(null);
     setBusy(false);
   };
-  const buy = (itemId: string) => {
-    const result = buyMerchantItem(state, itemId);
+  const buy = (item: RoamingMerchantItem) => {
+    const result = buyMerchantItem(state, item);
     if (result.error) { setNotice(result.error); return false; }
     update(() => result.state);
     setNotice("تمت الصفقة. أضيفت المكافأة إلى ممتلكاتك.");
@@ -80,17 +83,28 @@ export default function RoamingScreen() {
       <View style={styles.storyPanel}><Txt style={styles.storyHeading}>الحكاية</Txt><Txt style={styles.eventStory}>{event.story}</Txt></View>
       {event.kind === "merchant" ? <Card style={styles.merchantCard}>
         <View style={styles.merchantHeader}><Icon name="storefront" color={palette.gold} size={22} /><View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={styles.merchantTitle}>بضاعة ساهر لهذا اللقاء</Txt><Txt muted style={styles.small}>هذه القافلة لن تبقى هنا طويلًا</Txt></View></View>
-        {merchant.map((item) => <View key={item.id} style={styles.merchantRow}>
+        {merchantStock.map((item) => <View key={item.id} style={styles.merchantRow}>
           <View style={styles.merchantInfo}>
             <Txt style={styles.itemName}>{item.name}</Txt>
             <Txt muted style={styles.small}>{item.description}</Txt>
             <Txt style={styles.price}>{item.price.toLocaleString("en-US")} ذهب</Txt>
           </View>
-          <AppButton label={merchantBought.includes(item.id) ? "تم الشراء" : "شراء"} icon="cart-outline" small variant="secondary" disabled={merchantBought.includes(item.id)} onPress={() => { if (buy(item.id)) setMerchantBought((items) => [...items, item.id]); }} />
+          <AppButton label={merchantBought.includes(item.id) ? "تم الشراء" : "شراء"} icon="cart-outline" small variant="secondary" disabled={merchantBought.includes(item.id)} onPress={() => { if (buy(item)) setMerchantBought((items) => [...items, item.id]); }} />
         </View>)}
       </Card> : null}
-      <SectionTitle title="ماذا ستفعل؟" icon="git-branch-outline" />
-      {event.choices.map((choice) => <PressChoice key={choice.id} label={choice.label} onPress={() => choose(choice.id)} disabled={busy} />)}
+      {event.kind === "merchant" ? (
+        <AppButton label="تابع الطريق" icon="compass" onPress={() => {
+          update(() => completeRoamingMerchantVisit(state, event));
+          setEvent(null);
+          setMerchantStock([]);
+          setNotice("غادرت قافلة ساهر، ويمكنك مواصلة التجوال.");
+        }} />
+      ) : (
+        <>
+          <SectionTitle title="ماذا ستفعل؟" icon="git-branch-outline" />
+          {event.choices.map((choice) => <PressChoice key={choice.id} label={choice.label} onPress={() => choose(choice.id)} disabled={busy} />)}
+        </>
+      )}
     </Card> : null}
 
     {eventResult ? <Card style={styles.resultCard}>

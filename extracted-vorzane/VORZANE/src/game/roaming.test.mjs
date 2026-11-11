@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHeroState, getQuestProgress, getStoryChapterProgress } from "./engine.ts";
-import { buyRoamingHealthRefill, refreshRoamingHealth, getRoamingEvent, resolveRoamingChoice, ROAMING_EVENT_PREVIEW } from "./roaming.ts";
+import { buyRoamingHealthRefill, refreshRoamingHealth, getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, ROAMING_EVENT_PREVIEW } from "./roaming.ts";
 
 test("roaming health regenerates one point per minute and respects its maximum", () => {
   const now = Date.UTC(2026, 10, 11, 12, 0, 0);
@@ -142,4 +142,49 @@ test("red orchard root chapter returns an in-world result for the chosen action"
   assert.match(result.message, /تزيل عنه السم|يزيل/);
   assert.match(result.message, /النسغ إلى عروقه/);
   assert.doesNotMatch(result.message, /في حكاية|نفذت|الخطوة التالية:/);
+});
+
+
+test("roaming cycles through distinct base scenes before repeating one", () => {
+  const state = createHeroState("اختبار تنوع الأحداث", "Warrior");
+  const seenScenes = new Set();
+  let seed = 100_000;
+  for (let index = 0; index < 14; index += 1) {
+    let event;
+    do {
+      seed += 1;
+      event = getRoamingEvent(state, seed);
+    } while (event.kind === "merchant" || event.kind === "special");
+    const sceneIndex = Number(event.id.split("-")[1]);
+    assert.equal(seenScenes.has(sceneIndex), false);
+    seenScenes.add(sceneIndex);
+    state.roaming.eventsSeen.push(event.id);
+    state.roaming.eventsCompleted += 1;
+  }
+  assert.equal(seenScenes.size, 14);
+});
+
+test("Sahir merchant has no dialogue choices and closes as a completed visit", () => {
+  const state = createHeroState("اختبار ساهر", "Warrior");
+  const event = getRoamingEvent(state, 40_000);
+  assert.equal(event.kind, "merchant");
+  assert.deepEqual(event.choices, []);
+  const next = completeRoamingMerchantVisit(state, event, 50_000);
+  assert.equal(next.roaming.eventsCompleted, state.roaming.eventsCompleted + 1);
+  assert.ok(next.roaming.eventsSeen.includes(event.id));
+});
+
+test("Sahir stock is randomized per visit and purchases the exact displayed gear", () => {
+  const state = createHeroState("اختبار بضاعة ساهر", "Warrior");
+  const firstStock = getTravellingMerchant(state, 10_000);
+  const sameStock = getTravellingMerchant(state, 10_000);
+  const nextStock = getTravellingMerchant(state, 20_000);
+  assert.deepEqual(firstStock, sameStock);
+  assert.notDeepEqual(firstStock, nextStock);
+  const gear = firstStock.find((item) => item.gearTemplate);
+  assert.ok(gear?.gearTemplate);
+  state.gold = 100_000;
+  const purchased = buyMerchantItem(state, gear);
+  assert.equal(purchased.error, undefined);
+  assert.equal(purchased.state.inventory[0]?.catalogId, gear.gearTemplate.catalogId ?? gear.gearTemplate.id);
 });
