@@ -73,7 +73,7 @@ test("roaming choices return story and rewards separately", () => {
   assert.doesNotMatch(result.message, /ذهب|خبرة/);
 });
 
-test("active roaming story chains advance immediately to their next choice", () => {
+test("active roaming story chapters wait for random intervening encounters", () => {
   const state = createHeroState("اختبار تسلسل الحكاية", "Warrior");
   state.roaming.activeChain = "lost-cartographer";
   state.roaming.chainStage = 0;
@@ -85,7 +85,13 @@ test("active roaming story chains advance immediately to their next choice", () 
   const result = resolveRoamingChoice(state, event, "press", Date.UTC(2026, 10, 11));
   assert.equal(result.state.roaming.chainStage, 1);
   assert.match(result.message, /علامة على جذع قديم/);
-  const nextEvent = getRoamingEvent(result.state, Date.UTC(2026, 10, 11) + 1);
+  assert.equal(result.state.roaming.chainNextAtEvent >= result.state.roaming.eventsCompleted + 2, true);
+  const beforeCooldown = getRoamingEvent(result.state, Date.UTC(2026, 10, 11) + 1);
+  assert.notEqual(beforeCooldown.kind, "chain");
+  const afterCooldown = { ...result.state, roaming: { ...result.state.roaming, eventsCompleted: result.state.roaming.chainNextAtEvent } };
+  const randomSeed = Array.from({ length: 20 }, (_, i) => Date.UTC(2026, 10, 11) + i * 13_000).find((seed) => Math.abs(Math.floor(seed / 13)) % 4 === 0);
+  assert.ok(randomSeed);
+  const nextEvent = getRoamingEvent(afterCooldown, randomSeed);
   assert.equal(nextEvent.kind, "chain");
   assert.equal(nextEvent.chainStage, 1);
 });
