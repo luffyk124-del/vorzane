@@ -82,31 +82,6 @@ export default function QuestsScreen() {
       </Card>;
     })}
 
-    <Card style={styles.dungeonCard}>
-      <View style={styles.dungeonIcon}><Icon name="skull" color={palette.gold} size={22} /></View>
-      <View style={styles.dungeonBody}>
-        <Pill label={`الطابق ${state.dungeonFloor}`} tone="gold" />
-        <Txt style={styles.dungeonTitle}>زنزانة الهاوية</Txt>
-        <Txt muted style={styles.cardCopy}>قاتل تلقائيًا، استعد صحتك بعد كل نصر، واجمع غنائم ندرتها ترتفع مع المستوى والطابق.</Txt>
-      </View>
-      <AppButton label="انزل" icon="arrow-back" onPress={() => startBattle("dungeon")} variant="jade" small />
-    </Card>
-
-    <Card style={styles.towerCard}>
-      <View style={styles.towerBadge}><Icon name="business" color={palette.violet} size={21} /></View>
-      <View style={styles.towerBody}><Pill label={`الطابق ${state.tower + 1}`} tone="muted" /><Txt style={styles.towerTitle}>برج الحراس</Txt><Txt muted style={styles.cardCopy}>خصوم متنوعون ومواجهة أصعب من الطابق السابق.</Txt></View>
-      <AppButton label="تحدّ" icon="flash" onPress={() => startBattle("tower")} variant="secondary" small />
-    </Card>
-
-    <Card style={styles.modeCard}>
-      <View style={styles.modeIntro}><Icon name="bonfire" color={palette.red} size={19} /><Txt style={styles.modeTitle}>ميادين أخرى</Txt></View>
-      <View style={styles.modeButtons}>
-        <AppButton label="كهف الرماد" icon="bonfire" onPress={() => startBattle("cave")} variant="secondary" small style={{ flex: 1 }} />
-        <AppButton label="تحدي الكسوف" icon="moon" onPress={() => startBattle("hard")} variant="ghost" small style={{ flex: 1 }} />
-      </View>
-      <Txt muted style={styles.modeHint}>لكل ميدان خصوم وخصائص مختلفة؛ عتاد الزنزانة لا يسقط من هذه المعارك.</Txt>
-    </Card>
-
     <SectionTitle title="المهام المتجددة" icon="calendar-outline" action={<Pill label="مكافآت متجددة" tone="gold" />} />
     {recurringGroups.map((group) => <View key={group.scope} style={styles.recurringGroup}>
       <View style={styles.recurringHeading}>
@@ -234,7 +209,7 @@ export default function QuestsScreen() {
         const ready = quest.progress >= quest.target && !quest.claimed;
         return <Card key={quest.id} style={[styles.longQuest, ready && styles.questReady, quest.claimed && styles.questClaimed]}>
           <View style={styles.questTop}>
-            <AppButton label={quest.claimed ? "تم الاستلام" : ready ? "استلام المكافأة" : "قيد التقدم"} icon={quest.claimed ? "checkmark" : "gift-outline"} onPress={() => claim(quest.id)} variant={ready ? "jade" : "secondary"} small disabled={!ready} />
+            <AppButton label={quest.claimed ? "تم الاستلام" : ready ? "استلام المكافأة" : "قيد التقدم"} icon={quest.claimed ? "checkmark" : "gift-outline"} onPress={() => claimLong(quest.id)} variant={ready ? "jade" : "secondary"} small disabled={!ready} />
             <View style={styles.questTitleBlock}>
               <Pill label={quest.metric === "days" ? "مهمة طويلة" : group.tier} tone={quest.metric === "days" ? "gold" : TONES[group.tier]} />
               <Txt style={styles.longQuestTitle}>{quest.title}</Txt>
