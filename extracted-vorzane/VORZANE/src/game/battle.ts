@@ -57,17 +57,17 @@ function damageAmount(attack: number, defense: number): number {
   return Math.max(1, Math.floor(attack * 100 / (100 + Math.max(0, defense) * 2)));
 }
 
-export function createBattleSequence(state: GameState, mode: BattleMode, random: () => number = Math.random): BattleSequence | null {
+export function createBattleSequence(state: GameState, mode: BattleMode, random: () => number = Math.random, options?: { floor?: number; enemyScale?: number; modeLabel?: string }): BattleSequence | null {
   if (!state.hero) return null;
   const hero = state.hero;
   const player = combatStats(state);
-  const floor = mode === "dungeon" ? state.dungeonFloor : mode === "tower" ? state.tower + 1 : mode === "roaming" ? Math.max(1, state.roaming.eventsCompleted + 1) : Math.max(1, state.battleWinsByMode[mode] + 1);
+  const floor = options?.floor ?? (mode === "dungeon" ? state.dungeonFloor : mode === "tower" ? state.tower + 1 : mode === "roaming" ? Math.max(1, state.roaming.eventsCompleted + 1) : Math.max(1, state.battleWinsByMode[mode] + 1));
   const enemyTemplate = chooseEnemy(state, mode, random);
   const floorScale = mode === "dungeon" ? 1 + (floor - 1) * 0.018 : mode === "tower" ? Math.min(2.5, 1 + (floor - 1) * 0.045) : mode === "hard" ? 1 + Math.min(0.5, (floor - 1) * 0.01) : mode === "roaming" ? 1 + Math.min(0.45, (floor - 1) * 0.012) : 1 + Math.min(0.28, (floor - 1) * 0.008);
   const level = hero.level;
-  const enemyMaxHP = clamp(Math.round((108 + level * 18) * MODE_SCALE[mode] * floorScale * enemyTemplate.hpScale), 40, 1_000_000);
-  const enemyAttack = clamp(Math.round((8 + level * 3.3) * MODE_SCALE[mode] * floorScale * enemyTemplate.attackScale), 4, 250_000);
-  const enemyDefense = clamp(Math.round((4 + level * 1.4) * MODE_SCALE[mode] * floorScale * enemyTemplate.defenseScale), 0, 100_000);
+  const combatScale = options?.enemyScale ?? MODE_SCALE[mode] * floorScale;\n  const enemyMaxHP = clamp(Math.round((108 + level * 18) * combatScale * enemyTemplate.hpScale), 40, 1_000_000);
+  const enemyAttack = clamp(Math.round((8 + level * 3.3) * combatScale * enemyTemplate.attackScale), 4, 250_000);
+  const enemyDefense = clamp(Math.round((4 + level * 1.4) * combatScale * enemyTemplate.defenseScale), 0, 100_000);
   const heroMaxHP = player.maxHP;
   const enemy: BattleSequence["enemy"] = {
     ...enemyTemplate,
@@ -158,7 +158,7 @@ export function createBattleSequence(state: GameState, mode: BattleMode, random:
   return {
     id: `battle-${Date.now()}-${Math.floor(random() * 1_000_000)}`,
     mode,
-    modeLabel: MODE_LABELS[mode],
+    modeLabel: options?.modeLabel ?? MODE_LABELS[mode],
     hero: { name: hero.name, className: hero.className, level: hero.level, attack: player.attack, passiveName: CLASS_PASSIVES[hero.className].name },
     enemy: { ...enemy, name: enemyTemplate.name, title: mode === "dungeon" ? `الطابق ${floor} • ${enemyTemplate.title}` : enemyTemplate.title },
     heroMaxHP,
