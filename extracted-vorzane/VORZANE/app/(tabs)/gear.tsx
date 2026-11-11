@@ -150,7 +150,7 @@ export default function GearScreen() {
 
     {tab === "shop" ? <>
       <SectionTitle title="متجر العالم" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("en-US")} ذهب`} icon="cash-outline" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>الأسلحة والدروع والخوذ والقفازات والأحذية والإكسسوارات والرفقاء متاحة بأسعار متدرجة. لا توجد قيود طوابق على العتاد؛ بعض القطع تتطلب مستوى مناسبًا للتجهيز فقط.</Txt><Txt style={styles.poolNote}>{shopItems.length.toLocaleString("en-US")} قطعة عتاد • {PETS.length} رفقاء</Txt></Card>
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>الأسلحة والدروع والخوذ والقفازات والأحذية والإكسسوارات والرفقاء متاحة بأسعار متدرجة. لا توجد قيود طوابق على العتاد؛ بعض القطع تتطلب مستوى مناسبًا للتجهيز فقط.</Txt><Txt style={styles.poolNote}>{shopItems.length.toLocaleString("en-US")} قطعة عتاد • {PETS.filter((pet) => pet.shopAvailable !== false).length} رفقاء</Txt></Card>
       <View style={styles.shopFilters}>
         {SHOP_CATEGORIES.map((category) => <Pressable key={category.id} onPress={() => setShopCategory(category.id)} style={[styles.shopFilter, shopCategory === category.id && styles.shopFilterActive]}>
           <Txt style={[styles.shopFilterText, shopCategory === category.id && styles.shopFilterTextActive]}>{category.label}</Txt>
@@ -158,15 +158,16 @@ export default function GearScreen() {
       </View>
       {visibleShopItems.map((item) => {
         const canAfford = state.gold >= item.price;
+        const levelLocked = heroLevel < (item.requiredLevel ?? 1);
         return <Card key={item.id} style={styles.itemRow}>
-          <AppButton label={canAfford ? `شراء ${item.price.toLocaleString("en-US")}` : "ذهب غير كافٍ"} onPress={() => purchaseItem(item.id)} variant={canAfford ? "jade" : "secondary"} small icon="cart-outline" disabled={!canAfford || !state.hero} />
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التجهيز: مستوى {item.requiredLevel ?? 1}</Txt></View>
+          <AppButton label={levelLocked ? "تفعيل" : `شراء ${item.price.toLocaleString("en-US")}`} onPress={() => levelLocked ? message("لم تصل للمستوى المطلوب.") : canAfford ? purchaseItem(item.id) : message("لا تملك ذهبًا كافيًا.")} variant={levelLocked || !canAfford ? "secondary" : "jade"} small icon="cart-outline" />
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, levelLocked && { color: palette.red }]}>المستوى المطلوب: {item.requiredLevel ?? 1}</Txt></View>
           <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
         </Card>;
       })}
       {shopCategory === "all" || shopCategory === "companions" ? <>
       <SectionTitle title="رفقاء العالم" icon="paw-outline" action={<Pill label={`${state.pets.length}/${PETS.length}`} tone="jade" />} />
-      {PETS.map((pet) => {
+      {PETS.filter((pet) => pet.shopAvailable !== false).map((pet) => {
         const owned = state.pets.includes(pet.id);
         const locked = !state.hero || heroLevel < pet.requiredLevel;
         const active = state.activePet === pet.id && !locked;

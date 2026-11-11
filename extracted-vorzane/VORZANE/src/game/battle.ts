@@ -41,13 +41,14 @@ const MODE_LABELS: Record<BattleMode, string> = {
   dungeon: "زنزانة الهاوية",
   tower: "برج الحراس",
   hard: "تحدي الكسوف",
+  roaming: "مواجهة التجوال",
 };
-const MODE_SCALE: Record<BattleMode, number> = { cave: 0.82, dungeon: 1, tower: 1.16, hard: 1.42 };
+const MODE_SCALE: Record<BattleMode, number> = { cave: 0.82, dungeon: 1, tower: 1.16, hard: 1.42, roaming: 1.08 };
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 function chooseEnemy(state: GameState, mode: BattleMode, random: () => number): EnemyBlueprint {
   const pool = BATTLE_ENEMIES[mode];
-  const progress = mode === "dungeon" ? state.dungeonFloor - 1 : mode === "tower" ? state.tower : mode === "cave" ? state.battleWinsByMode.cave : state.battleWinsByMode.hard;
+  const progress = mode === "dungeon" ? state.dungeonFloor - 1 : mode === "tower" ? state.tower : state.battleWinsByMode[mode] ?? 0;
   if (mode === "dungeon" || mode === "tower") return pool[Math.max(0, progress) % pool.length];
   return pool[Math.min(pool.length - 1, Math.floor(clamp(random(), 0, 0.999999) * pool.length))];
 }
@@ -60,9 +61,9 @@ export function createBattleSequence(state: GameState, mode: BattleMode, random:
   if (!state.hero) return null;
   const hero = state.hero;
   const player = combatStats(state);
-  const floor = mode === "dungeon" ? state.dungeonFloor : mode === "tower" ? state.tower + 1 : Math.max(1, state.battleWinsByMode[mode] + 1);
+  const floor = mode === "dungeon" ? state.dungeonFloor : mode === "tower" ? state.tower + 1 : mode === "roaming" ? Math.max(1, state.roaming.eventsCompleted + 1) : Math.max(1, state.battleWinsByMode[mode] + 1);
   const enemyTemplate = chooseEnemy(state, mode, random);
-  const floorScale = mode === "dungeon" ? 1 + (floor - 1) * 0.018 : mode === "tower" ? Math.min(2.5, 1 + (floor - 1) * 0.045) : mode === "hard" ? 1 + Math.min(0.5, (floor - 1) * 0.01) : 1 + Math.min(0.28, (floor - 1) * 0.008);
+  const floorScale = mode === "dungeon" ? 1 + (floor - 1) * 0.018 : mode === "tower" ? Math.min(2.5, 1 + (floor - 1) * 0.045) : mode === "hard" ? 1 + Math.min(0.5, (floor - 1) * 0.01) : mode === "roaming" ? 1 + Math.min(0.45, (floor - 1) * 0.012) : 1 + Math.min(0.28, (floor - 1) * 0.008);
   const level = hero.level;
   const enemyMaxHP = clamp(Math.round((108 + level * 18) * MODE_SCALE[mode] * floorScale * enemyTemplate.hpScale), 40, 1_000_000);
   const enemyAttack = clamp(Math.round((8 + level * 3.3) * MODE_SCALE[mode] * floorScale * enemyTemplate.attackScale), 4, 250_000);
@@ -127,8 +128,8 @@ export function createBattleSequence(state: GameState, mode: BattleMode, random:
     if (mode === "dungeon") next.dungeonFloor = Math.min(100_000, next.dungeonFloor + 1);
     const levelProgress = Math.pow(Math.max(0, level - 1), 1.45);
     const floorProgress = Math.pow(Math.max(0, floor - 1), 1.3);
-    const modeBase = mode === "hard" ? 5 : mode === "tower" ? 4 : mode === "dungeon" ? 3 : 2;
-    const modeMultiplier = mode === "hard" ? 1.35 : mode === "tower" ? 1.15 : mode === "dungeon" ? 1 : 0.8;
+    const modeBase = mode === "hard" ? 5 : mode === "tower" ? 4 : mode === "dungeon" ? 3 : mode === "roaming" ? 3 : 2;
+    const modeMultiplier = mode === "hard" ? 1.35 : mode === "tower" ? 1.15 : mode === "dungeon" ? 1 : mode === "roaming" ? 1.05 : 0.8;
     const modeGold = (modeBase + levelProgress * 0.9 + floorProgress * 1.4) * modeMultiplier;
     gold = Math.max(1, Math.round(modeGold));
     xp = Math.max(1, Math.round((mode === "dungeon" ? 22 + Math.min(50, floor) * 1.1 : 16 + Math.min(20, floor) * 0.7) + Math.min(40, level) * (mode === "dungeon" ? 2 : 1.5)));
