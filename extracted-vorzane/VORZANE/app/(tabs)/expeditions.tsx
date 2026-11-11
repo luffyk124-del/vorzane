@@ -18,6 +18,7 @@ export default function RoamingScreen() {
   const [eventRewards, setEventRewards] = useState("");
   const [battleSequence, setBattleSequence] = useState<BattleSequence | null>(null);
   const [clock, setClock] = useState(Date.now());
+  const isSahirEvent = event?.kind === "merchant" || !!event?.title.includes("ساهر");
   useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer); }, []);
   useEffect(() => { const timer = setInterval(() => update((current) => refreshRoamingHealth(current)), 60_000); update((current) => refreshRoamingHealth(current)); return () => clearInterval(timer); }, [update]);
   const explore = () => {
@@ -76,12 +77,12 @@ export default function RoamingScreen() {
 
     {event ? <Card style={styles.eventCard}>
       <View style={styles.eventTop}>
-        <Icon name={event.kind === "merchant" ? "storefront" : "sparkles"} size={21} color={palette.gold} />
+        <Icon name={isSahirEvent ? "storefront" : "sparkles"} size={21} color={palette.gold} />
       </View>
       <Txt style={styles.region}>{event.region}</Txt>
       <Txt style={styles.eventTitle}>{event.title}</Txt>
       <View style={styles.storyPanel}><Txt style={styles.storyHeading}>الحكاية</Txt><Txt style={styles.eventStory}>{event.story}</Txt></View>
-      {event.kind === "merchant" ? <Card style={styles.merchantCard}>
+      {isSahirEvent ? <Card style={styles.merchantCard}>
         <View style={styles.merchantHeader}><Icon name="storefront" color={palette.gold} size={22} /><View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={styles.merchantTitle}>بضاعة ساهر لهذا اللقاء</Txt><Txt muted style={styles.small}>هذه القافلة لن تبقى هنا طويلًا</Txt></View></View>
         {merchantStock.map((item) => <View key={item.id} style={styles.merchantRow}>
           <View style={styles.merchantInfo}>
@@ -92,7 +93,7 @@ export default function RoamingScreen() {
           <AppButton label={merchantBought.includes(item.id) ? "تم الشراء" : "شراء"} icon="cart-outline" small variant="secondary" disabled={merchantBought.includes(item.id)} onPress={() => { if (buy(item)) setMerchantBought((items) => [...items, item.id]); }} />
         </View>)}
       </Card> : null}
-      {event.kind === "merchant" ? (
+      {isSahirEvent ? (
         <AppButton label="تابع الطريق" icon="compass" onPress={() => {
           update(() => completeRoamingMerchantVisit(state, event));
           setEvent(null);
