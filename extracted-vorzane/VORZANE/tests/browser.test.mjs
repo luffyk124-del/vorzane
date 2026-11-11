@@ -232,11 +232,25 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
 }
 
 async function signInWithMock(page) {
+  const pageErrors = [];
+  const consoleErrors = [];
+  const failedResponses = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  page.on("response", (response) => { if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`); });
   await page.goto(`${appUrl}/login`);
-  await page.getByPlaceholder("name@example.com").fill("player@example.test");
+  const emailField = page.getByPlaceholder("name@example.com");
+  try {
+    await emailField.waitFor({ state: "visible", timeout: 12_000 });
+  } catch (error) {
+    const diagnostic = await page.locator("body").innerText().catch(() => "<body unavailable>");
+    const title = await page.title().catch(() => "<title unavailable>");
+    throw new Error(`Login screen did not become interactive. URL=${page.url()} title=${title} body=${diagnostic.slice(0, 3000)} pageErrors=${JSON.stringify(pageErrors)} consoleErrors=${JSON.stringify(consoleErrors)} failedResponses=${JSON.stringify(failedResponses)} serverOutput=${serverOutput.slice(-5000)}; cause=${error instanceof Error ? error.message : String(error)}`);
+  }
+  await emailField.fill("player@example.test");
   await page.getByPlaceholder("8 أحرف على الأقل").fill("local-test-password");
   await page.getByRole("button", { name: "متابعة بالبريد" }).click();
-  await page.getByText("زنزانتك ومعاركك", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("ميادين القتال", { exact: true }).waitFor({ timeout: 15_000 });
 }
 
 async function waitForServer() {
@@ -363,15 +377,18 @@ test("primary game navigation stays visible and switches between core screens", 
 
   await signInWithMock(page);
   const navigation = page.getByRole("navigation", { name: "التنقل الرئيسي" });
-  assert.equal(await navigation.getByRole("button").count(), 5, "the primary navigation should expose five core destinations");
-  const journeys = navigation.getByRole("button", { name: "الرحلات" });
+  assert.equal(await navigation.getByRole("button").count(), 6, "the primary navigation should expose six core destinations, including the separate Dimas arena");
+  await navigation.getByRole("button", { name: "الديماس" }).click();
+  await page.waitForURL((url) => url.pathname.endsWith("/dimas"), { timeout: 10_000 });
+  await page.getByText("درج المجد", { exact: true }).waitFor({ timeout: 10_000 });
+  const journeys = navigation.getByRole("button", { name: "التجوال" });
   await journeys.click();
   await page.waitForURL((url) => url.pathname.endsWith("/expeditions"), { timeout: 10_000 });
-  await page.getByText("اختر وجهتك", { exact: true }).waitFor({ timeout: 10_000 });
+  await navigation.locator('[aria-label="التجوال"][aria-current="page"]').waitFor({ state: "visible", timeout: 10_000 });
   assert.match(page.url(), /expeditions/);
   await navigation.getByRole("button", { name: "المخيم" }).click();
   await page.waitForURL((url) => url.pathname.endsWith("/home"), { timeout: 10_000 });
-  await page.getByText("بطل الاختبار", { exact: true }).filter({ visible: true }).first().waitFor({ timeout: 10_000 });
+  await navigation.locator('[aria-label="المخيم"][aria-current="page"]').waitFor({ state: "visible", timeout: 10_000 });
   assert.match(page.url(), /home/);
 
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
@@ -422,7 +439,7 @@ test("new hero creator renders character controls only once", async () => {
   await page.getByText("الساحر", { exact: true }).click();
   await page.getByPlaceholder("اسمٌ يليق بالأساطير").fill("بطلة الاختبار");
   await page.getByRole("button", { name: "ابدأ الرحلة" }).click();
-  await page.getByText("زنزانتك ومعاركك", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByText("ميادين القتال", { exact: true }).waitFor({ timeout: 10_000 });
   assert.equal(await page.getByText("اختر شخصيتك", { exact: true }).count(), 0, "character selection must disappear after creation");
   assert.equal(await page.getByText("اختر فئتك", { exact: true }).count(), 0, "class selection must disappear after creation");
   assert.ok(await page.getByLabel("صورة البطلة").count() >= 1, "the selected heroine portrait remains available in the hero UI");

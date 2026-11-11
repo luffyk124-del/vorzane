@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import { useState, type PropsWithChildren, type ReactNode } from "react";
@@ -6,10 +7,12 @@ import { usePathname, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { palette, layout, shared } from "../theme";
 
-export type IconName = keyof typeof Ionicons.glyphMap;
+export type IconName = keyof typeof Ionicons.glyphMap | "sword" | "fist";
 
 export function Icon({ name, size = 20, color = palette.text }: { name: IconName; size?: number; color?: string }) {
-  return <Ionicons name={name} size={size} color={color} />;
+  if (name === "sword") return <MaterialCommunityIcons name="sword" size={size} color={color} />;
+  if (name === "fist") return <MaterialCommunityIcons name="arm-flex" size={size} color={color} />;
+  return <Ionicons name={name as keyof typeof Ionicons.glyphMap} size={size} color={color} />;
 }
 
 export function Txt({ children, style, muted = false, numberOfLines }: PropsWithChildren<{ style?: StyleProp<TextStyle>; muted?: boolean; numberOfLines?: number }>) {
@@ -23,7 +26,8 @@ export function Txt({ children, style, muted = false, numberOfLines }: PropsWith
 const primaryNavigation = [
   { label: "المخيم", href: "/(tabs)/home" as const, icon: "home-outline" as const },
   { label: "الشخصية", href: "/(tabs)/character" as const, icon: "person-circle-outline" as const },
-  { label: "الرحلات", href: "/(tabs)/expeditions" as const, icon: "compass-outline" as const },
+  { label: "التجوال", href: "/(tabs)/expeditions" as const, icon: "compass-outline" as const },
+  { label: "الديماس", href: "/(tabs)/dimas" as const, icon: "trophy-outline" as const },
   { label: "العتاد", href: "/(tabs)/gear" as const, icon: "shield-outline" as const },
   { label: "المهام", href: "/(tabs)/quests" as const, icon: "trophy-outline" as const },
 ];
@@ -68,7 +72,7 @@ export function AppScreen({ children, scroll = true, contentStyle, safe = true }
           key={item.href}
           accessibilityRole="button"
           accessibilityLabel={item.label}
-          accessibilityState={{ selected: active }}
+          aria-current={active ? "page" : undefined}
           onPress={() => { if (!active) router.push(item.href); }}
           style={[styles.bottomNavItem, active && styles.bottomNavItemActive]}
         >

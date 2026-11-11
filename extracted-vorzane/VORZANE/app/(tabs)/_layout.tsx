@@ -15,6 +15,7 @@ export default function TabLayout() {
     <Stack.Screen name="home" />
     <Stack.Screen name="character" />
     <Stack.Screen name="expeditions" />
+    <Stack.Screen name="dimas" />
     <Stack.Screen name="gear" />
     <Stack.Screen name="quests" />
     <Stack.Screen name="profile" />

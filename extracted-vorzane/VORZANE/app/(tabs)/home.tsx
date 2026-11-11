@@ -105,16 +105,10 @@ export default function CampScreen() {
   return <AppScreen>
     <View style={styles.topline}>
       <View style={styles.currencyRow}>
-        <Pill label={state.gold.toLocaleString("ar-EG")} icon="logo-usd" tone="gold" />
-        <Pill label={state.gems.toLocaleString("ar-EG")} icon="diamond" tone="jade" />
+        <Pill label={state.gold.toLocaleString("en-US")} icon="logo-usd" tone="gold" />
+        <Pill label={state.gems.toLocaleString("en-US")} icon="diamond" tone="jade" />
       </View>
-      <View style={styles.brandInline}>
-        <Pressable onPress={() => router.push("/profile")} accessibilityRole="button" accessibilityLabel="فتح الملف الشخصي" style={styles.profileButton}>
-          <CharacterPortrait gender={state.characterStyle.gender} width={36} height={42} compact />
-        </Pressable>
-        <BrandMark size={32} />
-        <Txt style={styles.wordmark}>VORZANE</Txt>
-      </View>
+      <Txt style={styles.wordmark}>VORZANE</Txt>
     </View>
 
     {status === "offline" ? <Card style={styles.offlineBanner}><Icon name="cloud-offline-outline" color={palette.red} size={18} /><Txt style={styles.offlineText}>أنت في وضع محلي مؤقت — {saveStatus}</Txt></Card> : null}
@@ -132,18 +126,27 @@ export default function CampScreen() {
         <CharacterPortrait gender={state.characterStyle.gender} width={104} height={132} />
       </View>
       <View style={styles.xpBlock}><View style={styles.xpMeta}><Txt muted style={styles.xpLabel}>الخبرة</Txt><Txt style={styles.xpValue}>{hero.exp} / {stats.xpNeeded}</Txt></View><Meter value={hero.exp} max={stats.xpNeeded} color={palette.gold} height={8} /></View>
-      <View style={styles.powerRow}><Pill label={`قوة ${stats.power}`} icon="flash" tone="jade" /><Txt muted style={styles.saveLine}>{saveStatus}</Txt></View>
+      <View style={styles.powerRow}><Pill label={`قوة ${stats.power}`} icon="fist" tone="jade" /><Txt muted style={styles.saveLine}>{saveStatus}</Txt></View>
     </GradientCard>
 
-    <SectionTitle title="زنزانتك ومعاركك" icon="flash-outline" action={<Pressable onPress={() => router.push("/quests")}><Txt style={styles.actionLink}>مهامك ←</Txt></Pressable>} />
+    <SectionTitle title="ميادين القتال" icon="shield-outline" action={<Pressable onPress={() => router.push("/quests")}><Txt style={styles.actionLink}>مهامك ←</Txt></Pressable>} />
     <Card style={styles.battleCard}>
-      <Txt muted style={styles.battleIntro}>كل ضربة تظهر أمامك. واصل الزنزانة تلقائيًا؛ يتجدد دمك بين الأعداء وتزداد قوتهم تدريجيًا.</Txt>
-      <AppButton label={`انزل إلى الزنزانة • الطابق ${state.dungeonFloor}`} icon="skull" onPress={() => enterBattle("dungeon")} variant="jade" />
+      <Txt muted style={styles.battleIntro}>اختر ساحة القتال المناسبة لقوتك. كل ميدان له خصومه وإيقاعه ومكافآته الخاصة.</Txt>
+      <AppButton label={`ساحة الحراس • المرحلة ${state.dungeonFloor}`} icon="shield" onPress={() => enterBattle("dungeon")} variant="jade" />
       <View style={styles.battleButtons}>
         <AppButton label="كهف الرماد" icon="bonfire" onPress={() => enterBattle("cave")} small style={{ flex: 1 }} />
         <AppButton label="برج الحراس" icon="business" variant="secondary" onPress={() => enterBattle("tower")} small style={{ flex: 1 }} />
       </View>
       <AppButton label="تحدي الكسوف" icon="moon" variant="ghost" onPress={() => enterBattle("hard")} small />
+    </Card>
+
+    <Card style={styles.dimasEntry}>
+      <View style={styles.dimasEntryIcon}><Icon name="layers" color={palette.gold} size={24} /></View>
+      <View style={styles.dimasEntryCopy}>
+        <Txt style={styles.dimasEntryTitle}>الديماس • 300 طابق</Txt>
+        <Txt muted style={styles.dimasEntryHint}>تحدٍّ متدرّج بمكافآت خاصة وأسلحة ومرافقين نادرين عند المحطات الكبرى</Txt>
+      </View>
+      <AppButton label="دخول" icon="arrow-back" onPress={() => router.push("/dimas" as never)} small variant="jade" />
     </Card>
 
     <SectionTitle title="رحلتك النشطة" icon="compass" action={<Pressable onPress={() => router.push("/expeditions")}><Txt style={styles.actionLink}>كل الرحلات ←</Txt></Pressable>} />
@@ -171,8 +174,6 @@ export default function CampScreen() {
 const styles = StyleSheet.create({
   topline: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
   currencyRow: { flexDirection: "row", gap: 7 },
-  brandInline: { flexDirection: "row", alignItems: "center", gap: 8 },
-  profileButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center" },
   wordmark: { color: palette.gold, fontSize: 20, fontWeight: "900", fontFamily: "Cinzel_700Bold", letterSpacing: 2.1 },
   offlineBanner: { padding: 11, flexDirection: "row", alignItems: "center", gap: 8, borderColor: "rgba(230,121,112,0.28)", backgroundColor: "rgba(230,121,112,0.06)" },
   offlineText: { flex: 1, color: palette.red, fontSize: 12, lineHeight: 18 },
@@ -188,6 +189,11 @@ const styles = StyleSheet.create({
   xpValue: { fontSize: 11, color: palette.gold, fontWeight: "700" },
   powerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
   saveLine: { fontSize: 10, maxWidth: "62%" },
+  dimasEntry: { padding: 13, flexDirection: "row", alignItems: "center", gap: 10, borderColor: "rgba(230,199,124,0.28)", backgroundColor: "#171C25" },
+  dimasEntryIcon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(230,199,124,0.1)" },
+  dimasEntryCopy: { flex: 1, alignItems: "flex-end", gap: 4 },
+  dimasEntryTitle: { fontSize: 14, fontWeight: "900", color: palette.gold },
+  dimasEntryHint: { fontSize: 10, lineHeight: 15, textAlign: "right" },
   battleCard: { gap: 11 },
   battleIntro: { fontSize: 13 },
   battleButtons: { flexDirection: "row", gap: 8 },

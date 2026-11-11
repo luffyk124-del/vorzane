@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, Switch, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { useAuth } from "../../src/contexts/AuthContext";
@@ -13,7 +13,6 @@ import {
   saveMyProfile,
   searchPlayers,
   sendFriendRequest,
-  setMyProfileSearchable,
   type FriendSummary,
   type IncomingFriendRequest,
   type PlayerProfile,
@@ -92,15 +91,6 @@ export default function FriendsScreen() {
     }, "تم حفظ ملف اللاعب.");
   };
 
-  const toggleSearchable = async (enabled: boolean) => {
-    if (!profile) return;
-    await run(async () => {
-      await setMyProfileSearchable(enabled);
-      if (mountedRef.current) setProfile((current) => current ? { ...current, is_searchable: enabled } : current);
-      if (!enabled) setResults([]);
-    }, enabled ? "أصبح ملفك ظاهرًا في البحث." : "أصبح ملفك مخفيًا من البحث.");
-  };
-
   const sendRequest = async (playerId: string) => {
     await run(async () => {
       await sendFriendRequest(playerId);
@@ -115,10 +105,6 @@ export default function FriendsScreen() {
   const doSearch = async () => {
     if (!profile) {
       setNotice("أنشئ ملف اللاعب أولًا قبل البحث عن الأصدقاء.");
-      return;
-    }
-    if (!profile.is_searchable) {
-      setNotice("فعّل ظهور ملفك في البحث قبل استخدام المجتمع.");
       return;
     }
     const searchTerm = typeof query === "string" ? query.trim() : "";
@@ -138,34 +124,25 @@ export default function FriendsScreen() {
     }
   };
 
+  const openPlayer = (playerId: string) => router.push((`/player/${playerId}`) as never);
+
   return <AppScreen>
     <View style={styles.content}>
-      <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء" subtitle="تحكم بظهور ملفك، وابحث عن لاعبين، وأدر طلبات الصداقة." />
+      <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء" subtitle="اعثر على اللاعبين وافتح ملفاتهم العامة، وأدر طلبات الصداقة." />
       <AppButton label="صندوق الإشعارات" icon="notifications-outline" onPress={() => router.push("/(tabs)/notifications" as never)} variant="secondary" />
       {notice ? <Card style={styles.notice}><Icon name="information-circle-outline" color={palette.gold} size={18} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
 
-      <SectionTitle title="ملف اللاعب والخصوصية" icon="shield-checkmark-outline" />
+      <SectionTitle title="ملفي العام" icon="globe-outline" />
       <Card style={styles.panel}>
         {profile ? <>
           <Txt style={styles.profileName}>{profile.display_name}</Txt>
-          <View style={styles.privacyRow}>
-            <View style={styles.playerInfo}>
-              <Txt style={styles.playerName}>السماح بالظهور في البحث</Txt>
-              <Txt muted style={styles.playerMeta}>{profile.is_searchable ? "يمكن للاعبين العثور عليك بالاسم." : "ملفك مخفي عن نتائج البحث."}</Txt>
-            </View>
-            <Switch
-              value={profile.is_searchable}
-              onValueChange={toggleSearchable}
-              disabled={busy}
-              trackColor={{ false: "#293744", true: palette.jadeDark }}
-              thumbColor={profile.is_searchable ? palette.jade : "#A9B7BE"}
-            />
-          </View>
+          <Txt muted style={styles.playerMeta}>ملفك ظاهر دائمًا لجميع اللاعبين وفي نتائج البحث.</Txt>
+          <AppButton label="عرض ملفي العام" icon="person-circle-outline" onPress={() => openPlayer(user!.id)} variant="secondary" small />
           <TextInput value={typeof displayName === "string" ? displayName : ""} onChangeText={setDisplayName} maxLength={24} placeholder="اسم اللاعب" placeholderTextColor={palette.muted} style={styles.input} />
           <AppButton label="حفظ اسم اللاعب" icon="save-outline" onPress={saveProfile} disabled={busy || (typeof displayName === "string" ? displayName.trim() : "") === profile.display_name} variant="secondary" />
         </> : <>
           <Txt style={styles.playerName}>أنشئ ملفك داخل مجتمع VORZANE</Txt>
-          <Txt muted style={styles.playerMeta}>اسم الملف مستقل عن بريدك الإلكتروني. يمكنك إخفاؤه من البحث لاحقًا.</Txt>
+          <Txt muted style={styles.playerMeta}>اسم الملف مستقل عن بريدك الإلكتروني، وسيكون ظاهرًا لجميع اللاعبين.</Txt>
           <TextInput value={typeof displayName === "string" ? displayName : ""} onChangeText={setDisplayName} maxLength={24} placeholder="اسم اللاعب (3–24 حرفًا)" placeholderTextColor={palette.muted} style={styles.input} />
           <AppButton label="إنشاء ملف اللاعب" icon="person-add-outline" onPress={saveProfile} loading={busy} disabled={busy || (typeof displayName === "string" ? displayName.trim().length : 0) < 3} />
         </>}
@@ -177,7 +154,7 @@ export default function FriendsScreen() {
           <AppButton label="قبول" onPress={() => run(() => respondToFriendRequest(request.request_id, true), "تمت إضافة الصديق.")} small disabled={busy} />
           <AppButton label="رفض" onPress={() => run(() => respondToFriendRequest(request.request_id, false), "تم رفض الطلب.")} small variant="secondary" disabled={busy} />
         </View>
-        <View style={styles.playerInfo}><Txt style={styles.playerName}>{request.display_name}</Txt><Txt muted style={styles.playerMeta}>طلب صداقة وارد</Txt></View>
+        <Pressable style={styles.playerInfo} onPress={() => openPlayer(request.requester_id)}><Txt style={styles.playerName}>{request.display_name}</Txt><Txt muted style={styles.playerMeta}>فتح الملف العام</Txt></Pressable>
         <Icon name="person-add-outline" color={palette.jade} size={22} />
       </Card>) : <Card style={styles.empty}><Txt muted>لا توجد طلبات واردة حاليًا.</Txt></Card>}
 
@@ -187,18 +164,18 @@ export default function FriendsScreen() {
           { text: "إلغاء", style: "cancel" },
           { text: "إزالة", style: "destructive", onPress: () => run(() => removeFriend(friend.user_id), "تمت إزالة الصديق من قائمتك.") },
         ])} variant="secondary" small disabled={busy} />
-        <View style={styles.playerInfo}><Txt style={styles.playerName}>{friend.display_name}</Txt><Txt muted style={styles.playerMeta}>منذ {new Date(friend.friends_since).toLocaleDateString("ar")}</Txt></View>
+        <Pressable style={styles.playerInfo} onPress={() => openPlayer(friend.user_id)}><Txt style={styles.playerName}>{friend.display_name}</Txt><Txt muted style={styles.playerMeta}>منذ {new Date(friend.friends_since).toLocaleDateString("en-US")} • فتح الملف</Txt></Pressable>
         <Icon name="person-circle-outline" color={palette.jade} size={22} />
       </Card>) : <Card style={styles.empty}><Txt muted>قائمة الأصدقاء فارغة. ابحث عن لاعبين لإرسال طلبات صداقة.</Txt></Card>}
 
       <SectionTitle title="البحث عن لاعبين" icon="search-outline" />
       <Card style={styles.panel}>
         <TextInput value={typeof query === "string" ? query : ""} onChangeText={setQuery} maxLength={24} placeholder="اسم اللاعب..." placeholderTextColor={palette.muted} style={styles.input} returnKeyType="search" onSubmitEditing={doSearch} />
-        <AppButton label="بحث" onPress={doSearch} loading={busy} disabled={busy || !profile?.is_searchable || (typeof query === "string" ? query.trim().length : 0) < 3} icon="search-outline" />
+        <AppButton label="بحث" onPress={doSearch} loading={busy} disabled={busy || !profile || (typeof query === "string" ? query.trim().length : 0) < 3} icon="search-outline" />
       </Card>
       {results.map((player) => <Card key={player.user_id} style={styles.playerRow}>
         {player.friend_state === "none" ? <AppButton label="إضافة" onPress={() => sendRequest(player.user_id)} small disabled={busy} /> : <Pill label={player.friend_state === "friends" ? "صديق" : player.friend_state === "incoming" ? "طلب وارد" : "تم الإرسال"} tone={player.friend_state === "friends" ? "jade" : "muted"} />}
-        <View style={styles.playerInfo}><Txt style={styles.playerName}>{player.display_name}</Txt><Txt muted style={styles.playerMeta}>ملف لاعب VORZANE</Txt></View>
+        <Pressable style={styles.playerInfo} onPress={() => openPlayer(player.user_id)}><Txt style={styles.playerName}>{player.display_name}</Txt><Txt muted style={styles.playerMeta}>فتح الملف العام</Txt></Pressable>
         <Icon name="person-outline" color={palette.jade} size={22} />
       </Card>)}
       <AppButton label="تحديث البيانات" onPress={() => run(refresh, "تم تحديث بيانات المجتمع.")} variant="ghost" disabled={busy} icon="refresh-outline" />

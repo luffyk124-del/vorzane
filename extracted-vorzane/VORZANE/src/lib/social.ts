@@ -8,6 +8,23 @@ export type PlayerProfile = {
   created_at: string;
 };
 
+export type PublicPlayerProfile = {
+  user_id: string;
+  display_name: string;
+  avatar_id: string;
+  character_gender: "male" | "female";
+  hero_name: string;
+  class_name: string;
+  level: number;
+  stats: Record<string, number>;
+  equipped: Record<string, { name?: string; rarity?: string } | null>;
+  active_pet: string | null;
+  wins: number;
+  battles: number;
+  dimas_floor: number;
+  roaming_events: number;
+};
+
 export type PlayerSearchResult = {
   user_id: string;
   display_name: string;
@@ -53,6 +70,12 @@ export async function getMyProfile(userId: string): Promise<PlayerProfile | null
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data as PlayerProfile | null;
+}
+
+export async function getPublicPlayerProfile(userId: string): Promise<PublicPlayerProfile | null> {
+  const { data, error } = await supabase.rpc("get_public_player_profile", { p_user_id: userId });
+  if (error) throw new Error(error.message);
+  return data as PublicPlayerProfile | null;
 }
 
 export async function saveMyProfile(displayName: string, avatarId: string): Promise<PlayerProfile> {
