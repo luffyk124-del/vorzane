@@ -15,18 +15,6 @@ export const PETS: Companion[] = [
   { id: "dimas-royal-drake", name: "تنين العرش الأزلي", icon: "flame", bonus: { str: 210, def: 155, vit: 185, luck: 90 }, price: 18_000_000, requiredLevel: 100, rarity: "mythic", description: "رفيق العرش الذي لا يظهر إلا بعد إتمام الديماس.", source: "الجائزة الحصرية لاجتياز الطابق 300 من الديماس", shopAvailable: false },
   { id: "shattered-echo", name: "الــصــدى المـتـشـظّ", icon: "sparkles", bonus: { str: 320, def: 250, vit: 290, agi: 190, luck: 170 }, price: 55_000_000, requiredLevel: 120, rarity: "mythic", description: "وجود متشظٍّ لا يستجيب إلا لمن يثبت اتزانه.", source: "اجتياز اختباراته العشرة في الحدث المميز", shopAvailable: false },
 ];
-  { id: "wolf", name: "ذئب الرماد", icon: "paw", bonus: { agi: 2 }, price: 300, requiredLevel: 1, description: "رفيق البداية؛ يرفع الرشاقة قليلًا." },
-  { id: "golem", name: "حارس الصخر", icon: "shield", bonus: { def: 4 }, price: 450, requiredLevel: 4, description: "درع حيّ يمنح صمودًا أكبر من المستوى الرابع." },
-  { id: "fox", name: "ثعلب السراب", icon: "sparkles", bonus: { luck: 9 }, price: 540, requiredLevel: 7, description: "حظّه الأقوى يرافق الصيادين بعد المستوى السابع." },
-  { id: "phoenix", name: "عنقاء الفجر", icon: "sunny", bonus: { vit: 10 }, price: 620, requiredLevel: 10, description: "نور متجدد يمنح حيوية عالية من المستوى العاشر." },
-  { id: "dragon", name: "تنين الياقوت", icon: "flame", bonus: { str: 9 }, price: 700, requiredLevel: 15, description: "رفيق متقدم يرفع القوة الهجومية بعد المستوى الخامس عشر." },
-  { id: "owl", name: "بومة الحكمة", icon: "eye", bonus: { luck: 18, agi: 8 }, price: 18_000, requiredLevel: 20, description: "رفيق نادر يزيد الحظ وسرعة الحركة." },
-  { id: "moon-deer", name: "أيل القمر", icon: "moon", bonus: { vit: 35, def: 12 }, price: 90_000, requiredLevel: 30, description: "رفيق أسطوري يمنح الحيوية والصمود." },
-  { id: "star-drake", name: "تنين الشهب", icon: "star", bonus: { str: 60, luck: 24 }, price: 450_000, requiredLevel: 45, description: "رفيق عظيم يعزز القوة والحظ." },
-  { id: "dimas-royal-drake", name: "تنين العرش الأزلي", icon: "flame", bonus: { str: 180, def: 90, vit: 140, luck: 80 }, price: 999_999_999, requiredLevel: 75, description: "رفيق أسطوري لا يُمنح إلا عند اجتياز الطابق 300 من الديماس.", shopAvailable: false },
-  { id: "fairy-warden", name: "حارسة الندى", icon: "flower", bonus: { vit: 28, luck: 18, agi: 12 }, price: 9_999_999, requiredLevel: 20, description: "رفيقة نادرة لا تظهر إلا لمن أعادها إلى قبيلتها.", shopAvailable: false },
-  { id: "shattered-echo", name: "الــصــدى المـتـشـظّ", icon: "sparkles", bonus: { str: 240, def: 160, vit: 200, agi: 120, luck: 120 }, price: 99_999_999, requiredLevel: 1, description: "رفيق نادر لا يستجيب إلا لمن اجتاز اختباراته.", shopAvailable: false },
-];
 
 export const STARTER_ITEMS: EquipmentItem[] = [
   { id: "sword1", name: "سيف المبتدئ", slot: "سلاح", rarity: "common", bonus: { str: 3 }, price: 100, requiredLevel: 1, icon: "flash" },

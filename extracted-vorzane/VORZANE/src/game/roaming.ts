@@ -4,7 +4,7 @@ import { EVENT_RELICS } from "./dungeonItems.ts";
 import { addExperience } from "./stats.ts";
 import { createItemInstance, getDungeonDrop } from "./dungeonItems.ts";
 
-export type RoamingOutcome = { gold?: number; gems?: number; xp?: number; damage?: number; heal?: number; chain?: string; chainEnd?: boolean; gear?: boolean; battle?: boolean; companion?: string; fairyRescue?: boolean; fairyReturn?: boolean; relic?: string };
+export type RoamingOutcome = { gold?: number; gems?: number; xp?: number; damage?: number; heal?: number; chain?: string; chainEnd?: boolean; gear?: boolean; battle?: boolean; companion?: string; fairyRescue?: boolean; fairyReturn?: boolean; relic?: string; echoAction?: "trust" | "listen" | "challenge" };
 export type RoamingChoice = { id: string; label: string; hint: string; outcome: RoamingOutcome };
 export type RoamingEvent = { id: string; title: string; region: string; story: string; kind: "encounter" | "traveler" | "cache" | "omen" | "chain" | "merchant" | "special"; choices: RoamingChoice[]; chainId?: string; chainStage?: number };
 type RoamingMerchantItem = { id: string; name: string; description: string; price: number; currency: "gold"; stock: number; gear?: boolean; heal?: number; gems?: number; gold?: number; xp?: number };
@@ -140,6 +140,35 @@ export const ROAMING_EVENT_PREVIEW = SCENES.flatMap((scene, sceneIndex) => VARIA
 
 export function getRoamingEvent(state: GameState, seed = Date.now()): RoamingEvent {
   const roaming = state.roaming;
+  if (roaming.echoStarted) {
+    const stage = Math.min(9, roaming.echoStage);
+    const routeOffset = roaming.echoRoute === "trust" ? 0 : roaming.echoRoute === "listen" ? 1 : roaming.echoRoute === "challenge" ? 2 : 0;
+    const expected = (["listen", "trust", "listen", "challenge", "trust", "listen", "challenge", "trust", "listen", "trust"] as const)[(stage + routeOffset) % 10];
+    const stories = [
+      "تتحرك شظية وحيدة فوق الأرض، ثم تستقر قرب أثر خطوات قديمة.",
+      "يعود الوميض من جهة مختلفة، وكأن المكان يتذكر قرارك السابق.",
+      "تسمع نغمة قصيرة تتكرر، لكن صداها يتغير كلما اقتربت.",
+      "تنفتح فجوة ضيقة بين الصخور وتظهر خلفها علامة غير مكتملة.",
+      "تتجمع الشظايا للحظة، ثم تتباعد في ثلاثة اتجاهات.",
+      "يخفت الضوء وتبقى علامة واحدة مضيئة قرب الممر.",
+      "يتردد صوت مألوف من خلف الجدار، ولا يظهر صاحبه.",
+      "تتحرك الظلال على الأرض وفق ترتيب يشبه اختياراتك السابقة.",
+      "يصبح الهواء ساكنًا، وتقترب الشظايا من بعضها للمرة الأولى.",
+      "يخفت كل شيء إلا الوميض الذي ينتظر قرارك.",
+    ];
+    return { id: `shattered-echo-${stage}`, title: "أثر الشظايا", region: REGIONS[(stage * 3 + roaming.eventsCompleted) % REGIONS.length], story: stories[stage] + (roaming.echoRoute ? " يتغير المشهد استجابةً لما اخترته سابقًا." : ""), kind: "special", choices: [
+      { id: "trust", label: "اقترب بثبات", hint: "تمنح الإشارة فرصة دون استعجال.", outcome: { xp: 180 + stage * 14, echoAction: "trust" } },
+      { id: "listen", label: "أنصت إلى النبض", hint: "تحاول قراءة الإيقاع قبل التحرك.", outcome: { xp: 170 + stage * 12, heal: 4, echoAction: "listen" } },
+      { id: "challenge", label: "واجه الاضطراب", hint: "تختبر ثباتك أمام القوة الغامضة.", outcome: { xp: 210 + stage * 15, damage: 7 + stage, echoAction: "challenge" } },
+    ] };
+  }
+  if (state.hero && state.hero.level >= 100 && !state.pets.includes("shattered-echo") && seed >= roaming.echoNextAt && Math.abs(Math.floor(seed / 1000)) % 211 === 0) {
+    return { id: "shattered-echo-awakening", title: "وميض لا يشبه سواه", region: REGIONS[Math.abs(Math.floor(seed / 13)) % REGIONS.length], story: "ينشق الصمت عن وميض متقطع. تتحرك شظايا صغيرة في الهواء كأنها تتبع إيقاعًا لا تسمعه سواك.", kind: "special", choices: [
+      { id: "trust", label: "اقترب من الوميض", hint: "تقترب دون أن تعرف ما ينتظرك.", outcome: { xp: 130, echoAction: "trust" } },
+      { id: "listen", label: "أنصت إلى النبض", hint: "تحاول فهم الإيقاع أولًا.", outcome: { xp: 150, echoAction: "listen" } },
+      { id: "challenge", label: "اختبر قوته", hint: "تواجه الظاهرة بدل الابتعاد عنها.", outcome: { xp: 160, damage: 10, echoAction: "challenge" } },
+    ] };
+  }
   if (roaming.storyFlags.includes("fairy-rescued") && !roaming.fairyReunited && roaming.fairyNextAt > 0 && seed >= roaming.fairyNextAt && roaming.eventsCompleted >= 4) {
     return { id: "fairy-reunion", title: "أثر يعرفك", region: "غابة الندى", story: "تظهر الجنية التي أنقذتها من قطيع الغيلان، وتدعوك إلى موطن قبيلتها. يفتح أفراد القبيلة الطريق أمامك ويقدمون لك عهدًا قديمًا.", kind: "traveler", choices: [
       { id: "follow", label: "اتبعها إلى موطن القبيلة", hint: "تقبل دعوتها وتكمل المعروف.", outcome: { xp: 520, gold: 800, companion: "fairy-warden", fairyReturn: true } },
@@ -230,6 +259,25 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
     if (pendant && next.inventory.length < 500) { next.inventory.unshift(createItemInstance(pendant, `fairy-${now}`)); lootName = pendant.name; }
   }
   if (reward.fairyReturn) next.roaming.fairyReunited = true;
+  if (reward.echoAction) {
+    const stage = next.roaming.echoStage;
+    const routeOffset = next.roaming.echoRoute === "trust" ? 0 : next.roaming.echoRoute === "listen" ? 1 : next.roaming.echoRoute === "challenge" ? 2 : 0;
+    const expected = (["listen", "trust", "listen", "challenge", "trust", "listen", "challenge", "trust", "listen", "trust"] as const)[(stage + routeOffset) % 10];
+    if (reward.echoAction === expected) {
+      next.roaming.echoStarted = true;
+      next.roaming.echoStage = stage + 1;
+      next.roaming.echoRoute = reward.echoAction;
+      if (next.roaming.echoStage >= 10) {
+        if (!next.pets.includes("shattered-echo")) next.pets.push("shattered-echo");
+        next.roaming.echoStarted = false; next.roaming.echoStage = 0; next.roaming.echoFailures = 0; next.roaming.echoRoute = null;
+        next.roaming.echoNextAt = now + 365 * 24 * 60 * 60 * 1000;
+        lootName = "الــصــدى المـتـشـظّ";
+      }
+    } else {
+      next.roaming.echoFailures += 1; next.roaming.echoStarted = false; next.roaming.echoStage = 0; next.roaming.echoRoute = null;
+      next.roaming.echoNextAt = now + (next.roaming.echoFailures >= 2 ? 30 : 3) * 24 * 60 * 60 * 1000;
+    }
+  }
   if (reward.relic) {
     const relic = EVENT_RELICS.find((item) => item.id === reward.relic);
     if (relic && next.inventory.length < 500) { next.inventory.unshift(createItemInstance(relic, `event-${now}`)); lootName = relic.name; }
