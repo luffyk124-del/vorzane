@@ -79,7 +79,7 @@ test("active roaming story chains wait through ordinary events before a random c
   state.roaming.chainStage = 0;
   state.roaming.eventsCompleted = 1;
   state.roaming.chainCooldown = 0;
-  const event = getRoamingEvent(state, 1_000);
+  const event = getRoamingEvent(state, 3_005);
   assert.equal(event.kind, "chain");
   assert.equal(event.chainStage, 0);
 
@@ -87,11 +87,11 @@ test("active roaming story chains wait through ordinary events before a random c
   assert.equal(result.state.roaming.chainStage, 1);
   assert.ok(result.state.roaming.chainCooldown >= 2 && result.state.roaming.chainCooldown <= 4);
   assert.match(result.message, /دفتر/);
-  const nextEvent = getRoamingEvent(result.state, 2_000);
+  const nextEvent = getRoamingEvent(result.state, 4_005);
   assert.notEqual(nextEvent.kind, "chain");
   let cooldownState = result.state;
   for (let index = 0; index < result.state.roaming.chainCooldown; index += 1) {
-    const ordinary = getRoamingEvent(cooldownState, 3_000 + index * 1_000);
+    const ordinary = getRoamingEvent(cooldownState, 4_005 + index * 1_000);
     assert.notEqual(ordinary.kind, "chain");
     cooldownState = resolveRoamingChoice(cooldownState, ordinary, ordinary.choices[0].id, Date.UTC(2026, 10, 11) + (index + 1) * 60_000).state;
   }
@@ -120,10 +120,10 @@ test("story-chain chapters have context-specific actions and no generic route sl
   state.roaming.activeChain = "lost-cartographer";
   state.roaming.chainStage = 0;
   state.roaming.eventsCompleted = 1;
-  const first = getRoamingEvent(state, Date.UTC(2026, 10, 11));
+  const first = getRoamingEvent(state, 3_005);
   assert.deepEqual(first.choices.map((choice) => choice.label), ["اقرأ دفتر الملاح", "اتبع العلامة على الخريطة"]);
   const firstResult = resolveRoamingChoice(state, first, "press", Date.UTC(2026, 10, 11));
-  const second = getRoamingEvent(firstResult.state, Date.UTC(2026, 10, 11) + 1);
+  const second = getRoamingEvent(firstResult.state, 4_005);
   assert.deepEqual(second.choices.map((choice) => choice.label), ["افحص النقش على الجذع", "قارن اتجاه الظلال"]);
   assert.notDeepEqual(first.choices.map((choice) => choice.label), second.choices.map((choice) => choice.label));
   assert.doesNotMatch(second.story, /مسار المواجهة|اختبارات أشد وغنائم أعلى/);
@@ -135,7 +135,7 @@ test("red orchard chapter result is narrated as an in-world story", () => {
   state.roaming.activeChain = "red-orchard";
   state.roaming.chainStage = 3;
   state.roaming.chainCooldown = 0;
-  const event = getRoamingEvent(state, 1_000);
+  const event = getRoamingEvent(state, 3_005);
   assert.equal(event.title, "جذر مسموم");
   const result = resolveRoamingChoice(state, event, "press", Date.UTC(2026, 10, 11));
   assert.match(result.message, /زهرة نادرة/);
