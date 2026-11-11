@@ -5,6 +5,7 @@ import { createItemInstance, getDungeonDrop } from "./dungeonItems.ts";
 export type RoamingOutcome = { gold?: number; gems?: number; xp?: number; fragments?: number; damage?: number; heal?: number; chain?: string; chainEnd?: boolean; gear?: boolean };
 export type RoamingChoice = { id: string; label: string; hint: string; outcome: RoamingOutcome };
 export type RoamingEvent = { id: string; title: string; region: string; story: string; kind: "encounter" | "traveler" | "cache" | "omen" | "chain" | "merchant"; choices: RoamingChoice[]; chainId?: string; chainStage?: number };
+type RoamingMerchantItem = { id: string; name: string; description: string; price: number; currency: "gold" | "fragments"; stock: number; gear?: boolean; heal?: number; fragments?: number; gems?: number; gold?: number; xp?: number };
 
 const REGIONS = ["غابة الرماد", "سهول الزجاج", "مستنقع الهمس", "طريق الملوك", "وادي الشهب", "أطلال القمر", "مرتفعات الصقيع", "ساحل العظام", "سراديب النور", "حدود العاصفة", "بساتين الظلال", "ممرّ العمالقة"];
 const SCENES = [
@@ -136,7 +137,7 @@ export function getRoamingEvent(state: GameState, seed = Date.now()): RoamingEve
     }
   }
   if (Math.abs(Math.floor(seed / 5)) % 8 === 0) return { id: `roam-merchant-${roaming.eventsCompleted}-${Math.floor(seed)}`, title: "قافلة ساهر عند مفترق الطرق", region: REGIONS[Math.abs(Math.floor(seed)) % REGIONS.length], story: "تسمع رنين أجراس صغيرة قبل أن تظهر عربة مغطاة بقماش أزرق. يرفع التاجر ساهر غطاء المصباح ويحييك كأنه يعرف أنك قادم. يشرح أن الطريق أمامه غير آمن، ولذلك سيبيع جزءًا من بضاعته هنا فقط. يلمح إلى أن بعض القطع جمعها من أطلال لا تظهر على الخرائط، ثم يمنحك وقتًا قصيرًا لتفقدها قبل أن تتحرك القافلة.", kind: "merchant", choices: [
-    { id: "browse", label: "تفقّد البضاعة", hint: "اطلع على العتاد والإمدادات المتاحة.", outcome: { xp: 25 } },
+    { id: "rumor", label: "اسأل ساهر عن الطريق", hint: "تحصل على معلومة قبل أن تغادر القافلة.", outcome: { xp: 55 } },
     { id: "bargain", label: "فاوض ساهر", hint: "تفاوضه على السعر مقابل أن تدله على طريق آمن.", outcome: { gold: 35, xp: 65, chain: "lost-cartographer" } },
     { id: "leave", label: "ودّعه وتابع طريقك", hint: "لا تنفق مواردك الآن.", outcome: { xp: 18 } },
   ] };
@@ -207,7 +208,7 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   return { state: next, message: rewards || "تابعت طريقك دون غنيمة." };
 }
 
-export function getTravellingMerchant(state: GameState, now = Date.now()) {
+export function getTravellingMerchant(state: GameState, now = Date.now()): RoamingMerchantItem[] {
   const cycle = Math.floor(now / (6 * 60 * 60 * 1000));
   const level = Math.max(1, state.hero?.level ?? 1);
   const sample = getDungeonDrop(0, level, () => 0.37);
