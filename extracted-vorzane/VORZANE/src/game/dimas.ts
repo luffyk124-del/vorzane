@@ -31,10 +31,10 @@ const MILESTONES: Record<number, DimasFloor["reward"]> = {
 };
 const FLOOR_NAMES = ["دهليز الحراس", "قاعة المرايا", "سلالم الرماد", "ممرّ العروش", "قبو النيازك", "معبد الصمت", "جسر العمالقة", "مكتبة الظلال", "ساحة الأختام", "قلب الديماس"];
 
-export function getDimasFloor(floor: number): DimasFloor {
+export function getDimasFloor(floor: number, level = 1): DimasFloor {
   const safe = Math.max(1, Math.min(300, Math.floor(floor)));
   const milestoneReward = MILESTONES[safe];
-  const levelFactor = 1 + Math.log2(1 + safe / 10) * 0.035;
+  const levelFactor = 1 + Math.log2(Math.max(1, level)) * 0.11;
   const boss = safe % 10 === 0;
   return {
     floor: safe, name: FLOOR_NAMES[(safe - 1) % FLOOR_NAMES.length],
@@ -45,8 +45,8 @@ export function getDimasFloor(floor: number): DimasFloor {
     milestone: !!milestoneReward, ...(milestoneReward ? { reward: milestoneReward } : {}),
   };
 }
-export function getDimasFloors(): DimasFloor[] {
-  return Array.from({ length: 300 }, (_, index) => getDimasFloor(index + 1));
+export function getDimasFloors(level = 1): DimasFloor[] {
+  return Array.from({ length: 300 }, (_, index) => getDimasFloor(index + 1, level));
 }
 
 function rareWeapon(floor: number, rewardName: string, level: number): EquipmentItem {
@@ -65,7 +65,7 @@ export function clearDimasFloor(state: GameState, floor: number): { state: GameS
   if (!state.hero) return { state, error: "أنشئ شخصيتك أولًا." };
   const nextFloor = state.dimas.highestFloor + 1;
   if (floor !== nextFloor || floor < 1 || floor > 300) return { state, error: `الطابق التالي المتاح هو ${nextFloor}.` };
-  const reward = getDimasFloor(floor);
+  const reward = getDimasFloor(floor, state.hero.level);
   const power = combatStats(state).power;
   if (power < reward.requiredPower) return { state, error: `تحتاج إلى قوة ${reward.requiredPower} على الأقل. قوتك الحالية ${power}.` };
 
