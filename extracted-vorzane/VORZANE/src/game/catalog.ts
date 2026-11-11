@@ -1,6 +1,6 @@
 import type { BattleMode, ClassId, EquipmentItem, StatKey } from "./model.ts";
 
-export const PETS: { id: string; name: string; icon: string; bonus: Partial<Record<StatKey, number>>; price: number; requiredLevel: number; description: string }[] = [
+export const PETS: { id: string; name: string; icon: string; bonus: Partial<Record<StatKey, number>>; price: number; requiredLevel: number; description: string; shopAvailable?: boolean }[] = [
   { id: "wolf", name: "ذئب الرماد", icon: "paw", bonus: { agi: 2 }, price: 300, requiredLevel: 1, description: "رفيق البداية؛ يرفع الرشاقة قليلًا." },
   { id: "golem", name: "حارس الصخر", icon: "shield", bonus: { def: 4 }, price: 450, requiredLevel: 4, description: "درع حيّ يمنح صمودًا أكبر من المستوى الرابع." },
   { id: "fox", name: "ثعلب السراب", icon: "sparkles", bonus: { luck: 9 }, price: 540, requiredLevel: 7, description: "حظّه الأقوى يرافق الصيادين بعد المستوى السابع." },
@@ -9,7 +9,9 @@ export const PETS: { id: string; name: string; icon: string; bonus: Partial<Reco
   { id: "owl", name: "بومة الحكمة", icon: "eye", bonus: { luck: 18, agi: 8 }, price: 18_000, requiredLevel: 20, description: "رفيق نادر يزيد الحظ وسرعة الحركة." },
   { id: "moon-deer", name: "أيل القمر", icon: "moon", bonus: { vit: 35, def: 12 }, price: 90_000, requiredLevel: 30, description: "رفيق أسطوري يمنح الحيوية والصمود." },
   { id: "star-drake", name: "تنين الشهب", icon: "star", bonus: { str: 60, luck: 24 }, price: 450_000, requiredLevel: 45, description: "رفيق عظيم يعزز القوة والحظ." },
-  { id: "dimas-royal-drake", name: "تنين العرش الأزلي", icon: "flame", bonus: { str: 180, def: 90, vit: 140, luck: 80 }, price: 0, requiredLevel: 75, description: "رفيق أسطوري لا يُمنح إلا لمن يبلغ قمة الديماس." },
+  { id: "dimas-royal-drake", name: "تنين العرش الأزلي", icon: "flame", bonus: { str: 180, def: 90, vit: 140, luck: 80 }, price: 999_999_999, requiredLevel: 75, description: "رفيق أسطوري لا يُمنح إلا عند اجتياز الطابق 300 من الديماس.", shopAvailable: false },
+  { id: "fairy-warden", name: "حارسة الندى", icon: "flower", bonus: { vit: 28, luck: 18, agi: 12 }, price: 9_999_999, requiredLevel: 20, description: "رفيقة نادرة لا تظهر إلا لمن أعادها إلى قبيلتها.", shopAvailable: false },
+  { id: "shattered-echo", name: "الــصــدى المـتـشـظّ", icon: "sparkles", bonus: { str: 240, def: 160, vit: 200, agi: 120, luck: 120 }, price: 99_999_999, requiredLevel: 1, description: "قوة نادرة لا تستجيب إلا لمن اجتاز اختبارات الصدى العشرة.", shopAvailable: false },
 ];
 
 export const STARTER_ITEMS: EquipmentItem[] = [
@@ -79,6 +81,11 @@ export const BATTLE_ENEMIES: Record<BattleMode, EnemyBlueprint[]> = {
     { id: "rift-champion", name: "بطل الشق", title: "سيد الساحة", icon: "flash", tint: "#CC7180", hpScale: 1.18, attackScale: 1.08, defenseScale: 1.1, agility: 11 },
     { id: "abyss-giant", name: "عملاق الهاوية", title: "ثقل الظلام", icon: "skull", tint: "#BA8269", hpScale: 1.42, attackScale: 0.96, defenseScale: 1.24, agility: 6 },
     { id: "night-sorcerer", name: "ساحر الليل", title: "حاصد النور", icon: "sparkles", tint: "#9986CE", hpScale: 0.94, attackScale: 1.27, defenseScale: 0.88, agility: 16 },
+  ],
+  roaming: [
+    { id: "roam-ogre", name: "غول الممرات", title: "مفترس الطريق", icon: "skull", tint: "#B67E70", hpScale: 1.18, attackScale: 1.12, defenseScale: 0.95, agility: 8 },
+    { id: "roam-raider", name: "قاطع الطريق", title: "صياد المسافرين", icon: "swords", tint: "#C58B65", hpScale: 0.92, attackScale: 1.2, defenseScale: 0.82, agility: 16 },
+    { id: "roam-wraith", name: "طيف البراري", title: "صدى الغابة", icon: "moon", tint: "#9C91D4", hpScale: 1.04, attackScale: 1.16, defenseScale: 1.12, agility: 13 },
   ],
 };
 

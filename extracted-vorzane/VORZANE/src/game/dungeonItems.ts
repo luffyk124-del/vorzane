@@ -59,6 +59,11 @@ function generateDungeonItems(): EquipmentItem[] {
 
 export const DUNGEON_ITEMS = generateDungeonItems();
 export const DUNGEON_ITEM_POOL_SIZE = DUNGEON_ITEMS.length;
+export const EVENT_RELICS: EquipmentItem[] = [
+  { id: "event-fairy-pendant", catalogId: "event-fairy-pendant", name: "قلادة عهد الجنية", slot: "قلادة", rarity: "rare", bonus: { vit: 18, luck: 14 }, price: 28_000, requiredLevel: 10, icon: "flower" },
+  { id: "event-echo-seal", catalogId: "event-echo-seal", name: "ختم الصدى المتشظي", slot: "خاتم أول", rarity: "mythic", bonus: { str: 65, def: 42, agi: 30 }, price: 1_250_000, requiredLevel: 35, icon: "sparkles" },
+  { id: "event-warden-blade", catalogId: "event-warden-blade", name: "نصل حارس العهد", slot: "سلاح", rarity: "epic", bonus: { str: 48, luck: 18 }, price: 165_000, requiredLevel: 25, icon: "flash" },
+];
 
 // Loot rarity is driven by hero progression, never by the current dungeon floor.
 function rarityWeights(level: number): Record<Rarity, number> {
@@ -101,7 +106,7 @@ export function createItemInstance(template: EquipmentItem, suffix?: string): Eq
 }
 
 export function findEquipmentTemplate(item: EquipmentItem): EquipmentItem | undefined {
-  const all = [...STARTER_ITEMS, ...DUNGEON_ITEMS];
+  const all = [...STARTER_ITEMS, ...DUNGEON_ITEMS, ...EVENT_RELICS];
   const catalogMatch = item.catalogId ? all.find((candidate) => candidate.id === item.catalogId) : undefined;
   if (catalogMatch && (item.id === catalogMatch.id || item.id.startsWith(`${catalogMatch.id}-`))) return catalogMatch;
   const exactMatch = all.find((candidate) => candidate.id === item.id);

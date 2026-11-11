@@ -2,7 +2,7 @@ export type ClassId = "Warrior" | "Mage" | "Assassin" | "Archer";
 export type StatKey = "str" | "def" | "vit" | "agi" | "luck";
 export type StatBlock = Record<StatKey, number>;
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "mythic";
-export type BattleMode = "cave" | "dungeon" | "tower" | "hard";
+export type BattleMode = "cave" | "dungeon" | "tower" | "hard" | "roaming";
 export type EquipmentItem = {
   id: string;
   name: string;
@@ -56,8 +56,17 @@ export type MissionPeriods = { daily: MissionPeriod; weekly: MissionPeriod; seas
 export type RoamingState = {
   health: number;
   maxHealth: number;
-  fragments: number;
   eventsCompleted: number;
+  healthUpdatedAt: number;
+  storyFlags: string[];
+  storyNextAt: number;
+  fairyNextAt: number;
+  fairyReunited: boolean;
+  echoStarted: boolean;
+  echoStage: number;
+  echoFailures: number;
+  echoNextAt: number;
+  echoRoute: string | null;
   eventsSeen: string[];
   activeChain: string | null;
   chainStage: number;
@@ -149,7 +158,7 @@ export function createFreshState(): GameState {
       weekly: { key: missionWeekKey(), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
       season: { key: new Date().toISOString().slice(0, 7), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
     },
-    roaming: { health: 100, maxHealth: 100, fragments: 0, eventsCompleted: 0, eventsSeen: [], activeChain: null, chainStage: 0, chainRoute: null, lastEventAt: 0, merchantRefreshAt: 0 },
+    roaming: { health: 100, maxHealth: 100, eventsCompleted: 0, healthUpdatedAt: Date.now(), storyFlags: [], storyNextAt: 0, fairyNextAt: 0, fairyReunited: false, echoStarted: false, echoStage: 0, echoFailures: 0, echoNextAt: 0, echoRoute: null, eventsSeen: [], activeChain: null, chainStage: 0, chainRoute: null, lastEventAt: 0, merchantRefreshAt: 0 },
     dimas: { highestFloor: 0, claimedMilestones: [], lastCompletedAt: 0 },
     longQuestStartedAt: Date.now(),
     claimedLongQuestIds: [],
@@ -163,7 +172,7 @@ export function createFreshState(): GameState {
     tower: 0,
     story: 0,
     dungeonFloor: 1,
-    battleWinsByMode: { cave: 0, dungeon: 0, tower: 0, hard: 0 },
+    battleWinsByMode: { cave: 0, dungeon: 0, tower: 0, hard: 0, roaming: 0 },
     battles: 0,
     wins: 0,
     expeditionsCompleted: 0,
@@ -298,8 +307,17 @@ export function normalizeGameState(value: unknown): GameState | null {
     roaming: {
       health: finite(source.roaming?.health, 100, 0, 100_000),
       maxHealth: finite(source.roaming?.maxHealth, 100, 1, 100_000),
-      fragments: finite(source.roaming?.fragments, 0, 0, 1_000_000_000),
       eventsCompleted: finite(source.roaming?.eventsCompleted, 0, 0, 1_000_000_000),
+      healthUpdatedAt: finite(source.roaming?.healthUpdatedAt, Date.now(), 0),
+      storyFlags: Array.isArray(source.roaming?.storyFlags) ? source.roaming.storyFlags.filter((flag): flag is string => typeof flag === "string").slice(-100) : [],
+      storyNextAt: finite(source.roaming?.storyNextAt, 0, 0),
+      fairyNextAt: finite(source.roaming?.fairyNextAt, 0, 0),
+      fairyReunited: source.roaming?.fairyReunited === true,
+      echoStarted: source.roaming?.echoStarted === true,
+      echoStage: finite(source.roaming?.echoStage, 0, 0, 9),
+      echoFailures: finite(source.roaming?.echoFailures, 0, 0, 100),
+      echoNextAt: finite(source.roaming?.echoNextAt, 0, 0),
+      echoRoute: typeof source.roaming?.echoRoute === "string" ? source.roaming.echoRoute.slice(0, 24) : null,
       eventsSeen: Array.isArray(source.roaming?.eventsSeen) ? source.roaming.eventsSeen.filter((id): id is string => typeof id === "string").slice(-500) : [],
       activeChain: typeof source.roaming?.activeChain === "string" ? source.roaming.activeChain.slice(0, 80) : null,
       chainStage: finite(source.roaming?.chainStage, 0, 0, 100),
@@ -329,6 +347,7 @@ export function normalizeGameState(value: unknown): GameState | null {
       dungeon: finite(source.battleWinsByMode?.dungeon, 0, 0, 1_000_000_000),
       tower: finite(source.battleWinsByMode?.tower, 0, 0, 1_000_000_000),
       hard: finite(source.battleWinsByMode?.hard, 0, 0, 1_000_000_000),
+      roaming: finite(source.battleWinsByMode?.roaming, 0, 0, 1_000_000_000),
     },
     battles: finite(source.battles, 0, 0, 1_000_000_000),
     wins: finite(source.wins, 0, 0, 1_000_000_000),
