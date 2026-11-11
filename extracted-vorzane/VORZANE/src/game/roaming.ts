@@ -254,7 +254,9 @@ export function getRoamingEvent(state: GameState, seed = Date.now()): RoamingEve
       return { id: `companion-${entry.petId}`, title: entry.title, region: entry.region, story: entry.story, kind: entry.kind, choices: entry.choices };
     }
   }
-  if (roaming.activeChain && roaming.eventsCompleted > 0) {
+  const chainReady = roaming.activeChain && roaming.eventsCompleted >= roaming.chainNextAtEvent;
+  const chainAppears = chainReady && Math.abs(Math.floor(seed / 13)) % 4 === 0;
+  if (chainAppears) {
     const chain = CHAINS.find((item) => item.id === roaming.activeChain);
     if (chain) {
       const stage = Math.min(chain.stages.length - 1, roaming.chainStage);
@@ -361,10 +363,12 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
     next.roaming.activeChain = null;
     next.roaming.chainStage = 0;
     next.roaming.chainRoute = null;
+    next.roaming.chainNextAtEvent = 0;
   } else if (reward.chain) {
     next.roaming.activeChain = reward.chain;
     next.roaming.chainStage = event.chainId ? (event.chainStage ?? 0) + 1 : 0;
     next.roaming.chainRoute = ["careful", "study", "sneak", "pray", "help", "trade"].includes(choice.id) ? "cautious" : "bold";
+    next.roaming.chainNextAtEvent = next.roaming.eventsCompleted + 2 + (Math.abs(Math.floor(now / 1000)) % 3);
   }
   if (next.roaming.health <= 0) {
     next.roaming.health = 0;
@@ -380,15 +384,39 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
     lootName ? `غنيمة: ${lootName}` : "",
   ].filter(Boolean).join(" • ");
   const chain = event.chainId ? CHAINS.find((item) => item.id === event.chainId) : undefined;
-  const nextStageName = chain?.stages[(event.chainStage ?? 0) + 1];
   const sceneIndex = event.id.startsWith("roam-") ? Number(event.id.split("-")[1]) : -1;
   const choiceIndex = event.choices.findIndex((item) => item.id === choiceId);
   const sceneResult = sceneIndex >= 0 ? SCENE_RESULTS[sceneIndex]?.[choiceIndex] : undefined;
+  const chainStage = event.chainStage ?? 0;
+  const chainContinuations: Record<string, string[]> = {
+    "lost-cartographer": ["تفتح الدفتر فتنساب منه ورقة مطوية، وعلى حافتها رسم لشجرة تحمل العلامة نفسها. ترفع عينيك نحو الغابة وتدرك أن الطريق لم ينتهِ بعد.", "تتبع الظلال حتى تتلاقى عند صخرة ملساء؛ تحتها أثر قديم يشبه توقيع الملاح، فتحتفظ بمكانه في ذاكرتك."],
+    "black-sail": ["تهب نسمة بحرية فتتحرك الراية، ويسقط من طياتها ختم نحاسي عليه رمز السفينة المفقودة.", "تزيل الملح عن الزجاجة فتظهر كتابة باهتة، وتكشف كلماتها عن سر لم يكن واضحًا من قبل."],
+    "silent-bell": ["يمرر الهواء نغمة خافتة عبر الجرس، ثم يضيء نقش صغير على حافته كأنه يجيب عن سؤالك.", "تتبع الصدى إلى أسفل الدرج، وهناك تجد ثلاث علامات محفورة في الحجر."],
+    "ember-crown": ["تستقر الشظية في راحة يدك ويخرج منها دفء خفيف، ثم يظهر على سطحها نقش يقود إلى الفرن القديم.", "يعرض الحداد أثر المعدن على لوح حجري، فتتضح له علامة لم يرها منذ سنوات."],
+    "moon-letters": ["تضع الرسالة تحت الضوء، فيظهر سطر فضي بين الكلمات ويكشف اسمًا غاب عن الرسالة الأولى.", "تتبع أثر الحبر حتى طرف الورقة، فتجد علامة صغيرة تشير إلى المرصد المهجور."],
+    "glass-king": ["يتغير انعكاس القناع للحظة، ويظهر خلفك باب لم يكن موجودًا قبل أن تلمسه.", "تجمع الشظايا المتناثرة، فتتطابق أطرافها وتكشف ممرًا خفيًا في القصر."],
+    "wanderer": ["تضيء علامة البوابة ثم تنفتح في سطحها صورة مكان بعيد، كأن العابر يرسل إليك إشارة من عالمه.", "تراجع خريطة المسافر وتجد خطًا لم يكن ظاهرًا، يرسم طريقًا جديدًا بين العلامات."],
+    "red-orchard": ["تسند يدك إلى الجذر وتزيل عنه الطبقة الفاسدة، ثم تغسله بماء النبع. يعود النسغ إلى العروق اليابسة، وترتجف الأغصان فوقك قبل أن تتفتح زهرة نادرة بين الأوراق.", "تتبع مجرى الماء إلى منبعه وتوقف ما كان يفسد التربة. يعود الماء صافيًا إلى الجذور، وتظهر زهرة نادرة في قلب البستان."],
+    "star-forge": ["يلتقط المعدن ضوء النجوم، فتظهر على سطحه خطوط دقيقة ترسم طريقًا إلى المنجم.", "تقلب الشظية قرب ضوء الفرن، فتلمع علامة قديمة على حافتها وتشير إلى موضع المطرقة."],
+    "hollow-mask": ["تسمع همسًا خافتًا من داخل القناع، ثم يظهر على باطنه نصف اسم كان مخفيًا.", "تعدل القناع أمام الضوء، فينعكس على جداره نقش يقود إلى شاهد جديد."]
+  };
+  const chainEndings: Record<string, string> = {
+    "lost-cartographer": "تضع آخر صفحة في موضعها، فتكتمل الخريطة أمامك. يظهر الملاح عند نهاية الطريق، وقد عرف من العلامات أنك أعدت إليه ما فقده.",
+    "black-sail": "ينكشف سر الراية أخيرًا؛ لم يكن الكنز صندوقًا من الذهب فحسب، بل سجل الرحلة الذي حفظ حكاية السفينة وطاقمها. تطوي السجل وتترك البحر يحتفظ ببقية أسراره.",
+    "silent-bell": "تعود النغمة إلى الجرس، فيضيء النقش الأخير وتفهم سر الصمت الذي أحاط بالمكان. تغادر القاعة وقد عاد إليها صوتها.",
+    "ember-crown": "يستقر التاج بعد اكتمال صنعه، ويخفت وهج الفرن للمرة الأولى منذ زمن. تنتهي الرحلة ويبقى أثرها محفورًا في المعدن.",
+    "moon-letters": "تجتمع الرسائل أخيرًا، وتتضح الصلة بين كلماتها. ترسل الوعد إلى صاحبه، ثم ينطفئ ضوء المرصد بهدوء.",
+    "glass-king": "تكتمل صورة القناع، وينعكس وجه الحقيقة على العرش المتصدع. يغادر آخر أسرار القصر معك، وتُطوى الحكاية.",
+    "wanderer": "تستقر البوابة ويظهر الطريق الذي ظل العابر يبحث عنه. يودعك وقد وجد وجهته، ويترك لك علامة تذكرك باللقاء.",
+    "red-orchard": "تمتد الحياة من جديد بين أشجار البستان، وتخضر الأغصان التي ظلت صامتة طويلًا. يعود عطر المكان، ولا يبقى من اللعنة إلا ذكرى بعيدة.",
+    "star-forge": "يستعيد المعدن بريقه تحت ضوء الفرن، ويكتمل العمل الذي بدأ بالشظية الساقطة. تهدأ المطرقة ويبقى أثر النجمة شاهدًا على الرحلة.",
+    "hollow-mask": "تنكشف الروايات المتضاربة وتجتمع الشهادات على حقيقة واحدة. تعيد القناع إلى موضعه، وتُسدل الستارة على الحكاية."
+  };
   const storyResult = event.chainId
     ? reward.chainEnd
-      ? "اكتملت حكاية «" + (chain?.name ?? "الرحلة") + "». جمعت الأدلة المرتبطة ببدايتها ووصلت إلى خاتمتها عند «" + (chain?.stages[event.chainStage ?? 0] ?? "النهاية") + "»."
-      : "في حكاية «" + (chain?.name ?? "رحلتك") + "»، نفذت «" + choice.label + "» وربطت الدليل الحالي بالخطوة التالية: «" + (nextStageName ?? "الخاتمة") + "». بقيت علامة جديدة تستحق الفحص."
-    : sceneResult ?? "نفذت اختيارك «" + choice.label + "» بما يناسب تفاصيل هذا اللقاء، ثم واصلت طريقك.";
+      ? chainEndings[event.chainId] ?? "تكتمل الحكاية أخيرًا، وتتضح لك حقيقة العلامات التي قادتك منذ البداية."
+      : chainContinuations[event.chainId]?.[choiceId === "press" ? 0 : 1] ?? "تتكشف أمامك علامة جديدة، وتفهم من تفاصيلها شيئًا لم يكن واضحًا من قبل."
+    : sceneResult ?? "يهدأ المكان من حولك، وتترك خطوتك أثرًا في هذا اللقاء قبل أن تواصل الطريق.";
   return { state: next, message: storyResult, rewards: rewards || "لم تحصل على مكافآت في هذا الاختيار." };
 }
 
