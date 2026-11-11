@@ -128,5 +128,6 @@ const styles = StyleSheet.create({
   floorActive: { borderColor: palette.gold, backgroundColor: "rgba(230,199,124,0.12)" },
   floorMilestone: { borderColor: "rgba(190,155,255,0.42)" },
   floorNumber: { fontSize: 15, fontWeight: "900", color: palette.text },
+  floorReward: { fontSize: 9, textAlign: "center" },
   clearedText: { color: palette.jade },
 });
