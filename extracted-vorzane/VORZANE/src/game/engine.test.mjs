@@ -109,15 +109,23 @@ test("unequipping is blocked when the bag is full to prevent item overflow", () 
   assert.ok(blocked.equipped["سلاح"]);
 });
 
-test("rare companions cannot be purchased and require level 40 or higher", () => {
+test("store companions can be purchased from level 40 while event companions stay exclusive", () => {
   const state = createHeroState("اختبار", "Warrior");
   state.gold = 500_000_000;
+  const lowLevel = buyPet(state, "wolf");
+  assert.match(lowLevel.error ?? "", /المستوى المطلوب/);
+  assert.equal(lowLevel.state.gold, state.gold);
 
-  const blocked = buyPet(state, "star-drake");
-  assert.match(blocked.error ?? "", /لا يُشترون من المتجر/);
-  assert.equal(blocked.state.gold, state.gold);
-  assert.deepEqual(blocked.state.pets, []);
-  assert.equal(setPet(state, "star-drake").activePet, null);
+  const eligible = { ...state, hero: { ...state.hero, level: 40 } };
+  const purchased = buyPet(eligible, "wolf");
+  assert.equal(purchased.error, undefined);
+  assert.equal(purchased.state.gold, eligible.gold - 60_000);
+  assert.ok(purchased.state.pets.includes("wolf"));
+  assert.equal(purchased.state.activePet, "wolf");
+
+  const blocked = buyPet(purchased.state, "star-drake");
+  assert.match(blocked.error ?? "", /حصري/);
+  assert.ok(!blocked.state.pets.includes("star-drake"));
 });
 
 test("each level grants exactly one stat point, including multiple levels at once", () => {

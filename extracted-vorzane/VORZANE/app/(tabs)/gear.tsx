@@ -167,7 +167,7 @@ export default function GearScreen() {
 
     {tab === "shop" ? <>
       <SectionTitle title="متجر العالم" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("en-US")} ذهب`} icon="cash-outline" tone="gold" />} />
-      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>الأسلحة والدروع والخوذ والقفازات والأحذية والإكسسوارات والرفقاء متاحة بأسعار متدرجة. لا توجد قيود طوابق على العتاد؛ بعض القطع تتطلب مستوى مناسبًا للتجهيز فقط.</Txt><Txt style={styles.poolNote}>{shopItems.length.toLocaleString("en-US")} قطعة عتاد • {PETS.length} رفقاء نادرون</Txt></Card>
+      <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>الأسلحة والدروع والخوذ والقفازات والأحذية والإكسسوارات والرفقاء متاحة بأسعار متدرجة. لا توجد قيود طوابق على العتاد؛ بعض القطع تتطلب مستوى مناسبًا للتجهيز فقط.</Txt><Txt style={styles.poolNote}>{shopItems.length.toLocaleString("en-US")} قطعة عتاد • {PETS.filter((pet) => pet.shopAvailable).length} رفقاء للشراء • {PETS.filter((pet) => !pet.shopAvailable).length} رفقاء حصريون</Txt></Card>
       <View style={styles.shopFilters}>
         {SHOP_CATEGORIES.map((category) => <Pressable key={category.id} onPress={() => setShopCategory(category.id)} style={[styles.shopFilter, shopCategory === category.id && styles.shopFilterActive]}>
           <Txt style={[styles.shopFilterText, shopCategory === category.id && styles.shopFilterTextActive]}>{category.label}</Txt>
@@ -197,7 +197,7 @@ export default function GearScreen() {
         return <Card key={pet.id} style={styles.petCard}>
           <View style={styles.petBadge}><Icon name={pet.icon as never} color={active ? palette.gold : palette.jade} size={23} /></View>
           <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : <Pill label={pet.rarity === "mythic" ? "خرافي" : pet.rarity === "legendary" ? "أسطوري" : pet.rarity === "epic" ? "ملحمي" : "نادر"} tone="gold" />}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, locked && { color: palette.red }]}>المستوى المطلوب: {pet.requiredLevel} • القيمة: {pet.price.toLocaleString("en-US")} ذهب</Txt><Txt muted style={styles.petDescription}>مصدر الحصول: {pet.source}</Txt></View>
-           {owned ? <AppButton label={locked ? "تفعيل" : active ? "النشط" : "تفعيل"} onPress={() => locked ? message("لم تصل للمستوى المطلوب.") : update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active} /> : <Pill label="لا يُباع • جائزة حصرية" tone="muted" />}
+           {owned ? <AppButton label={locked ? "تفعيل" : active ? "النشط" : "تفعيل"} onPress={() => locked ? message("لم تصل للمستوى المطلوب.") : update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active} /> : pet.shopAvailable ? <AppButton label={locked ? "تفعيل" : `شراء ${pet.price.toLocaleString("en-US")}`} onPress={() => locked ? message("لم تصل للمستوى المطلوب.") : canAfford ? purchasePet(pet.id) : message("لا تملك ذهبًا كافيًا.")} variant={locked || !canAfford ? "secondary" : "jade"} small icon="cart-outline" /> : <Pill label="حصري • حدث / ديماس" tone="muted" />}
         </Card>;
       })}
       </> : null}

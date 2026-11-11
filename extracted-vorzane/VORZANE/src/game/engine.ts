@@ -223,7 +223,12 @@ export function sellItem(state: GameState, itemId: string): { state: GameState; 
 export function buyPet(state: GameState, petId: string): { state: GameState; error?: string } {
   const pet = PETS.find((item) => item.id === petId);
   if (!pet) return { state, error: "الرفيق غير متاح." };
-  return { state, error: "الرفقاء النادرون لا يُشترون من المتجر؛ احصل عليهم من أحداثهم أو جوائز الديماس." };
+  if (!pet.shopAvailable) return { state, error: "هذا الرفيق حصري لحدثه أو لجائزة الديماس." };
+  if (!state.hero) return { state, error: "أنشئ شخصية أولًا." };
+  if (state.pets.includes(petId)) return { state, error: "هذا الرفيق لديك بالفعل." };
+  if (state.hero.level < pet.requiredLevel) return { state, error: "لم تصل للمستوى المطلوب." };
+  if (state.gold < pet.price) return { state, error: "لا تملك ذهبًا كافيًا." };
+  return { state: { ...state, gold: state.gold - pet.price, pets: [...state.pets, petId], activePet: state.activePet ?? petId } };
 }
 
 export function setPet(state: GameState, petId: string | null): GameState {
