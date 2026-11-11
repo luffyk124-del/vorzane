@@ -149,11 +149,11 @@ export function AppButton({ label, onPress, icon, variant = "primary", disabled 
     <Txt style={[styles.buttonText, small && { fontSize: 13 }, (variant === "primary" || variant === "jade") && { color: palette.ink }, variant === "danger" && { color: palette.red }]}>{label}</Txt>
   </View>;
   if (variant === "primary" || variant === "jade") {
-    return <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [styles.button, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>
+    return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: disabled || loading, busy: loading }} onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [styles.button, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>
       <LinearGradient colors={background as [string, string, ...string[]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.buttonGradient, small && styles.buttonSmall]}>{content}</LinearGradient>
     </Pressable>;
   }
-  return <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [styles.button, styles.buttonAlt, variant === "ghost" && styles.buttonGhost, variant === "danger" && styles.buttonDanger, small && styles.buttonSmall, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>{content}</Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: disabled || loading, busy: loading }} onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [styles.button, styles.buttonAlt, variant === "ghost" && styles.buttonGhost, variant === "danger" && styles.buttonDanger, small && styles.buttonSmall, disabled && styles.disabled, pressed && !disabled && styles.pressed, style]}>{content}</Pressable>;
 }
 
 export function Pill({ label, icon, tone = "gold", style }: { label: string; icon?: IconName; tone?: "gold" | "jade" | "muted" | "red"; style?: StyleProp<ViewStyle> }) {
@@ -166,7 +166,7 @@ export function Pill({ label, icon, tone = "gold", style }: { label: string; ico
 
 export function Meter({ value, max, color = palette.jade, height = 7 }: { value: number; max: number; color?: string; height?: number }) {
   const width = Math.max(0, Math.min(100, max > 0 ? (value / max) * 100 : 0));
-  return <View style={[styles.meterTrack, { height }]}><View style={[styles.meterFill, { width: `${width}%`, backgroundColor: color, height }]} /></View>;
+  return <View accessibilityRole="progressbar" accessibilityLabel="مستوى التقدم" accessibilityValue={{ min: 0, max, now: Math.max(0, Math.min(max, value)) }} style={[styles.meterTrack, { height }]}><View style={[styles.meterFill, { width: `${width}%`, backgroundColor: color, height }]} /></View>;
 }
 
 export function InputField({ label, value, onChangeText, placeholder, secureTextEntry, keyboardType, autoCapitalize = "none", multiline = false, icon, style }: {
@@ -186,6 +186,7 @@ export function InputField({ label, value, onChangeText, placeholder, secureText
     <View style={[styles.inputWrap, multiline && { minHeight: 94, alignItems: "flex-start" }]}>
       {icon ? <Icon name={icon} size={18} color={palette.dim} /> : null}
       <TextInput
+        accessibilityLabel={label || placeholder}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

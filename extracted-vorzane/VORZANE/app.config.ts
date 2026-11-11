@@ -24,6 +24,12 @@ export default {
   web: {
     bundler: "metro",
     output: "static",
+    name: "VORZANE",
+    shortName: "VORZANE",
+    description: "عالم فانتازيا RPG؛ أنشئ بطلك، استكشف الديماس، وأكمل رحلاتك.",
+    lang: "ar",
+    themeColor: "#080C12",
+    backgroundColor: "#080C12",
     favicon: "./assets/images/favicon.png",
   },
   plugins: [
