@@ -34,7 +34,7 @@ export default function DimasScreen() {
     sequence.enemy.title = selected % 10 === 0 ? "حارس الطابق" : "حارس الديماس";
     const originalSettler = sequence.result;
     if (originalSettler.won) {
-      const baseState = { ...originalSettler.state, tower: state.tower, battleWinsByMode: { ...originalSettler.state.battleWinsByMode, tower: state.battleWinsByMode.tower } };
+      const baseState = { ...originalSettler.state, hero: state.hero, gold: state.gold, gems: state.gems, inventory: state.inventory, pets: state.pets, activePet: state.activePet, tower: state.tower, battleWinsByMode: { ...originalSettler.state.battleWinsByMode, tower: state.battleWinsByMode.tower } };
       const cleared = clearDimasFloor(baseState, selected);
       if (cleared.error || !cleared.reward) { setNotice(cleared.error ?? "تعذر تسجيل نتيجة الطابق."); return; }
       sequence.result = {
