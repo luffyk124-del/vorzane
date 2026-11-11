@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { clearDimasFloor, getDimasFloor, getDimasFloors } from "../../src/game/dimas";
+import { clearDimasFloor, getDimasFloor, getDimasFloors, getDimasEvent, getDimasMerchantStock, resolveDimasEvent, buyDimasMerchantItem, type DimasEvent } from "../../src/game/dimas";
 import { combatStats } from "../../src/game/stats";
 import { useGame } from "../../src/contexts/GameContext";
 import { palette } from "../../src/theme";
@@ -17,6 +17,7 @@ export default function DimasScreen() {
   const { state, update } = useGame();
   const [selected, setSelected] = useState(Math.min(300, state.dimas.highestFloor + 1));
   const [notice, setNotice] = useState("");
+  const [event, setEvent] = useState<DimasEvent | null>(null);
   const floors = useMemo(() => getDimasFloors(), []);
   const current = getDimasFloor(selected);
   const power = state.hero ? combatStats(state).power : 0;
@@ -24,8 +25,10 @@ export default function DimasScreen() {
     const result = clearDimasFloor(state, selected);
     if (result.error) { setNotice(result.error); return; }
     update(() => result.state);
-    setNotice(result.reward?.reward ? `اجتزت الطابق ${selected}! المكافأة الإضافية: ${milestoneLabel(result.reward.reward)}.` : `اجتزت الطابق ${selected} وحصلت على الذهب والخبرة.`);
+    const extra = result.loot ? ` وسقط لك ${result.loot.name}.` : "";
+    setNotice(result.reward?.reward ? `اجتزت الطابق ${selected}! المكافأة الإضافية: ${milestoneLabel(result.reward.reward)}.${extra}` : `اجتزت الطابق ${selected} وحصلت على الذهب والخبرة.${extra}`);
     setSelected(Math.min(300, result.state.dimas.highestFloor + 1));
+    setEvent(getDimasEvent(selected, result.state.hero?.level ?? 1, Date.now()));
   };
 
   return <AppScreen>
@@ -49,6 +52,42 @@ export default function DimasScreen() {
     </Card>
 
     {notice ? <Card style={styles.notice}><Icon name="information-circle-outline" color={palette.gold} size={18} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
+    {event ? <Card style={styles.eventCard}>
+      <View style={styles.eventTop}>
+        <Pill label={event.kind === "merchant" ? "تاجر متنقل" : event.kind === "encounter" ? "مواجهة" : event.kind === "cache" ? "اكتشاف" : event.kind === "traveler" ? "لقاء" : "حدث غامض"} tone="gold" />
+        <Icon name={event.kind === "merchant" ? "storefront" : "sparkles"} size={21} color={palette.gold} />
+      </View>
+      <Txt style={styles.eventRegion}>{event.region}</Txt>
+      <Txt style={styles.eventTitle}>{event.title}</Txt>
+      <Txt muted style={styles.eventStory}>{event.story}</Txt>
+      {event.kind === "merchant" ? <View style={styles.merchantStock}>
+        {getDimasMerchantStock(state.hero?.level ?? 1, state.dimas.highestFloor, Number(event.id.split("-").pop()) || Date.now()).map((item) => <View key={item.id} style={styles.merchantRow}>
+          <View style={styles.merchantInfo}>
+            <Txt style={styles.merchantName}>{item.name}</Txt>
+            <Txt muted style={styles.eventHint}>{item.description}</Txt>
+            <Txt style={styles.merchantPrice}>{item.price.toLocaleString("en-US")} ذهب</Txt>
+          </View>
+          <AppButton label="شراء" icon="cart-outline" small variant="secondary" onPress={() => {
+            const bought = buyDimasMerchantItem(state, state.dimas.highestFloor, item.id, Number(event.id.split("-").pop()) || Date.now());
+            if (bought.error) { setNotice(bought.error); return; }
+            update(() => bought.state);
+            setNotice("تمت الصفقة؛ أضيفت البضاعة إلى ممتلكاتك.");
+          }} />
+        </View>)}
+      </View> : null}
+      <SectionTitle title={event.kind === "merchant" ? "كيف تتصرف؟" : "اختر تصرفك"} icon="git-branch-outline" />
+      {event.choices.map((choice) => <View key={choice.id} style={styles.eventChoice}>
+        <AppButton label={choice.label} onPress={() => {
+          const result = resolveDimasEvent(state, event, choice.id);
+          update(() => result.state);
+          setNotice(result.message);
+          setEvent(null);
+        }} variant="secondary" />
+        <Txt muted style={styles.eventHint}>{choice.hint}</Txt>
+      </View>)}
+      <AppButton label="غادر اللقاء" onPress={() => setEvent(null)} variant="ghost" small />
+    </Card> : null}
+
     <SectionTitle title="خريطة الطوابق" icon="grid-outline" action={<Pill label="1 — 300" tone="muted" />} />
     <ScrollView style={styles.floorScroll} nestedScrollEnabled contentContainerStyle={styles.floorGrid}>
       {floors.map((floor) => {
@@ -78,6 +117,18 @@ export default function DimasScreen() {
 
 const styles = StyleSheet.create({
   hero: { padding: 16, gap: 12, backgroundColor: "#1B1C2B", borderColor: "rgba(190,155,255,0.25)" },
+  eventCard: { padding: 15, gap: 11, backgroundColor: "#20232B", borderColor: "rgba(230,199,124,0.35)" },
+  eventTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  eventRegion: { color: palette.jade, textAlign: "right", fontSize: 10, fontWeight: "800" },
+  eventTitle: { textAlign: "right", fontSize: 18, fontWeight: "900" },
+  eventStory: { textAlign: "right", fontSize: 12, lineHeight: 21 },
+  eventChoice: { gap: 4 },
+  eventHint: { textAlign: "right", fontSize: 10, lineHeight: 16 },
+  merchantStock: { gap: 8 },
+  merchantRow: { flexDirection: "row", alignItems: "center", gap: 9, borderTopWidth: 1, borderTopColor: palette.line, paddingTop: 9 },
+  merchantInfo: { flex: 1, alignItems: "flex-end", gap: 3 },
+  merchantName: { fontSize: 12, fontWeight: "900", textAlign: "right" },
+  merchantPrice: { color: palette.gold, fontSize: 11, fontWeight: "900" },
   heroTop: { flexDirection: "row", alignItems: "center", gap: 10 },
   heroTitle: { fontSize: 19, fontWeight: "900" },
   small: { fontSize: 10, lineHeight: 16, textAlign: "right" },
