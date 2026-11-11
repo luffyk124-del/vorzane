@@ -63,7 +63,8 @@ export default function ProfileScreen() {
     <PageTitle eyebrow="هويتك في العالم" title="الملف الشخصي" subtitle="ملفك يعرض هويتك وبطولاتك وعتادك. تغييرات الهوية متاحة من وضع التعديل فقط." trailing={<CharacterPortrait gender={state.characterStyle.gender} width={66} height={86} />} />
     <Card style={styles.heroCard}>
       <View style={styles.heroRow}>
-        <CharacterPortrait gender={state.characterStyle.gender} width={104} height={136} />
+        <View style={styles.avatarBlock}><ProfileAvatar avatarId={state.profileAvatarId} size={58} /><Txt muted style={styles.avatarCaption}>صورة الحساب</Txt></View>
+        <CharacterPortrait gender={state.characterStyle.gender} width={88} height={120} />
         <View style={styles.heroInfo}>
           <Pill label={hero ? `المستوى ${hero.level.toLocaleString("en-US")}` : "لم تنشأ الشخصية"} tone="gold" />
           <Txt style={styles.heroName}>{displayName.trim() || hero?.name || "اسم اللاعب"}</Txt>
@@ -129,7 +130,9 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   heroCard: { padding: 16, gap: 14, backgroundColor: "#13242C", borderColor: "rgba(98,216,195,0.25)" },
   heroRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  heroInfo: { flex: 1, alignItems: "flex-end", gap: 6 },
+  heroInfo: { flex: 1, minWidth: 0, alignItems: "flex-end", gap: 6 },
+  avatarBlock: { alignItems: "center", justifyContent: "center", gap: 5 },
+  avatarCaption: { fontSize: 9 },
   heroName: { fontSize: 21, fontWeight: "900", textAlign: "right" },
   heroClass: { fontSize: 13, color: palette.jade, fontWeight: "800" },
   hint: { fontSize: 10, lineHeight: 17, textAlign: "right" },
