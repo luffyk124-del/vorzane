@@ -1,5 +1,5 @@
 import { BATTLE_ENEMIES } from "./catalog.ts";
-import { createItemInstance, getDungeonDrop, getEquipmentSellPrice } from "./dungeonItems.ts";
+
 import { addExperience, combatStats } from "./stats.ts";
 import { CLASS_PASSIVES, type BattleMode, type ClassId, type EquipmentItem, type GameState } from "./model.ts";
 import type { EnemyBlueprint } from "./catalog.ts";
@@ -57,17 +57,18 @@ function damageAmount(attack: number, defense: number): number {
   return Math.max(1, Math.floor(attack * 100 / (100 + Math.max(0, defense) * 2)));
 }
 
-export function createBattleSequence(state: GameState, mode: BattleMode, random: () => number = Math.random): BattleSequence | null {
+export function createBattleSequence(state: GameState, mode: BattleMode, random: () => number = Math.random, options?: { floor?: number; enemyScale?: number; modeLabel?: string }): BattleSequence | null {
   if (!state.hero) return null;
   const hero = state.hero;
   const player = combatStats(state);
-  const floor = mode === "dungeon" ? state.dungeonFloor : mode === "tower" ? state.tower + 1 : mode === "roaming" ? Math.max(1, state.roaming.eventsCompleted + 1) : Math.max(1, state.battleWinsByMode[mode] + 1);
+  const floor = options?.floor ?? (mode === "dungeon" ? state.dungeonFloor : mode === "tower" ? state.tower + 1 : mode === "roaming" ? Math.max(1, state.roaming.eventsCompleted + 1) : Math.max(1, state.battleWinsByMode[mode] + 1));
   const enemyTemplate = chooseEnemy(state, mode, random);
   const floorScale = mode === "dungeon" ? 1 + (floor - 1) * 0.018 : mode === "tower" ? Math.min(2.5, 1 + (floor - 1) * 0.045) : mode === "hard" ? 1 + Math.min(0.5, (floor - 1) * 0.01) : mode === "roaming" ? 1 + Math.min(0.45, (floor - 1) * 0.012) : 1 + Math.min(0.28, (floor - 1) * 0.008);
   const level = hero.level;
-  const enemyMaxHP = clamp(Math.round((108 + level * 18) * MODE_SCALE[mode] * floorScale * enemyTemplate.hpScale), 40, 1_000_000);
-  const enemyAttack = clamp(Math.round((8 + level * 3.3) * MODE_SCALE[mode] * floorScale * enemyTemplate.attackScale), 4, 250_000);
-  const enemyDefense = clamp(Math.round((4 + level * 1.4) * MODE_SCALE[mode] * floorScale * enemyTemplate.defenseScale), 0, 100_000);
+  const combatScale = options?.enemyScale ?? MODE_SCALE[mode] * floorScale;
+  const enemyMaxHP = clamp(Math.round((108 + level * 18) * combatScale * enemyTemplate.hpScale), 40, 1_000_000);
+  const enemyAttack = clamp(Math.round((8 + level * 3.3) * combatScale * enemyTemplate.attackScale), 4, 250_000);
+  const enemyDefense = clamp(Math.round((4 + level * 1.4) * combatScale * enemyTemplate.defenseScale), 0, 100_000);
   const heroMaxHP = player.maxHP;
   const enemy: BattleSequence["enemy"] = {
     ...enemyTemplate,
@@ -131,34 +132,20 @@ export function createBattleSequence(state: GameState, mode: BattleMode, random:
     const modeBase = mode === "hard" ? 5 : mode === "tower" ? 4 : mode === "dungeon" ? 3 : mode === "roaming" ? 3 : 2;
     const modeMultiplier = mode === "hard" ? 1.35 : mode === "tower" ? 1.15 : mode === "dungeon" ? 1 : mode === "roaming" ? 1.05 : 0.8;
     const modeGold = (modeBase + levelProgress * 0.9 + floorProgress * 1.4) * modeMultiplier;
-    gold = Math.max(1, Math.round(modeGold));
-    xp = Math.max(1, Math.round((mode === "dungeon" ? 22 + Math.min(50, floor) * 1.1 : 16 + Math.min(20, floor) * 0.7) + Math.min(40, level) * (mode === "dungeon" ? 2 : 1.5)));
+    gold = Math.max(1, Math.round(modeGold * (mode === "dungeon" ? 0.55 : 1)));
+    xp = Math.max(1, Math.round(mode === "dungeon"
+      ? 12 + Math.min(20, floor) * 0.5 + Math.min(40, level) * 0.8
+      : 16 + Math.min(20, floor) * 0.7 + Math.min(40, level) * 1.5));
     next.gold = Math.min(1_000_000_000, next.gold + gold);
     const leveled = addExperience(next, xp);
     next = leveled.state;
 
-    if (mode === "dungeon") {
-      const dropChance = clamp(0.20 + player.stats.luck * 0.003, 0.20, 0.65);
-      if (random() < dropChance) {
-        const template = getDungeonDrop(floor, level, random);
-        const item: EquipmentItem = createItemInstance(template, `drop-${Date.now()}-${Math.floor(random() * 1_000_000)}`);
-        if (next.inventory.length < 500) {
-          next.inventory.push(item);
-          dropped = template.name;
-        } else {
-          const quickSale = Math.floor(template.price / 2);
-          next.gold = Math.min(1_000_000_000, next.gold + quickSale);
-          gold += quickSale;
-          dropped = `بيع تلقائي: ${template.name}`;
-        }
-      }
-    }
   }
 
   return {
     id: `battle-${Date.now()}-${Math.floor(random() * 1_000_000)}`,
     mode,
-    modeLabel: MODE_LABELS[mode],
+    modeLabel: options?.modeLabel ?? MODE_LABELS[mode],
     hero: { name: hero.name, className: hero.className, level: hero.level, attack: player.attack, passiveName: CLASS_PASSIVES[hero.className].name },
     enemy: { ...enemy, name: enemyTemplate.name, title: mode === "dungeon" ? `الطابق ${floor} • ${enemyTemplate.title}` : enemyTemplate.title },
     heroMaxHP,

@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter } from "./engine.ts";
+import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter, getQuestProgress } from "./engine.ts";
+import { QUESTS } from "./catalog.ts";
 import { createFreshState, normalizeGameState } from "./model.ts";
+import { buyRoamingHealthRefill, refreshRoamingHealth } from "./roaming.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
   const state = createHeroState("اختبار", "Warrior");
@@ -14,7 +16,7 @@ test("quest rewards are one-time and require completed progress", () => {
   assert.equal(claimQuest(claimed, "first").gold, claimed.gold);
 });
 
-test("Dimas story chapters unlock in order and pay rewards once", () => {
+test("Ashen World campaign chapters unlock in order and pay rewards once", () => {
   const state = createHeroState("رحّالة الرماد", "Warrior");
   assert.equal(getStoryChapterProgress(state, 1), 0);
   assert.equal(canClaimStoryChapter(state, 1), false);
@@ -26,13 +28,16 @@ test("Dimas story chapters unlock in order and pay rewards once", () => {
   assert.equal(first.gold, state.gold + 120);
   assert.equal(claimStoryChapter(first, 1).gold, first.gold, "a completed chapter must not pay twice");
 
-  first.dimas.highestFloor = 4;
-  assert.equal(getStoryChapterProgress(first, 2), 4);
+  first.dimas.highestFloor = 3;
+  assert.equal(getStoryChapterProgress(first, 2), 3);
   assert.equal(canClaimStoryChapter(first, 2), true);
   assert.equal(canClaimStoryChapter(first, 3), false, "later chapters must remain locked until the previous chapter is claimed");
   const second = claimStoryChapter(first, 2);
   assert.equal(second.story, 2);
   assert.equal(second.gold, first.gold + 240);
+  second.roaming.eventsCompleted = 3;
+  assert.equal(getStoryChapterProgress(second, 3), 3);
+  assert.equal(canClaimStoryChapter(second, 3), true);
   assert.equal(state.story, 0, "claiming story chapters must not mutate the original save");
 });
 
@@ -168,7 +173,7 @@ test("stat allocation requires a hero and respects the stat ceiling", () => {
   assert.equal(hero.hero.statPoints, 1);
 });
 
-test("winning a dungeon battle advances the floor and grants catalog loot", () => {
+test("Guard Arena victory advances its stage and grants only reduced gold and XP", () => {
   const state = createHeroState("اختبار", "Warrior");
   const battle = createBattleSequence(state, "dungeon", () => 0.01);
 
@@ -177,9 +182,10 @@ test("winning a dungeon battle advances the floor and grants catalog loot", () =
   assert.equal(state.dungeonFloor, 1);
   assert.equal(state.inventory.length, 0);
   assert.equal(battle.result.state.dungeonFloor, 2);
-  assert.equal(battle.result.state.inventory.length, 1);
-  assert.ok(battle.result.gold > 0);
-  assert.ok(battle.result.xp > 0);
+  assert.equal(battle.result.state.inventory.length, 0);
+  assert.equal(battle.result.dropped, null);
+  assert.ok(battle.result.gold > 0 && battle.result.gold <= 2);
+  assert.ok(battle.result.xp > 0 && battle.result.xp <= 14);
 });
 
 test("each hero class has a distinct passive that appears in combat", () => {
@@ -209,7 +215,7 @@ test("each hero class has a distinct passive that appears in combat", () => {
   assert.ok(warrior.turns[0].damage < mageWithSlowStart.turns[0].damage, "Warrior passive should reduce the incoming hit");
 });
 
-test("dungeon victories can yield no item when the random drop roll fails", () => {
+test("Guard Arena never drops equipment regardless of the random roll", () => {
   const state = createHeroState("اختبار", "Warrior");
   const battle = createBattleSequence(state, "dungeon", () => 0.99);
 
@@ -325,4 +331,66 @@ test("weekly and seasonal mission progress uses period baselines", () => {
 
   const nextMonth = ensureMissionPeriods(state, Date.UTC(2026, 1, 1, 12));
   assert.equal(getRecurringMissions(nextMonth, "season", Date.UTC(2026, 1, 1, 12)).find((mission) => mission.id === "season-wins")?.progress, 0);
+});
+
+
+test("roaming gem refills restore health and enforce a ten-purchase daily cap", () => {
+  const now = Date.UTC(2026, 10, 11, 12, 0, 0);
+  const state = createHeroState("اختبار التجوال", "Warrior");
+  state.gems = 250;
+  state.roaming.health = 0;
+  state.roaming.healthUpdatedAt = now;
+  state.roaming.gemRefillDate = new Date(now).toISOString().slice(0, 10);
+  state.roaming.gemRefillsUsed = 0;
+
+  let current = state;
+  for (let index = 0; index < 10; index += 1) {
+    const result = buyRoamingHealthRefill(current, now + index);
+    assert.equal(result.error, undefined);
+    assert.equal(result.restored, 20);
+    current = { ...result.state, roaming: { ...result.state.roaming, health: 0 } };
+  }
+
+  assert.equal(current.roaming.health, 0);
+  assert.equal(current.gems, 50);
+  assert.equal(current.roaming.gemRefillsUsed, 10);
+  const capped = buyRoamingHealthRefill(current, now + 20);
+  assert.equal(capped.error, "وصلت إلى الحد اليومي: 10 تعبئات.");
+  assert.equal(capped.state.gems, 50);
+});
+
+test("roaming gem refill rejects insufficient gems and full health", () => {
+  const now = Date.UTC(2026, 10, 11, 12, 0, 0);
+  const state = createHeroState("اختبار التجوال", "Warrior");
+  state.gems = 19;
+  state.roaming.health = 10;
+  state.roaming.gemRefillDate = new Date(now).toISOString().slice(0, 10);
+  assert.equal(buyRoamingHealthRefill(state, now).error, "لا تملك 20 جوهرة كافية.");
+  state.roaming.health = state.roaming.maxHealth;
+  assert.equal(buyRoamingHealthRefill(state, now).error, "صحتك مكتملة بالفعل.");
+});
+
+
+test("current quest catalog tracks Dimas, roaming, and companion progression", () => {
+  const state = createHeroState("اختبار المهام", "Warrior");
+  state.dimas.highestFloor = 4;
+  state.roaming.eventsCompleted = 3;
+  state.pets = ["wolf"];
+  assert.equal(getQuestProgress(state, "dimas-entry"), 4);
+  assert.equal(getQuestProgress(state, "roaming-path"), 3);
+  assert.equal(getQuestProgress(state, "companion"), 1);
+  assert.ok(QUESTS.every((quest) => !["cave", "tower", "hard"].includes(quest.id)));
+});
+
+
+test("roaming health regenerates one point per minute and stops at its cap", () => {
+  const now = Date.UTC(2026, 10, 11, 12, 0, 0);
+  const state = createHeroState("اختبار الصحة", "Warrior");
+  state.roaming.health = 10;
+  state.roaming.healthUpdatedAt = now;
+  const afterThree = refreshRoamingHealth(state, now + 3 * 60_000 + 59_000);
+  assert.equal(afterThree.roaming.health, 13);
+  assert.equal(afterThree.roaming.healthUpdatedAt, now + 3 * 60_000);
+  const capped = refreshRoamingHealth({ ...afterThree, roaming: { ...afterThree.roaming, health: afterThree.roaming.maxHealth - 1 } }, now + 20 * 60_000);
+  assert.equal(capped.roaming.health, capped.roaming.maxHealth);
 });
