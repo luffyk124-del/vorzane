@@ -315,7 +315,7 @@ export function normalizeGameState(value: unknown): GameState | null {
       maxHealth: finite(source.roaming?.maxHealth, 100, 1, 100_000),
       fragments: finite(source.roaming?.fragments, 0, 0, 1_000_000_000),
       fragmentsCollected: finite(source.roaming?.fragmentsCollected, finite(source.roaming?.fragments, 0, 0, 1_000_000_000), 0, 1_000_000_000),
-      fragmentProgress: finite(source.roaming?.fragmentProgress, 0, 0, 1),
+      fragmentProgress: Math.floor(finite(source.roaming?.fragmentProgress, 0, 0, 1)),
       eventsCompleted: finite(source.roaming?.eventsCompleted, 0, 0, 1_000_000_000),
       healthUpdatedAt: finite(source.roaming?.healthUpdatedAt, Date.now(), 0),
       storyFlags: Array.isArray(source.roaming?.storyFlags) ? source.roaming.storyFlags.filter((flag): flag is string => typeof flag === "string").slice(-100) : [],
