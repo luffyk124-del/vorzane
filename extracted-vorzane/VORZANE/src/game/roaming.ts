@@ -1,4 +1,4 @@
-import type { GameState } from "./model.ts";
+import type { EquipmentItem, GameState } from "./model.ts";
 import { PETS } from "./catalog.ts";
 import { EVENT_RELICS } from "./dungeonItems.ts";
 import { addExperience } from "./stats.ts";
@@ -7,7 +7,7 @@ import { createItemInstance, getDungeonDrop } from "./dungeonItems.ts";
 export type RoamingOutcome = { gold?: number; gems?: number; xp?: number; damage?: number; heal?: number; chain?: string; chainEnd?: boolean; gear?: boolean; battle?: boolean; companion?: string; fairyRescue?: boolean; fairyReturn?: boolean; relic?: string; echoAction?: "trust" | "listen" | "challenge" };
 export type RoamingChoice = { id: string; label: string; hint: string; outcome: RoamingOutcome };
 export type RoamingEvent = { id: string; title: string; region: string; story: string; kind: "encounter" | "traveler" | "cache" | "omen" | "chain" | "merchant" | "special"; choices: RoamingChoice[]; chainId?: string; chainStage?: number };
-type RoamingMerchantItem = { id: string; name: string; description: string; price: number; currency: "gold"; stock: number; gear?: boolean; heal?: number; gems?: number; gold?: number; xp?: number };
+export type RoamingMerchantItem = { id: string; name: string; description: string; price: number; currency: "gold"; stock: number; gearTemplate?: EquipmentItem; heal?: number; gems?: number; gold?: number; xp?: number };
 
 const COMPANION_EVENT_BANK = [
   { petId: "wolf", kind: "encounter" as const, title: "ذئب الرماد الجريح", region: "ممرّ الصنوبر", story: "تجد ذئبًا رماديًا مصابًا قرب آثار قطيع مفترس. لا يهاجمك، لكنه يراقب يديك بحذر، وعلى عنقه أثر طوق قديم.", choices: [
@@ -281,17 +281,25 @@ export function getRoamingEvent(state: GameState, seed = Date.now()): RoamingEve
       };
     }
   }
-  if (Math.abs(Math.floor(seed / 5)) % 8 === 0) return { id: `roam-merchant-${roaming.eventsCompleted}-${Math.floor(seed)}`, title: "قافلة ساهر عند مفترق الطرق", region: REGIONS[Math.abs(Math.floor(seed)) % REGIONS.length], story: "تسمع رنين أجراس صغيرة قبل أن تظهر عربة مغطاة بقماش أزرق. يرفع التاجر ساهر غطاء المصباح ويحييك كأنه يعرف أنك قادم. يشرح أن الطريق أمامه غير آمن، ولذلك سيبيع جزءًا من بضاعته هنا فقط. يلمح إلى أن بعض القطع جمعها من أطلال لا تظهر على الخرائط، ثم يمنحك وقتًا قصيرًا لتفقدها قبل أن تتحرك القافلة.", kind: "merchant", choices: [
-    { id: "rumor", label: "اسأل ساهر عن الطريق", hint: "تحصل على معلومة قبل أن تغادر القافلة.", outcome: { xp: 55 } },
-    { id: "bargain", label: "فاوض ساهر", hint: "تفاوضه على السعر مقابل أن تدله على طريق آمن.", outcome: { gold: 35, xp: 65, chain: "lost-cartographer" } },
-    { id: "leave", label: "ودّعه وتابع طريقك", hint: "لا تنفق مواردك الآن.", outcome: { xp: 18 } },
-  ] };
-  const available = ROAMING_EVENT_PREVIEW.filter((event) => !roaming.eventsSeen.includes(event.id));
-  const pool = available.length ? available : ROAMING_EVENT_PREVIEW;
-  const index = Math.abs(Math.floor(seed)) % pool.length;
-  const scene = pool[index];
+  if (Math.abs(Math.floor(seed / 5)) % 8 === 0) return { id: `roam-merchant-${roaming.eventsCompleted}-${Math.floor(seed)}`, title: "قافلة ساهر عند مفترق الطرق", region: REGIONS[Math.abs(Math.floor(seed)) % REGIONS.length], story: "تسمع رنين أجراس صغيرة قبل أن تظهر عربة مغطاة بقماش أزرق. يرفع التاجر ساهر غطاء المصباح ويحييك كأنه يعرف أنك قادم. يفتح صناديق القافلة لتتفقّد بضاعة مختلفة في كل لقاء، ثم يستعد لمواصلة رحلته.", kind: "merchant", choices: [] };
+  // Rotate through every base scene before showing another variant of a scene already seen.
+  const unseenSceneIndexes = SCENES.map((_, index) => index).filter((sceneIndex) =>
+    !roaming.eventsSeen.some((id) => id.startsWith(`roam-${sceneIndex}-`))
+  );
+  const preferredPool = unseenSceneIndexes.length
+    ? ROAMING_EVENT_PREVIEW.filter((event) => unseenSceneIndexes.includes(Number(event.id.split("-")[1] ?? 0)))
+    : ROAMING_EVENT_PREVIEW.filter((event) => !roaming.eventsSeen.includes(event.id));
+  const pool = preferredPool.length ? preferredPool : ROAMING_EVENT_PREVIEW;
+  // Mix the timestamp and progression counter instead of using the raw timestamp remainder.
+  let mixedSeed = (Math.floor(seed) ^ Math.imul(roaming.eventsCompleted + 1, 0x9e3779b1)) >>> 0;
+  mixedSeed ^= mixedSeed >>> 16;
+  mixedSeed = Math.imul(mixedSeed, 0x7feb352d);
+  mixedSeed ^= mixedSeed >>> 15;
+  mixedSeed = Math.imul(mixedSeed, 0x846ca68b);
+  mixedSeed ^= mixedSeed >>> 16;
+  const index = (mixedSeed >>> 0) % pool.length;
+  const scene = pool[index]!;
   const chainStart = CHAINS[Math.abs(Math.floor(seed / 7)) % CHAINS.length];
-  const sceneIndex = Number(scene.id.split("-")[1] ?? 0);
   const choices = scene.choices.map((choice) => ({
     ...choice,
     outcome: { ...choice.outcome, ...(choice.outcome.chain ? {} : Math.abs(Math.floor(seed / 11)) % 9 === 0 && !choice.id.includes("leave") && !choice.id.includes("long") && !choice.id.includes("step") ? { chain: chainStart.id } : {}) },
@@ -430,30 +438,62 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
 }
 
 export function getTravellingMerchant(state: GameState, now = Date.now()): RoamingMerchantItem[] {
-  const cycle = Math.floor(now / (6 * 60 * 60 * 1000));
   const level = Math.max(1, state.hero?.level ?? 1);
-  const sample = getDungeonDrop(0, level, () => 0.37);
   const scale = 1 + Math.log2(level) * 0.22;
-  return [
-    { id: "merchant-gear", name: sample.name, description: `${sample.slot} • ${sample.rarity} • يتطلب مستوى ${sample.requiredLevel ?? 1}`, price: Math.max(80, Math.round(sample.price * scale * 0.72)), currency: "gold" as const, gear: true, stock: 1 },
-    { id: "healing-tonic", name: "إكسير المسافر", description: "يعيد 45 نقطة من صحتك في التجوال.", price: Math.round(90 * scale), currency: "gold" as const, heal: 45, stock: 1 + (cycle % 2) },
-    { id: "mystery-cache", name: "صندوق الأسرار", description: "ذهب وخبرة من مخزون القافلة.", price: Math.round(260 * scale), currency: "gold" as const, gold: Math.round(220 * scale), xp: Math.round(180 * scale), stock: 1 },
-  ];
+  let randomState = (Math.floor(now) ^ Math.imul(level, 0x9e3779b1)) >>> 0;
+  const random = () => {
+    randomState = (randomState + 0x6d2b79f5) >>> 0;
+    let value = randomState;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+  const stock: RoamingMerchantItem[] = [];
+  const usedGear = new Set<string>();
+  for (let index = 0; index < 3; index += 1) {
+    let template = getDungeonDrop(0, level, random);
+    for (let attempt = 0; attempt < 8 && usedGear.has(template.id); attempt += 1) template = getDungeonDrop(0, level, random);
+    usedGear.add(template.id);
+    stock.push({
+      id: `merchant-gear-${Math.floor(now)}-${index}`,
+      name: template.name,
+      description: `${template.slot} • ${template.rarity} • يتطلب مستوى ${template.requiredLevel ?? 1}`,
+      price: Math.max(80, Math.round(template.price * scale * 0.72)),
+      currency: "gold",
+      stock: 1,
+      gearTemplate: template,
+    });
+  }
+  stock.push(
+    { id: `healing-tonic-${Math.floor(now)}`, name: "إكسير المسافر", description: "يعيد 45 نقطة من صحتك في التجوال.", price: Math.round((75 + Math.floor(random() * 61)) * scale), currency: "gold", heal: 45, stock: 1 + Math.floor(random() * 2) },
+    { id: `mystery-cache-${Math.floor(now)}`, name: "صندوق الأسرار", description: "ذهب وخبرة من مخزون القافلة.", price: Math.round((210 + Math.floor(random() * 121)) * scale), currency: "gold", gold: Math.round((160 + Math.floor(random() * 141)) * scale), xp: Math.round((130 + Math.floor(random() * 121)) * scale), stock: 1 },
+  );
+  return stock;
 }
-export function buyMerchantItem(state: GameState, itemId: string) {
-  const item = getTravellingMerchant(state).find((entry) => entry.id === itemId);
+
+export function buyMerchantItem(state: GameState, item: RoamingMerchantItem) {
   if (!item) return { state, error: "هذا المنتج غير متاح." };
   if (!state.hero) return { state, error: "أنشئ شخصيتك أولًا." };
   if (item.currency === "gold" && state.gold < item.price) return { state, error: "لا تملك الذهب الكافي." };
-  if (item.gear && state.inventory.length >= 500) return { state, error: "حقيبتك ممتلئة." };
+  if (item.gearTemplate && state.inventory.length >= 500) return { state, error: "حقيبتك ممتلئة." };
   const next = JSON.parse(JSON.stringify(state)) as GameState;
   if (item.currency === "gold") next.gold -= item.price;
-  if (item.gear) next.inventory.unshift(createItemInstance(getDungeonDrop(0, next.hero?.level ?? 1, () => 0.37), `merchant-${Date.now()}`));
+  if (item.gearTemplate) next.inventory.unshift(createItemInstance(item.gearTemplate, `merchant-${Date.now()}`));
   next.gems += item.gems ?? 0;
   next.gold += item.gold ?? 0;
   if (item.heal) next.roaming.health = Math.min(next.roaming.maxHealth, next.roaming.health + item.heal);
   if (item.xp && next.hero) Object.assign(next, addExperience(next, item.xp).state);
   return { state: next };
+}
+
+export function completeRoamingMerchantVisit(state: GameState, event: RoamingEvent, now = Date.now()): GameState {
+  if (!state.hero || event.kind !== "merchant") return state;
+  const next = JSON.parse(JSON.stringify(state)) as GameState;
+  next.roaming.eventsCompleted += 1;
+  next.roaming.lastEventAt = now;
+  next.roaming.healthUpdatedAt = now;
+  next.roaming.eventsSeen = [...next.roaming.eventsSeen.filter((id) => id !== event.id), event.id].slice(-500);
+  return next;
 }
 
 
