@@ -49,9 +49,43 @@ export default function QuestsScreen() {
   };
   const claimedCount = state.claimedLongQuestIds.filter((id) => LONG_QUESTS.some((quest) => quest.id === id)).length;
   const readyCount = LONG_QUESTS.filter((quest) => !state.claimedLongQuestIds.includes(quest.id) && getLongQuestProgress(state, quest, now) >= quest.target).length;
+  const readyStoryCount = STORY_CHAPTERS.filter((chapter) => canClaimStoryChapter(state, chapter.id)).length;
+  const readyRecurringCount = recurringGroups.reduce((total, group) => total + group.missions.filter((mission) => mission.available && !mission.claimed).length, 0);
+  const readyQuestCount = quests.filter((quest) => quest.available && !quest.claimed).length;
+  const readyExplorationCount = EXPEDITION_TASKS.filter((task) => canClaimExpeditionTask(state, task.id)).length
+    + EXPLORATION_ACHIEVEMENTS.filter((achievement) => canClaimExplorationAchievement(state, achievement.id)).length;
+  const readyTotal = readyStoryCount + readyRecurringCount + readyQuestCount + readyExplorationCount + readyCount;
 
   return <AppScreen>
     <PageTitle eyebrow="سجل التكليفات" title="المهام" subtitle="مهام يومية وأسبوعية وقصصية وإنجازات، إضافة إلى تحديات طويلة مستقلة عن ميادين القتال والتجوال." trailing={<Pill label={`${state.wins} انتصار`} icon="trophy" tone="gold" />} />
+    <Card style={styles.overviewCard}>
+      <View style={styles.overviewHeader}>
+        <View style={styles.overviewHeading}>
+          <Txt style={styles.overviewTitle}>ملخص تقدمك</Txt>
+          <Txt muted style={styles.overviewCaption}>نظرة سريعة على ما ينتظرك</Txt>
+        </View>
+        <View style={styles.overviewIcon}><Icon name="clipboard-outline" color={palette.gold} size={21} /></View>
+      </View>
+      <View style={styles.overviewStats}>
+        <View style={styles.overviewStat}>
+          <Txt style={styles.overviewValue}>{readyTotal}</Txt>
+          <Txt muted style={styles.overviewLabel}>مكافآت جاهزة</Txt>
+        </View>
+        <View style={styles.overviewDivider} />
+        <View style={styles.overviewStat}>
+          <Txt style={styles.overviewValue}>{claimedCount}/{LONG_QUESTS.length}</Txt>
+          <Txt muted style={styles.overviewLabel}>مهام طويلة مستلمة</Txt>
+        </View>
+        <View style={styles.overviewDivider} />
+        <View style={styles.overviewStat}>
+          <Txt style={styles.overviewValue}>{state.story}/{STORY_CHAPTERS.length}</Txt>
+          <Txt muted style={styles.overviewLabel}>فصول القصة</Txt>
+        </View>
+      </View>
+      <Txt muted style={styles.overviewFootnote}>
+        {readyTotal > 0 ? `لديك ${readyTotal} مكافأة أو إنجازًا جاهزًا للمطالبة.` : "واصل التقدم في القصة والمهام لفتح مكافآت جديدة."}
+      </Txt>
+    </Card>
     <SectionTitle title="حملة الرماد" icon="book-outline" action={<Pill label={`${state.story}/${STORY_CHAPTERS.length} فصول`} tone="gold" />} />
     <Card style={styles.storyIntro}>
       <Txt style={styles.storyIntroTitle}>حكاية عالم VORZANE</Txt>
@@ -232,6 +266,18 @@ export default function QuestsScreen() {
 }
 
 const styles = StyleSheet.create({
+  overviewCard: { padding: 14, gap: 12, backgroundColor: "#17232D", borderColor: "rgba(230,199,124,0.3)" },
+  overviewHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  overviewHeading: { flex: 1, alignItems: "flex-end", gap: 3 },
+  overviewTitle: { fontSize: 15, fontWeight: "900", color: palette.text },
+  overviewCaption: { fontSize: 10 },
+  overviewIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: "rgba(230,199,124,0.1)", alignItems: "center", justifyContent: "center" },
+  overviewStats: { flexDirection: "row", alignItems: "center", justifyContent: "space-around" },
+  overviewStat: { flex: 1, alignItems: "center", gap: 4 },
+  overviewValue: { fontSize: 20, fontWeight: "900", color: palette.gold },
+  overviewLabel: { fontSize: 9, textAlign: "center" },
+  overviewDivider: { width: 1, height: 30, backgroundColor: palette.border },
+  overviewFootnote: { fontSize: 10, lineHeight: 16, textAlign: "right" },
   storyIntro: { padding: 14, gap: 5, borderColor: "rgba(230,199,124,0.22)", backgroundColor: "#141C27" },
   storyIntroTitle: { fontSize: 14, fontWeight: "900", color: palette.gold },
   storyCard: { padding: 13, gap: 8, backgroundColor: "#111A25" },
