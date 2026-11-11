@@ -110,15 +110,15 @@ export type QuestMetric = "wins" | "level" | "caveWins" | "dungeonWins" | "tower
 export type QuestCategory = "قتال" | "الزنزانة" | "البرج" | "الرحلات" | "العتاد" | "تطور";
 export const DUNGEON_ITEM_POOL_SIZE = 8 * 6 * 6;
 export const QUESTS = [
-  { id: "first", title: "الخطوة الأولى", description: "أكمل أول معركة", rewardGold: 100, icon: "sparkles", category: "قتال", metric: "wins", target: 1 },
-  { id: "battles", title: "صاحب العزم", description: "اربح ثلاث معارك بأي نمط", rewardGold: 150, icon: "trophy", category: "قتال", metric: "wins", target: 3 },
-  { id: "level", title: "بداية الصعود", description: "بلغ المستوى الثاني", rewardGold: 200, icon: "trending-up", category: "تطور", metric: "level", target: 2 },
-  { id: "cave", title: "صياد الكهوف", description: "اهزم ثلاثة أعداء في كهف الرماد", rewardGold: 170, icon: "bonfire", category: "قتال", metric: "caveWins", target: 3 },
-  { id: "dungeon", title: "نازل الهاوية", description: "اهزم خمسة أعداء في الزنزانة", rewardGold: 220, icon: "skull", category: "الزنزانة", metric: "dungeonWins", target: 5 },
-  { id: "tower", title: "قاهر الطوابق", description: "اجتز طابقين في برج الحراس", rewardGold: 220, icon: "business", category: "البرج", metric: "towerWins", target: 2 },
-  { id: "hard", title: "مواجهة الكسوف", description: "انتصر مرة في تحدي الكسوف", rewardGold: 300, icon: "moon", category: "قتال", metric: "hardWins", target: 1 },
-  { id: "expeditions", title: "رحّالة الحدود", description: "أكمل رحلتين استكشافيتين", rewardGold: 180, icon: "compass", category: "الرحلات", metric: "expeditions", target: 2 },
-  { id: "gear", title: "استعداد الأسطورة", description: "جهّز ثلاث قطع عتاد", rewardGold: 120, icon: "shield-checkmark", category: "العتاد", metric: "equipped", target: 3 },
+  { id: "first", title: "الخطوة الأولى", description: "أكمل أول معركة في أي ميدان.", rewardGold: 100, icon: "sparkles", category: "قتال", metric: "wins", target: 1 },
+  { id: "battles", title: "صاحب العزم", description: "اربح خمس معارك في العالم.", rewardGold: 180, icon: "trophy", category: "قتال", metric: "wins", target: 5 },
+  { id: "level", title: "بداية الصعود", description: "بلغ المستوى الخامس.", rewardGold: 220, icon: "trending-up", category: "تطور", metric: "level", target: 5 },
+  { id: "dimas-entry", title: "عتبة الديماس", description: "اجتز أول طابق في الديماس.", rewardGold: 180, icon: "layers", category: "الديماس", metric: "dimasFloor", target: 1 },
+  { id: "dimas-veteran", title: "حارس الطوابق", description: "اجتز خمسة طوابق في الديماس.", rewardGold: 320, icon: "shield-checkmark", category: "الديماس", metric: "dimasFloor", target: 5 },
+  { id: "roaming-path", title: "خطى المستكشف", description: "أكمل خمسة أحداث في التجوال.", rewardGold: 240, icon: "compass", category: "التجوال", metric: "roamingEvents", target: 5 },
+  { id: "companion", title: "رفيق الطريق", description: "ضم رفيقًا واحدًا إلى مجموعتك.", rewardGold: 220, icon: "paw", category: "الرفقاء", metric: "companions", target: 1 },
+  { id: "expeditions", title: "رحّالة الحدود", description: "أكمل رحلتين استكشافيتين.", rewardGold: 180, icon: "map", category: "الرحلات", metric: "expeditions", target: 2 },
+  { id: "gear", title: "استعداد الأسطورة", description: "جهّز ثلاث قطع عتاد.", rewardGold: 120, icon: "shield-checkmark", category: "العتاد", metric: "equipped", target: 3 },
 ] as const;
 
 export const RARITY_LABELS = {
