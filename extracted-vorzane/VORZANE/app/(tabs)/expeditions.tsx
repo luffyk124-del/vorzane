@@ -88,7 +88,7 @@ export default function RoamingScreen() {
         </View>)}
       </Card> : null}
       <SectionTitle title="ماذا ستفعل؟" icon="git-branch-outline" />
-      {event.choices.map((choice) => <PressChoice key={choice.id} label={choice.label} hint={choice.hint} outcome={choice.outcome} onPress={() => choose(choice.id)} disabled={busy} />)}
+      {event.choices.map((choice) => <PressChoice key={choice.id} label={choice.label} hint={choice.hint} outcome={choice.outcome} heroLevel={state.hero?.level ?? 1} onPress={() => choose(choice.id)} disabled={busy} />)}
     </Card> : null}
 
     {battleSequence ? <BattleArena sequence={battleSequence} onBattleSettled={(result: BattleResult) => { const last = battleSequence.turns[battleSequence.turns.length - 1]; const remaining = last?.heroHP ?? 0; const health = Math.max(0, Math.round(state.roaming.maxHealth * remaining / battleSequence.heroMaxHP)); update(() => ({ ...result.state, roaming: { ...result.state.roaming, health, healthUpdatedAt: Date.now(), eventsCompleted: result.state.roaming.eventsCompleted + 1 } })); setEventResult(result.won ? "انتصرت في المواجهة وتستطيع متابعة الطريق." : "لم تنجح في المواجهة؛ تحتاج إلى استعادة صحتك قبل متابعة الطريق."); setNotice(result.won ? "انتصرت في المواجهة." : "انتهت المواجهة بهزيمتك."); }} onClose={() => setBattleSequence(null)} /> : null}
@@ -97,11 +97,14 @@ export default function RoamingScreen() {
   </AppScreen>;
 }
 
-function PressChoice({ label, hint, outcome, onPress, disabled }: { label: string; hint: string; outcome: RoamingOutcome; onPress: () => void; disabled: boolean }) {
+function PressChoice({ label, hint, outcome, heroLevel, onPress, disabled }: { label: string; hint: string; outcome: RoamingOutcome; heroLevel: number; onPress: () => void; disabled: boolean }) {
+  const scale = 1 + Math.log2(Math.max(1, heroLevel)) * 0.13;
+  const scaledGold = Math.round((outcome.gold ?? 0) * scale);
+  const scaledXp = Math.round((outcome.xp ?? 0) * scale);
   const rewardParts = outcome.battle ? [] : [
-    outcome.gold ? `+${outcome.gold.toLocaleString("en-US")} ذهب` : "",
+    scaledGold ? `+${scaledGold.toLocaleString("en-US")} ذهب` : "",
     outcome.gems ? `+${outcome.gems} جواهر` : "",
-    outcome.xp ? `+${outcome.xp} خبرة` : "",
+    scaledXp ? `+${scaledXp} خبرة` : "",
     outcome.heal ? `+${outcome.heal} صحة` : "",
   ].filter(Boolean);
   return <View style={styles.choiceWrap}>
