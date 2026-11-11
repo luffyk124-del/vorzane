@@ -536,6 +536,28 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
 });
 
 
+test("friends screen guides new players to create a public profile before searching", async () => {
+  const browserContext = await browser.newContext({ viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  const pageErrors = [];
+  const { unexpectedRequests } = await installSupabaseMock(page);
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await signInWithMock(page);
+  await page.goto(`${appUrl}/friends`);
+  await page.getByText("أنشئ ملفك العام أولًا لتتمكن من البحث عن اللاعبين وإرسال طلبات الصداقة.", { exact: true }).waitFor({ timeout: 10_000 });
+  const setupButton = page.getByRole("button", { name: "إعداد الملف الشخصي" });
+  assert.equal(await setupButton.isEnabled(), true, "new players should have an actionable route to profile setup");
+  await setupButton.click();
+  await page.getByText("هويتك في العالم", { exact: true }).waitFor({ timeout: 10_000 });
+
+  const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  assert.equal(hasHorizontalOverflow, false, "profile setup guidance must fit a narrow mobile viewport");
+  assert.deepEqual(unexpectedRequests, []);
+  assert.deepEqual(pageErrors, []);
+  await browserContext.close();
+});
+
 test("character, player profile, and settings have separate responsibilities", async () => {
   const store = { state: saveFixture(), writes: [] };
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
