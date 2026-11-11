@@ -176,9 +176,14 @@ test("Sahir merchant has no dialogue choices and closes as a completed visit", (
 
 test("Sahir stock is randomized per visit and purchases the exact displayed gear", () => {
   const state = createHeroState("اختبار بضاعة ساهر", "Warrior");
-  const firstStock = getTravellingMerchant(state, 10_000);
-  const sameStock = getTravellingMerchant(state, 10_000);
-  const nextStock = getTravellingMerchant(state, 20_000);
+  const makeRandom = (value) => {
+    let index = 0;
+    const values = [value, 0.13, 0.27, 0.41, 0.55, 0.69, 0.83, 0.97, 0.21, 0.35, 0.49, 0.63, 0.77, 0.91, 0.05, 0.19, 0.33, 0.47, 0.61, 0.75];
+    return () => values[index++ % values.length];
+  };
+  const firstStock = getTravellingMerchant(state, 10_000, makeRandom(0.02));
+  const sameStock = getTravellingMerchant(state, 10_000, makeRandom(0.02));
+  const nextStock = getTravellingMerchant(state, 20_000, makeRandom(0.98));
   assert.deepEqual(firstStock, sameStock);
   assert.notDeepEqual(firstStock, nextStock);
   const gear = firstStock.find((item) => item.gearTemplate);
