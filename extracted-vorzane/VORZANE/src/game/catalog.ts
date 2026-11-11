@@ -1,15 +1,25 @@
 import type { BattleMode, ClassId, EquipmentItem, StatKey } from "./model.ts";
 
-export const PETS: { id: string; name: string; icon: string; bonus: Partial<Record<StatKey, number>>; price: number; requiredLevel: number; description: string }[] = [
-  { id: "wolf", name: "ذئب الرماد", icon: "paw", bonus: { agi: 2 }, price: 300, requiredLevel: 1, description: "رفيق البداية؛ يرفع الرشاقة قليلًا." },
-  { id: "golem", name: "حارس الصخر", icon: "shield", bonus: { def: 4 }, price: 450, requiredLevel: 4, description: "درع حيّ يمنح صمودًا أكبر من المستوى الرابع." },
-  { id: "fox", name: "ثعلب السراب", icon: "sparkles", bonus: { luck: 9 }, price: 540, requiredLevel: 7, description: "حظّه الأقوى يرافق الصيادين بعد المستوى السابع." },
-  { id: "phoenix", name: "عنقاء الفجر", icon: "sunny", bonus: { vit: 10 }, price: 620, requiredLevel: 10, description: "نور متجدد يمنح حيوية عالية من المستوى العاشر." },
-  { id: "dragon", name: "تنين الياقوت", icon: "flame", bonus: { str: 9 }, price: 700, requiredLevel: 15, description: "رفيق متقدم يرفع القوة الهجومية بعد المستوى الخامس عشر." },
-  { id: "owl", name: "بومة الحكمة", icon: "eye", bonus: { luck: 18, agi: 8 }, price: 18_000, requiredLevel: 20, description: "رفيق نادر يزيد الحظ وسرعة الحركة." },
-  { id: "moon-deer", name: "أيل القمر", icon: "moon", bonus: { vit: 35, def: 12 }, price: 90_000, requiredLevel: 30, description: "رفيق أسطوري يمنح الحيوية والصمود." },
-  { id: "star-drake", name: "تنين الشهب", icon: "star", bonus: { str: 60, luck: 24 }, price: 450_000, requiredLevel: 45, description: "رفيق عظيم يعزز القوة والحظ." },
-  { id: "dimas-royal-drake", name: "تنين العرش الأزلي", icon: "flame", bonus: { str: 180, def: 90, vit: 140, luck: 80 }, price: 0, requiredLevel: 75, description: "رفيق أسطوري لا يُمنح إلا لمن يبلغ قمة الديماس." },
+export type CompanionRarity = "rare" | "epic" | "legendary" | "mythic";
+export type Companion = { id: string; name: string; icon: string; bonus: Partial<Record<StatKey, number>>; price: number; requiredLevel: number; description: string; rarity: CompanionRarity; source: string; shopAvailable: boolean };
+export const PETS: Companion[] = [
+  { id: "wolf", name: "ذئب الرماد", icon: "paw", bonus: { agi: 18, vit: 10 }, price: 60_000, requiredLevel: 40, rarity: "rare", description: "رفيق سريع يحمي أطراف القوافل من مفترسات البراري.", source: "متجر الرفقاء", shopAvailable: true },
+  { id: "golem", name: "حارس الصخر", icon: "shield", bonus: { def: 32, vit: 25 }, price: 115_000, requiredLevel: 45, rarity: "rare", description: "حارس حجري بطيء لكنه شديد الصمود.", source: "متجر الرفقاء", shopAvailable: true },
+  { id: "fox", name: "ثعلب السراب", icon: "sparkles", bonus: { luck: 38, agi: 26 }, price: 235_000, requiredLevel: 50, rarity: "epic", description: "يتلاعب بالمسارات ويقود صاحبه إلى الفرص الخفية.", source: "متجر الرفقاء", shopAvailable: true },
+  { id: "phoenix", name: "عنقاء الفجر", icon: "sunny", bonus: { vit: 62, def: 22, luck: 20 }, price: 520_000, requiredLevel: 60, rarity: "epic", description: "تجدد ناري يمنح الحيوية والثبات.", source: "متجر الرفقاء", shopAvailable: true },
+  { id: "dragon", name: "تنين الياقوت", icon: "flame", bonus: { str: 65, vit: 38, def: 18 }, price: 820_000, requiredLevel: 65, rarity: "epic", description: "تنين صغير يحرس جوهرة ياقوتية قديمة.", source: "متجر الرفقاء", shopAvailable: true },
+  { id: "cave-bear", name: "دب الكهوف", icon: "paw", bonus: { def: 38, vit: 42, str: 12 }, price: 165_000, requiredLevel: 48, rarity: "rare", description: "رفيق ثقيل يتحمل الضربات ويحمي صاحبه في المواجهات الطويلة.", source: "متجر الرفقاء", shopAvailable: true },
+  { id: "storm-falcon", name: "صقر العاصفة", icon: "navigate", bonus: { agi: 48, luck: 24, str: 15 }, price: 360_000, requiredLevel: 55, rarity: "epic", description: "يرصد الفرص من بعيد ويمنح صاحبه سرعة ومباغتة.", source: "متجر الرفقاء", shopAvailable: true },
+  { id: "crystal-serpent", name: "أفعى البلور", icon: "flash", bonus: { str: 42, luck: 34, agi: 18 }, price: 470_000, requiredLevel: 58, rarity: "epic", description: "تتبع مسارات الطاقة وتزيد دقة الهجمات.", source: "متجر الرفقاء", shopAvailable: true },
+  { id: "mountain-tortoise", name: "سلحفاة الجبل", icon: "shield", bonus: { def: 76, vit: 88 }, price: 980_000, requiredLevel: 70, rarity: "epic", description: "رفيق شديد التحمل يوازن بين الدفاع والحيوية.", source: "متجر الرفقاء", shopAvailable: true },
+  { id: "silver-griffin", name: "غريفون الفضة", icon: "airplane", bonus: { str: 62, def: 48, agi: 54 }, price: 1_850_000, requiredLevel: 80, rarity: "legendary", description: "حارس جوي يجمع القوة والسرعة.", source: "متجر الرفقاء", shopAvailable: true },
+  { id: "frost-lynx", name: "وشق الجليد", icon: "snow", bonus: { agi: 82, vit: 48, luck: 42 }, price: 2_450_000, requiredLevel: 85, rarity: "legendary", description: "صياد نادر يرفع سرعة الحركة والحظ.", source: "متجر الرفقاء", shopAvailable: true },
+  { id: "owl", name: "بومة الحكمة", icon: "eye", bonus: { luck: 58, agi: 32, vit: 18 }, price: 1_350_000, requiredLevel: 70, rarity: "legendary", description: "تقرأ حركة الخصم قبل أن يبدأ هجومه.", source: "جائزة اجتياز الطابق 75 من الديماس", shopAvailable: false },
+  { id: "fairy-warden", name: "حارسة الندى", icon: "flower", bonus: { vit: 58, luck: 44, agi: 38 }, price: 2_250_000, requiredLevel: 75, rarity: "legendary", description: "حارسة قبيلة الجنيات، تحفظ عهد من أنقذها.", source: "لقاء الجنية اللاحق بعد إنقاذها في التجوال", shopAvailable: false },
+  { id: "moon-deer", name: "أيل القمر", icon: "moon", bonus: { vit: 100, def: 58, luck: 28 }, price: 2_800_000, requiredLevel: 80, rarity: "legendary", description: "روح غابية تعزز الصمود وتوازن الطاقة.", source: "جائزة اجتياز الطابق 150 من الديماس", shopAvailable: false },
+  { id: "star-drake", name: "تنين الشهب", icon: "star", bonus: { str: 125, luck: 72, agi: 35 }, price: 5_200_000, requiredLevel: 90, rarity: "mythic", description: "تنين سماوي يضاعف القوة والحدس.", source: "جائزة اجتياز الطابق 225 من الديماس", shopAvailable: false },
+  { id: "dimas-royal-drake", name: "تنين العرش الأزلي", icon: "flame", bonus: { str: 210, def: 155, vit: 185, luck: 90 }, price: 18_000_000, requiredLevel: 100, rarity: "mythic", description: "رفيق العرش الذي لا يظهر إلا بعد إتمام الديماس.", source: "الجائزة الحصرية لاجتياز الطابق 300 من الديماس", shopAvailable: false },
+  { id: "shattered-echo", name: "الــصــدى المـتـشـظّ", icon: "sparkles", bonus: { str: 320, def: 250, vit: 290, agi: 190, luck: 170 }, price: 55_000_000, requiredLevel: 120, rarity: "mythic", description: "وجود متشظٍّ لا يستجيب إلا لمن يثبت اتزانه.", source: "اجتياز اختباراته العشرة في الحدث المميز", shopAvailable: false },
 ];
 
 export const STARTER_ITEMS: EquipmentItem[] = [
@@ -79,6 +89,11 @@ export const BATTLE_ENEMIES: Record<BattleMode, EnemyBlueprint[]> = {
     { id: "rift-champion", name: "بطل الشق", title: "سيد الساحة", icon: "flash", tint: "#CC7180", hpScale: 1.18, attackScale: 1.08, defenseScale: 1.1, agility: 11 },
     { id: "abyss-giant", name: "عملاق الهاوية", title: "ثقل الظلام", icon: "skull", tint: "#BA8269", hpScale: 1.42, attackScale: 0.96, defenseScale: 1.24, agility: 6 },
     { id: "night-sorcerer", name: "ساحر الليل", title: "حاصد النور", icon: "sparkles", tint: "#9986CE", hpScale: 0.94, attackScale: 1.27, defenseScale: 0.88, agility: 16 },
+  ],
+  roaming: [
+    { id: "roam-ogre", name: "غول الممرات", title: "مفترس الطريق", icon: "skull", tint: "#B67E70", hpScale: 1.18, attackScale: 1.12, defenseScale: 0.95, agility: 8 },
+    { id: "roam-raider", name: "قاطع الطريق", title: "صياد المسافرين", icon: "swords", tint: "#C58B65", hpScale: 0.92, attackScale: 1.2, defenseScale: 0.82, agility: 16 },
+    { id: "roam-wraith", name: "طيف البراري", title: "صدى الغابة", icon: "moon", tint: "#9C91D4", hpScale: 1.04, attackScale: 1.16, defenseScale: 1.12, agility: 13 },
   ],
 };
 

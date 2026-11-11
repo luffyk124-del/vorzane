@@ -109,21 +109,23 @@ test("unequipping is blocked when the bag is full to prevent item overflow", () 
   assert.ok(blocked.equipped["سلاح"]);
 });
 
-test("players can buy high-level companions early but cannot activate them early", () => {
+test("store companions can be purchased from level 40 while event companions stay exclusive", () => {
   const state = createHeroState("اختبار", "Warrior");
-  state.gold = 500_000;
+  state.gold = 500_000_000;
+  const lowLevel = buyPet(state, "wolf");
+  assert.match(lowLevel.error ?? "", /للمستوى المطلوب/);
+  assert.equal(lowLevel.state.gold, state.gold);
 
-  const purchased = buyPet(state, "star-drake");
+  const eligible = { ...state, hero: { ...state.hero, level: 40 } };
+  const purchased = buyPet(eligible, "wolf");
   assert.equal(purchased.error, undefined);
-  assert.equal(purchased.state.gold, 50_000);
-  assert.ok(purchased.state.pets.includes("star-drake"));
-  assert.equal(purchased.state.activePet, null);
+  assert.equal(purchased.state.gold, eligible.gold - 60_000);
+  assert.ok(purchased.state.pets.includes("wolf"));
+  assert.equal(purchased.state.activePet, "wolf");
 
-  const blocked = setPet(purchased.state, "star-drake");
-  assert.equal(blocked.activePet, null);
-
-  const eligible = { ...purchased.state, hero: { ...purchased.state.hero, level: 45 } };
-  assert.equal(setPet(eligible, "star-drake").activePet, "star-drake");
+  const blocked = buyPet(purchased.state, "star-drake");
+  assert.match(blocked.error ?? "", /حصري/);
+  assert.ok(!blocked.state.pets.includes("star-drake"));
 });
 
 test("each level grants exactly one stat point, including multiple levels at once", () => {

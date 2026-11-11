@@ -1,11 +1,36 @@
 import type { GameState } from "./model.ts";
+import { PETS } from "./catalog.ts";
+import { EVENT_RELICS } from "./dungeonItems.ts";
 import { addExperience } from "./stats.ts";
 import { createItemInstance, getDungeonDrop } from "./dungeonItems.ts";
 
-export type RoamingOutcome = { gold?: number; gems?: number; xp?: number; fragments?: number; damage?: number; heal?: number; chain?: string; chainEnd?: boolean; gear?: boolean };
+export type RoamingOutcome = { gold?: number; gems?: number; xp?: number; damage?: number; heal?: number; chain?: string; chainEnd?: boolean; gear?: boolean; battle?: boolean; companion?: string; fairyRescue?: boolean; fairyReturn?: boolean; relic?: string; echoAction?: "trust" | "listen" | "challenge" };
 export type RoamingChoice = { id: string; label: string; hint: string; outcome: RoamingOutcome };
-export type RoamingEvent = { id: string; title: string; region: string; story: string; kind: "encounter" | "traveler" | "cache" | "omen" | "chain" | "merchant"; choices: RoamingChoice[]; chainId?: string; chainStage?: number };
-type RoamingMerchantItem = { id: string; name: string; description: string; price: number; currency: "gold" | "fragments"; stock: number; gear?: boolean; heal?: number; fragments?: number; gems?: number; gold?: number; xp?: number };
+export type RoamingEvent = { id: string; title: string; region: string; story: string; kind: "encounter" | "traveler" | "cache" | "omen" | "chain" | "merchant" | "special"; choices: RoamingChoice[]; chainId?: string; chainStage?: number };
+type RoamingMerchantItem = { id: string; name: string; description: string; price: number; currency: "gold"; stock: number; gear?: boolean; heal?: number; gems?: number; gold?: number; xp?: number };
+
+const COMPANION_EVENT_BANK = [
+  { petId: "wolf", kind: "encounter" as const, title: "ذئب الرماد الجريح", region: "ممرّ الصنوبر", story: "تجد ذئبًا رماديًا مصابًا قرب آثار قطيع مفترس. لا يهاجمك، لكنه يراقب يديك بحذر، وعلى عنقه أثر طوق قديم.", choices: [
+    { id: "treat", label: "عالج جرحه وأبعد المفترسات", hint: "تخاطر بوقتك لتكسب ثقته.", outcome: { xp: 220, companion: "wolf" } },
+    { id: "leave", label: "اترك له الطعام وانسحب", hint: "تساعده دون أن تقترب.", outcome: { xp: 90, gold: 70 } },
+  ] },
+  { petId: "golem", kind: "cache" as const, title: "قلب الحارس الحجري", region: "مقلع الحراس", story: "تجد تمثالًا حجريًا متشققًا يحرس بوابة منسية. في صدره نواة خامدة، وعلى الأرض نقوش إصلاح قديمة.", choices: [
+    { id: "restore", label: "أعد تثبيت النواة", hint: "تحتاج إلى الصبر وفهم النقوش.", outcome: { xp: 280, companion: "golem" } },
+    { id: "take", label: "اجمع شظايا الحجر", hint: "مكسب سريع دون إيقاظ الحارس.", outcome: { gold: 240, xp: 80 } },
+  ] },
+  { petId: "fox", kind: "traveler" as const, title: "صفقة ثعلب السراب", region: "سهول الزجاج", story: "يظهر ثعلب بلون الرمال ويحمل في فمه مفتاحًا فضيًا. يقودك إلى صندوق صغير ثم ينتظر ليرى إن كنت ستفي بوعدك.", choices: [
+    { id: "share", label: "شاركه الغنيمة", hint: "تختار الوفاء بالاتفاق.", outcome: { xp: 340, companion: "fox" } },
+    { id: "keep", label: "احتفظ بالصندوق لنفسك", hint: "تربح بعض الذهب لكن الثعلب يختفي.", outcome: { gold: 320, xp: 75 } },
+  ] },
+  { petId: "phoenix", kind: "omen" as const, title: "رماد العنقاء", region: "فوهة الفجر", story: "تجد عشًا متفحمًا تتوهج في وسطه جمرة لا تنطفئ. تحوم فوقها طيور سوداء وتنتظر أن تبتعد.", choices: [
+    { id: "shield", label: "احمِ الجمرة حتى تفقس", hint: "تتحمل حرارة المكان حتى يظهر أثرها.", outcome: { xp: 460, damage: 14, companion: "phoenix" } },
+    { id: "collect", label: "اجمع الرماد المتوهج", hint: "تحصل على مادة نادرة وتغادر.", outcome: { gold: 450, xp: 120 } },
+  ] },
+  { petId: "dragon", kind: "cache" as const, title: "بيضة تنين الياقوت", region: "كهف الياقوت", story: "بين بلورات حمراء تجد بيضة تنبض بضوء خافت. آثار المخالب حولها حديثة، ويبدو أن الحارس قد يعود في أي لحظة.", choices: [
+    { id: "guard", label: "احرس البيضة حتى تفقس", hint: "تختار حماية المخلوق بدل الاستيلاء على جوهره.", outcome: { xp: 520, damage: 18, companion: "dragon" } },
+    { id: "retreat", label: "ابتعد عن العش", hint: "تتفادى مواجهة الحارس.", outcome: { xp: 140, gold: 180 } },
+  ] },
+] satisfies { petId: string; kind: "encounter" | "cache" | "traveler" | "omen"; title: string; region: string; story: string; choices: RoamingChoice[] }[];
 
 const REGIONS = ["غابة الرماد", "سهول الزجاج", "مستنقع الهمس", "طريق الملوك", "وادي الشهب", "أطلال القمر", "مرتفعات الصقيع", "ساحل العظام", "سراديب النور", "حدود العاصفة", "بساتين الظلال", "ممرّ العمالقة"];
 const SCENES = [
@@ -60,24 +85,24 @@ const VARIANTS = ["تحت ضوء القمر", "قبل هبوب العاصفة", 
 
 const COMMON_CHOICES: RoamingChoice[][] = [
   [
-    { id: "help", label: "ساعده", hint: "تضحي ببعض الوقت والموارد لمساعدة الغريب.", outcome: { gold: 35, xp: 45, fragments: 1, chain: "lost-cartographer" } },
+    { id: "help", label: "ساعده", hint: "تضحي ببعض الوقت والموارد لمساعدة الغريب.", outcome: { gold: 35, xp: 45, chain: "lost-cartographer" } },
     { id: "trade", label: "اعرض صفقة", hint: "تحاول تحويل الموقف إلى تبادل مفيد.", outcome: { gold: 70, xp: 20 } },
     { id: "ignore", label: "تابع طريقك", hint: "تتجنب المخاطرة وتواصل التجوال.", outcome: { xp: 12 } },
   ],
   [
-    { id: "fight", label: "واجه الخطر", hint: "مكافأة أكبر مقابل مخاطرة أعلى.", outcome: { gold: 90, xp: 75, fragments: 2, damage: 12 } },
-    { id: "sneak", label: "تسلل من الخلف", hint: "تعتمد على الرشاقة والحذر.", outcome: { gold: 45, xp: 55, fragments: 1 } },
+    { id: "fight", label: "واجه الخطر", hint: "مكافأة أكبر مقابل مخاطرة أعلى.", outcome: { gold: 90, xp: 75, battle: true } },
+    { id: "sneak", label: "تسلل من الخلف", hint: "تعتمد على الرشاقة والحذر.", outcome: { gold: 45, xp: 55, } },
     { id: "retreat", label: "انسحب", hint: "تتجنب المواجهة وتحافظ على صحتك.", outcome: { xp: 10 } },
   ],
   [
-    { id: "open", label: "افتحه", hint: "قد تجد غنيمة ثمينة أو فخًا قديمًا.", outcome: { gold: 110, gems: 1, xp: 45, fragments: 2, damage: 8 } },
-    { id: "study", label: "افحص الرموز", hint: "تبحث عن طريقة آمنة لفهم الختم.", outcome: { xp: 80, fragments: 2 } },
+    { id: "open", label: "افتحه", hint: "قد تجد غنيمة ثمينة أو فخًا قديمًا.", outcome: { gold: 110, gems: 1, xp: 45, damage: 8 } },
+    { id: "study", label: "افحص الرموز", hint: "تبحث عن طريقة آمنة لفهم الختم.", outcome: { xp: 80, } },
     { id: "leave", label: "اتركه", hint: "لا تخاطر بما تملكه.", outcome: { xp: 8 } },
   ],
   [
-    { id: "touch", label: "المس الحجر", hint: "تقبل أثره المجهول.", outcome: { gems: 2, xp: 90, fragments: 2, damage: 18 } },
-    { id: "pray", label: "تأمل بهدوء", hint: "تستعيد بعض توازنك.", outcome: { heal: 25, xp: 35, fragments: 1 } },
-    { id: "break", label: "حطّمه", hint: "تحصل على ما بداخله بالقوة.", outcome: { gold: 65, fragments: 3, damage: 10 } },
+    { id: "touch", label: "المس الحجر", hint: "تقبل أثره المجهول.", outcome: { gems: 2, xp: 90, damage: 18 } },
+    { id: "pray", label: "تأمل بهدوء", hint: "تستعيد بعض توازنك.", outcome: { heal: 25, xp: 35, } },
+    { id: "break", label: "حطّمه", hint: "تحصل على ما بداخله بالقوة.", outcome: { gold: 65, damage: 10 } },
   ],
 ];
 
@@ -115,6 +140,58 @@ export const ROAMING_EVENT_PREVIEW = SCENES.flatMap((scene, sceneIndex) => VARIA
 
 export function getRoamingEvent(state: GameState, seed = Date.now()): RoamingEvent {
   const roaming = state.roaming;
+  if (roaming.echoStarted) {
+    const stage = Math.min(9, roaming.echoStage);
+    const routeOffset = roaming.echoRoute === "trust" ? 0 : roaming.echoRoute === "listen" ? 1 : roaming.echoRoute === "challenge" ? 2 : 0;
+    const expected = (["listen", "trust", "listen", "challenge", "trust", "listen", "challenge", "trust", "listen", "trust"] as const)[(stage + routeOffset) % 10];
+    const stories = [
+      "تتحرك شظية وحيدة فوق الأرض، ثم تستقر قرب أثر خطوات قديمة.",
+      "يعود الوميض من جهة مختلفة، وكأن المكان يتذكر قرارك السابق.",
+      "تسمع نغمة قصيرة تتكرر، لكن صداها يتغير كلما اقتربت.",
+      "تنفتح فجوة ضيقة بين الصخور وتظهر خلفها علامة غير مكتملة.",
+      "تتجمع الشظايا للحظة، ثم تتباعد في ثلاثة اتجاهات.",
+      "يخفت الضوء وتبقى علامة واحدة مضيئة قرب الممر.",
+      "يتردد صوت مألوف من خلف الجدار، ولا يظهر صاحبه.",
+      "تتحرك الظلال على الأرض وفق ترتيب يشبه اختياراتك السابقة.",
+      "يصبح الهواء ساكنًا، وتقترب الشظايا من بعضها للمرة الأولى.",
+      "يخفت كل شيء إلا الوميض الذي ينتظر قرارك.",
+    ];
+    return { id: `shattered-echo-${stage}`, title: "أثر الشظايا", region: REGIONS[(stage * 3 + roaming.eventsCompleted) % REGIONS.length], story: stories[stage] + (roaming.echoRoute ? " يتغير المشهد استجابةً لما اخترته سابقًا." : ""), kind: "special", choices: [
+      { id: "trust", label: "اقترب بثبات", hint: "تمنح الإشارة فرصة دون استعجال.", outcome: { xp: 180 + stage * 14, echoAction: "trust" } },
+      { id: "listen", label: "أنصت إلى النبض", hint: "تحاول قراءة الإيقاع قبل التحرك.", outcome: { xp: 170 + stage * 12, heal: 4, echoAction: "listen" } },
+      { id: "challenge", label: "واجه الاضطراب", hint: "تختبر ثباتك أمام القوة الغامضة.", outcome: { xp: 210 + stage * 15, damage: 7 + stage, echoAction: "challenge" } },
+    ] };
+  }
+  if (state.hero && state.hero.level >= 100 && !state.pets.includes("shattered-echo") && seed >= roaming.echoNextAt && Math.abs(Math.floor(seed / 1000)) % 211 === 0) {
+    return { id: "shattered-echo-awakening", title: "وميض لا يشبه سواه", region: REGIONS[Math.abs(Math.floor(seed / 13)) % REGIONS.length], story: "ينشق الصمت عن وميض متقطع. تتحرك شظايا صغيرة في الهواء كأنها تتبع إيقاعًا لا تسمعه سواك.", kind: "special", choices: [
+      { id: "trust", label: "اقترب من الوميض", hint: "تقترب دون أن تعرف ما ينتظرك.", outcome: { xp: 130, echoAction: "trust" } },
+      { id: "listen", label: "أنصت إلى النبض", hint: "تحاول فهم الإيقاع أولًا.", outcome: { xp: 150, echoAction: "listen" } },
+      { id: "challenge", label: "اختبر قوته", hint: "تواجه الظاهرة بدل الابتعاد عنها.", outcome: { xp: 160, damage: 10, echoAction: "challenge" } },
+    ] };
+  }
+  if (roaming.storyFlags.includes("fairy-rescued") && !roaming.fairyReunited && roaming.fairyNextAt > 0 && seed >= roaming.fairyNextAt && roaming.eventsCompleted >= 4) {
+    return { id: "fairy-reunion", title: "أثر يعرفك", region: "غابة الندى", story: "تظهر الجنية التي أنقذتها من قطيع الغيلان، وتدعوك إلى موطن قبيلتها. يفتح أفراد القبيلة الطريق أمامك ويقدمون لك عهدًا قديمًا.", kind: "traveler", choices: [
+      { id: "follow", label: "اتبعها إلى موطن القبيلة", hint: "تقبل دعوتها وتكمل المعروف.", outcome: { xp: 520, gold: 800, companion: "fairy-warden", fairyReturn: true } },
+      { id: "farewell", label: "ودّعها وتابع طريقك", hint: "تكتفي بالاطمئنان عليها.", outcome: { xp: 240, fairyReturn: true } },
+    ] };
+  }
+  if (!roaming.storyFlags.includes("fairy-rescued") && Math.abs(Math.floor(seed / 41)) % 37 === 0) {
+    return { id: "fairy-rescue", title: "أسيرة بين الغيلان", region: "وادي الغيلان", story: "تسمع نداءً خافتًا خلف الصخور. جنية صغيرة محاصرة قرب قطيع من الغيلان، وعلى الأرض أثر ممر ضيق يمكن فتحه دون الاقتراب من القطيع.", kind: "traveler", choices: [
+      { id: "rescue", label: "افتح الممر وأنقذها", hint: "تتدخل رغم الخطر.", outcome: { xp: 260, damage: 12, gold: 140, fairyRescue: true } },
+      { id: "distract", label: "شتّت الغيلان بالحيلة", hint: "تستخدم البيئة لصنع فرصة للهروب.", outcome: { xp: 220, gold: 90, fairyRescue: true } },
+      { id: "leave", label: "انسحب بهدوء", hint: "تتجنب المخاطرة.", outcome: { xp: 20 } },
+    ] };
+  }
+  if (state.hero && state.hero.level >= 40 && Math.abs(Math.floor(seed / 29)) % 13 === 0) {
+    const eligible = COMPANION_EVENT_BANK.filter((entry) => {
+      const pet = PETS.find((item) => item.id === entry.petId);
+      return !!pet && state.hero!.level >= pet.requiredLevel && !state.pets.includes(entry.petId);
+    });
+    if (eligible.length) {
+      const entry = eligible[Math.abs(Math.floor(seed / 7)) % eligible.length]!;
+      return { id: `companion-${entry.petId}`, title: entry.title, region: entry.region, story: entry.story, kind: entry.kind, choices: entry.choices };
+    }
+  }
   if (roaming.activeChain && roaming.eventsCompleted > 0 && roaming.eventsCompleted % 5 === 0) {
     const chain = CHAINS.find((item) => item.id === roaming.activeChain);
     if (chain) {
@@ -130,8 +207,8 @@ export function getRoamingEvent(state: GameState, seed = Date.now()): RoamingEve
         chainId: chain.id,
         chainStage: stage,
         choices: [
-          { id: "press", label: "تابع التحقيق", hint: "تقترب من نهاية الحكاية.", outcome: { gold: 100 + stage * 70, xp: 90 + stage * 60, fragments: 2 + Math.floor(stage / 2), chain: chain.id, chainEnd: stage === chain.stages.length - 1 } },
-          { id: "careful", label: "تقدم بحذر", hint: "تقلل المخاطر وتحصل على خبرة.", outcome: { gold: 45 + stage * 25, xp: 120 + stage * 45, fragments: 1 + Math.floor(stage / 3), chain: chain.id, chainEnd: stage === chain.stages.length - 1 } },
+          { id: "press", label: "تابع التحقيق", hint: "تقترب من نهاية الحكاية.", outcome: { gold: 100 + stage * 70, xp: 90 + stage * 60, chain: chain.id, chainEnd: stage === chain.stages.length - 1 } },
+          { id: "careful", label: "تقدم بحذر", hint: "تقلل المخاطر وتحصل على خبرة.", outcome: { gold: 45 + stage * 25, xp: 120 + stage * 45, chain: chain.id, chainEnd: stage === chain.stages.length - 1 } },
         ],
       };
     }
@@ -165,14 +242,47 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   const scale = 1 + Math.log2(level) * 0.13;
   const gold = Math.round((reward.gold ?? 0) * scale);
   const xp = Math.round((reward.xp ?? 0) * scale);
-  const fragments = Math.round((reward.fragments ?? 0) * (1 + Math.log2(level) * 0.045));
   const damage = Math.round((reward.damage ?? 0) * (1 + Math.log2(level) * 0.065));
   next.gold = Math.max(0, next.gold + gold);
   next.gems = Math.max(0, next.gems + (reward.gems ?? 0));
-  next.roaming.fragments += fragments;
   next.roaming.health = Math.min(next.roaming.maxHealth, Math.max(0, next.roaming.health - damage + (reward.heal ?? 0)));
   if (xp) { const trained = addExperience(next, xp); Object.assign(next, trained.state); }
   let lootName = "";
+  if (reward.companion && PETS.some((pet) => pet.id === reward.companion) && !next.pets.includes(reward.companion)) {
+    next.pets.push(reward.companion);
+    lootName = `رفيق جديد: ${PETS.find((pet) => pet.id === reward.companion)?.name ?? reward.companion}`;
+  }
+  if (reward.fairyRescue) {
+    next.roaming.storyFlags = [...new Set([...next.roaming.storyFlags, "fairy-rescued"])];
+    next.roaming.fairyNextAt = now + (4 + Math.floor(Math.random() * 8)) * 60 * 60 * 1000;
+    const pendant = EVENT_RELICS.find((item) => item.id === "event-fairy-pendant");
+    if (pendant && next.inventory.length < 500) { next.inventory.unshift(createItemInstance(pendant, `fairy-${now}`)); lootName = pendant.name; }
+  }
+  if (reward.fairyReturn) next.roaming.fairyReunited = true;
+  if (reward.echoAction) {
+    const stage = next.roaming.echoStage;
+    const routeOffset = next.roaming.echoRoute === "trust" ? 0 : next.roaming.echoRoute === "listen" ? 1 : next.roaming.echoRoute === "challenge" ? 2 : 0;
+    const expected = (["listen", "trust", "listen", "challenge", "trust", "listen", "challenge", "trust", "listen", "trust"] as const)[(stage + routeOffset) % 10];
+    if (reward.echoAction === expected) {
+      next.roaming.echoStarted = true;
+      next.roaming.echoStage = stage + 1;
+      next.roaming.echoRoute = reward.echoAction;
+      if (next.roaming.echoStage >= 10) {
+        if (!next.pets.includes("shattered-echo")) next.pets.push("shattered-echo");
+        next.roaming.echoStarted = false; next.roaming.echoStage = 0; next.roaming.echoFailures = 0; next.roaming.echoRoute = null;
+        next.roaming.echoNextAt = now + 365 * 24 * 60 * 60 * 1000;
+        lootName = "الــصــدى المـتـشـظّ";
+      }
+    } else {
+      next.roaming.echoFailures += 1; next.roaming.echoStarted = false; next.roaming.echoStage = 0; next.roaming.echoRoute = null;
+      next.roaming.echoNextAt = now + (next.roaming.echoFailures >= 2 ? 30 : 3) * 24 * 60 * 60 * 1000;
+    }
+  }
+  if (reward.relic) {
+    const relic = EVENT_RELICS.find((item) => item.id === reward.relic);
+    if (relic && next.inventory.length < 500) { next.inventory.unshift(createItemInstance(relic, `event-${now}`)); lootName = relic.name; }
+  }
+
   const lootChance = Math.min(0.28, 0.055 + Math.log2(level) * 0.025 + Math.min(0.07, (next.hero?.stats.luck ?? 0) * 0.001));
   if ((reward.gear || (gold > 0 && choice.id !== "ignore" && choice.id !== "retreat" && Math.random() < lootChance)) && next.inventory.length < 500) {
     const loot = createItemInstance(getDungeonDrop(0, level), `roam-${now}`);
@@ -181,7 +291,8 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   }
   next.roaming.eventsCompleted += 1;
   next.roaming.lastEventAt = now;
-  next.roaming.eventsSeen = [...next.roaming.eventsSeen.filter((id) => id !== event.id), event.id].slice(-500);
+  next.roaming.healthUpdatedAt = now;
+  if (!event.id.startsWith("companion-") || reward.companion) next.roaming.eventsSeen = [...next.roaming.eventsSeen.filter((id) => id !== event.id), event.id].slice(-500);
   if (event.chainId && reward.chainEnd) {
     next.roaming.activeChain = null;
     next.roaming.chainStage = 0;
@@ -192,15 +303,14 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
     next.roaming.chainRoute = ["careful", "study", "sneak", "pray", "help", "trade"].includes(choice.id) ? "cautious" : "bold";
   }
   if (next.roaming.health <= 0) {
-    next.roaming.health = Math.max(1, Math.floor(next.roaming.maxHealth * 0.35));
+    next.roaming.health = 0;
     next.gold = Math.max(0, next.gold - 25);
-    return { state: next, message: "أُنهكت في الطريق؛ عدت إلى نقطة آمنة وفقدت 25 ذهبًا. استعدت جزءًا من صحتك." };
+    return { state: next, message: "أُنهكت في الطريق. توقفت رحلتك حتى تستعيد 20 نقطة صحة على الأقل." };
   }
   const rewards = [
     gold ? `+${gold} ذهب` : "",
     reward.gems ? `+${reward.gems} جوهرة` : "",
     xp ? `+${xp} خبرة` : "",
-    fragments ? `+${fragments} قطعة أثرية` : "",
     reward.heal ? `استعدت ${reward.heal} صحة` : "",
     damage ? `تضررت ${damage} صحة` : "",
     lootName ? `غنيمة: ${lootName}` : "",
@@ -216,8 +326,7 @@ export function getTravellingMerchant(state: GameState, now = Date.now()): Roami
   return [
     { id: "merchant-gear", name: sample.name, description: `${sample.slot} • ${sample.rarity} • يتطلب مستوى ${sample.requiredLevel ?? 1}`, price: Math.max(80, Math.round(sample.price * scale * 0.72)), currency: "gold" as const, gear: true, stock: 1 },
     { id: "healing-tonic", name: "إكسير المسافر", description: "يعيد 45 نقطة من صحتك في التجوال.", price: Math.round(90 * scale), currency: "gold" as const, heal: 45, stock: 1 + (cycle % 2) },
-    { id: "fragment-pouch", name: "كيس القطع الأثرية", description: "ثلاث قطع من مخلفات الأطلال.", price: Math.round(180 * scale), currency: "gold" as const, fragments: 3, stock: 1 + ((cycle + 1) % 2) },
-    { id: "mystery-cache", name: "صندوق الأسرار", description: "ذهب وخبرة من مخزون القافلة.", price: Math.round(5 * scale), currency: "fragments" as const, gold: Math.round(220 * scale), xp: Math.round(180 * scale), fragments: 1, stock: 1 },
+    { id: "mystery-cache", name: "صندوق الأسرار", description: "ذهب وخبرة من مخزون القافلة.", price: Math.round(260 * scale), currency: "gold" as const, gold: Math.round(220 * scale), xp: Math.round(180 * scale), stock: 1 },
   ];
 }
 export function buyMerchantItem(state: GameState, itemId: string) {
@@ -225,16 +334,23 @@ export function buyMerchantItem(state: GameState, itemId: string) {
   if (!item) return { state, error: "هذا المنتج غير متاح." };
   if (!state.hero) return { state, error: "أنشئ شخصيتك أولًا." };
   if (item.currency === "gold" && state.gold < item.price) return { state, error: "لا تملك ذهبًا كافيًا." };
-  if (item.currency === "fragments" && state.roaming.fragments < item.price) return { state, error: "لا تملك قطعًا كافية." };
   if (item.gear && state.inventory.length >= 500) return { state, error: "حقيبتك ممتلئة." };
   const next = JSON.parse(JSON.stringify(state)) as GameState;
   if (item.currency === "gold") next.gold -= item.price;
-  else next.roaming.fragments -= item.price;
   if (item.gear) next.inventory.unshift(createItemInstance(getDungeonDrop(0, next.hero?.level ?? 1, () => 0.37), `merchant-${Date.now()}`));
-  next.roaming.fragments += item.gear ? 0 : item.fragments ?? 0;
   next.gems += item.gems ?? 0;
   next.gold += item.gold ?? 0;
   if (item.heal) next.roaming.health = Math.min(next.roaming.maxHealth, next.roaming.health + item.heal);
   if (item.xp && next.hero) Object.assign(next, addExperience(next, item.xp).state);
   return { state: next };
+}
+
+
+/** Regenerate one roaming health point for each full minute elapsed. */
+export function refreshRoamingHealth(state: GameState, now = Date.now()): GameState {
+  const last = state.roaming.healthUpdatedAt || now;
+  const minutes = Math.floor(Math.max(0, now - last) / 60_000);
+  if (!minutes) return state;
+  const health = Math.min(state.roaming.maxHealth, state.roaming.health + minutes);
+  return { ...state, roaming: { ...state.roaming, health, healthUpdatedAt: last + minutes * 60_000 } };
 }

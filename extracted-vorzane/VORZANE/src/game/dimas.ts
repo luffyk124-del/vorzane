@@ -5,24 +5,24 @@ import { createItemInstance, getDungeonDrop } from "./dungeonItems.ts";
 export type DimasFloor = {
   floor: number; name: string; title: string; requiredPower: number; gold: number; xp: number;
   milestone: boolean;
-  reward?: { kind: "weapon" | "companion" | "gems" | "fragments"; name: string; amount?: number };
+  reward?: { kind: "weapon" | "companion" | "gems"; name: string; amount?: number };
 };
 export type DimasChoice = { id: string; label: string; hint: string; gold?: number; xp?: number; damage?: number; heal?: number; gear?: boolean; };
 export type DimasEvent = {
   id: string; kind: "encounter" | "cache" | "traveler" | "merchant" | "omen";
   title: string; region: string; story: string; choices: DimasChoice[];
 };
-export type DimasMerchantItem = { id: string; name: string; description: string; price: number; kind: "gear" | "tonic" | "fragments"; };
+export type DimasMerchantItem = { id: string; name: string; description: string; price: number; kind: "gear" | "tonic" | "gold"; };
 
 const MILESTONES: Record<number, DimasFloor["reward"]> = {
   10: { kind: "gems", name: "جواهر الديماس", amount: 10 },
-  25: { kind: "fragments", name: "قطع أثرية", amount: 12 },
+  25: { kind: "weapon", name: "درع ختم الديماس" },
   50: { kind: "weapon", name: "نصل حارس الديماس" },
   75: { kind: "companion", name: "بومة الحكمة" },
   100: { kind: "weapon", name: "رمح العرش المكسور" },
   125: { kind: "gems", name: "جواهر الديماس", amount: 35 },
   150: { kind: "companion", name: "أيل القمر" },
-  175: { kind: "fragments", name: "قطع أثرية", amount: 60 },
+  175: { kind: "weapon", name: "قلادة أصداء الديماس" },
   200: { kind: "weapon", name: "سيف الشفق الأبدي" },
   225: { kind: "companion", name: "تنين الشهب" },
   250: { kind: "weapon", name: "قاطع النجوم الأسطوري" },
@@ -39,9 +39,9 @@ export function getDimasFloor(floor: number, level = 1): DimasFloor {
   return {
     floor: safe, name: FLOOR_NAMES[(safe - 1) % FLOOR_NAMES.length],
     title: boss ? `حارس الطابق ${safe}` : `اختبار الطابق ${safe}`,
-    requiredPower: Math.round(38 + safe * 8.5 + Math.pow(safe, 1.18) * 1.4),
-    gold: Math.round((70 + safe * 48 + Math.floor(safe * safe * 0.35)) * levelFactor),
-    xp: Math.round((45 + safe * 34 + Math.floor(safe * safe * 0.22)) * levelFactor),
+    requiredPower: Math.round(150 + (safe - 1) * 24 + (Math.pow(safe, 1.25) - 1) * 2.2),
+    gold: Math.round((350 + safe * 130 + Math.floor(safe * safe * 1.8)) * levelFactor),
+    xp: Math.round((220 + safe * 95 + Math.floor(safe * safe * 1.1)) * levelFactor),
     milestone: !!milestoneReward, ...(milestoneReward ? { reward: milestoneReward } : {}),
   };
 }
@@ -73,7 +73,6 @@ export function clearDimasFloor(state: GameState, floor: number): { state: GameS
 
   if (reward.reward) {
     if (reward.reward.kind === "gems") next.gems += reward.reward.amount ?? 0;
-    if (reward.reward.kind === "fragments") next.roaming.fragments += reward.reward.amount ?? 0;
     if (reward.reward.kind === "weapon") {
       const item = rareWeapon(floor, reward.reward.name, next.hero?.level ?? 1);
       if (next.inventory.length < 500) next.inventory.unshift(item);
@@ -135,7 +134,7 @@ export function getDimasMerchantStock(level: number, floor: number, seed = Date.
   return [
     { id: "dimas-gear", name: sample.name, description: `${sample.slot} • ${sample.rarity} • يتطلب مستوى ${sample.requiredLevel ?? 1}`, price: Math.max(80, Math.round(sample.price * factor * 0.72)), kind: "gear" },
     { id: "dimas-tonic", name: "إكسير الديماس", description: "استعادة صحية بعد المواجهات.", price: Math.round(90 * factor), kind: "tonic" },
-    { id: "dimas-fragments", name: "حزمة القطع الأثرية", description: "مواد نادرة من مخازن البرج.", price: Math.round(140 * factor), kind: "fragments" },
+    { id: "dimas-supply", name: "صندوق إمداد الحراس", description: "ذهب إضافي من مخازن البرج.", price: Math.round(180 * factor), kind: "gold" },
   ];
 }
 export function buyDimasMerchantItem(state: GameState, floor: number, itemId: string, seed = Date.now()): { state: GameState; error?: string } {
@@ -153,7 +152,7 @@ export function buyDimasMerchantItem(state: GameState, floor: number, itemId: st
   } else if (item.kind === "tonic") {
     next.roaming.health = Math.min(next.roaming.maxHealth, next.roaming.health + 35);
   } else {
-    next.roaming.fragments += 3;
+    next.gold += Math.round(item.price * 0.8);
   }
   return { state: next };
 }

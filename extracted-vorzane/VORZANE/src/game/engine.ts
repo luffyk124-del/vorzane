@@ -175,6 +175,26 @@ export function equipItem(state: GameState, itemId: string): GameState {
   return { ...state, inventory: nextInventory, equipped: { ...state.equipped, [canonicalItem.slot]: canonicalItem } };
 }
 
+export function autoEquipArmor(state: GameState): GameState {
+  if (!state.hero) return state;
+  const slots = ["درع", "خوذة", "قفازات", "حذاء"];
+  let next = state;
+  const score = (item: EquipmentItem | null | undefined) => {
+    if (!item) return -1;
+    const template = findEquipmentTemplate(item) ?? item;
+    return (template.bonus.def ?? 0) * 4 + (template.bonus.vit ?? 0) * 2 + (template.bonus.agi ?? 0) * 0.5 + (template.bonus.str ?? 0) * 0.25 + (template.bonus.luck ?? 0) * 0.1;
+  };
+  for (const slot of slots) {
+    const current = next.equipped[slot];
+    const best = next.inventory.filter((item) => {
+      const template = findEquipmentTemplate(item);
+      return template?.slot === slot && next.hero!.level >= (template.requiredLevel ?? item.requiredLevel ?? 1) && next.dungeonFloor >= (template.requiredDungeonFloor ?? item.requiredDungeonFloor ?? 1);
+    }).map((item) => ({ item, value: score(item) })).sort((a, b) => b.value - a.value)[0];
+    if (best && best.value > score(current)) next = equipItem(next, best.item.id);
+  }
+  return next;
+}
+
 export function unequipItem(state: GameState, slot: string): GameState {
   const item = state.equipped[slot];
   if (!item || state.inventory.length >= 500) return state;
@@ -203,12 +223,12 @@ export function sellItem(state: GameState, itemId: string): { state: GameState; 
 export function buyPet(state: GameState, petId: string): { state: GameState; error?: string } {
   const pet = PETS.find((item) => item.id === petId);
   if (!pet) return { state, error: "الرفيق غير متاح." };
+  if (!pet.shopAvailable) return { state, error: "هذا الرفيق حصري لحدثه أو لجائزة الديماس." };
   if (!state.hero) return { state, error: "أنشئ شخصية أولًا." };
   if (state.pets.includes(petId)) return { state, error: "هذا الرفيق لديك بالفعل." };
-  if (state.pets.length >= 100) return { state, error: "وصلت إلى الحد الأقصى لعدد الرفقاء." };
-  if (state.gold < pet.price) return { state, error: "الذهب غير كافٍ." };
-  const canActivate = state.hero.level >= pet.requiredLevel;
-  return { state: { ...state, gold: state.gold - pet.price, pets: [...state.pets, petId], activePet: state.activePet ?? (canActivate ? petId : null) } };
+  if (state.hero.level < pet.requiredLevel) return { state, error: "لم تصل للمستوى المطلوب." };
+  if (state.gold < pet.price) return { state, error: "لا تملك ذهبًا كافيًا." };
+  return { state: { ...state, gold: state.gold - pet.price, pets: [...state.pets, petId], activePet: state.activePet ?? petId } };
 }
 
 export function setPet(state: GameState, petId: string | null): GameState {
