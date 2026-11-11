@@ -20,6 +20,7 @@ export default function ProfileScreen() {
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [draftAvatarId, setDraftAvatarId] = useState<ClassId | "brand">(state.profileAvatarId);
   const [notice, setNotice] = useState("");
   const hero = state.hero;
   const totals = totalStats(state);
@@ -47,7 +48,8 @@ export default function ProfileScreen() {
     setBusy(true);
     setNotice("");
     try {
-      await saveMyProfile(displayName.trim(), String(state.profileAvatarId));
+      await saveMyProfile(displayName.trim(), String(draftAvatarId));
+      update((current) => ({ ...current, profileAvatarId: draftAvatarId }));
       setEditing(false);
       setNotice("تم حفظ تعديلات ملفك الشخصي.");
     } catch (error) {
@@ -77,15 +79,15 @@ export default function ProfileScreen() {
       </View> : null}
     </Card>
 
-    <AppButton label={editing ? "إلغاء التعديل" : "تعديل الملف الشخصي"} icon={editing ? "close-outline" : "create-outline"} variant="secondary" onPress={() => setEditing((value) => !value)} disabled={busy} />
+    <AppButton label={editing ? "إلغاء التعديل" : "تعديل الملف الشخصي"} icon={editing ? "close-outline" : "create-outline"} variant="secondary" onPress={() => { if (editing) { setEditing(false); setDraftAvatarId(state.profileAvatarId); } else { setDraftAvatarId(state.profileAvatarId); setEditing(true); } }} disabled={busy} />
     {editing ? <>
     <SectionTitle title="صورة الملف الشخصي" icon="image-outline" />
     <Card style={styles.avatarPanel}>
       <Txt muted style={styles.hint}>اختر صورة الملف هنا؛ الشخصية الأساسية والفئة لا تتغيران.</Txt>
       <View style={styles.avatarChoices}>
         {(["brand", "Warrior", "Mage", "Assassin", "Archer"] as const).map((avatar) => {
-          const selected = state.profileAvatarId === avatar;
-          return <Pressable key={avatar} accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={() => update((current) => ({ ...current, profileAvatarId: avatar }))} style={[styles.avatarChoice, selected && styles.avatarChoiceSelected]}>
+          const selected = draftAvatarId === avatar;
+          return <Pressable key={avatar} accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={() => setDraftAvatarId(avatar)} style={[styles.avatarChoice, selected && styles.avatarChoiceSelected]}>
             <ProfileAvatar avatarId={avatar} size={48} />
             <Txt style={styles.avatarLabel}>{avatar === "brand" ? "الختم" : CLASS_NAMES[avatar]}</Txt>
             {selected ? <Icon name="checkmark-circle" color={palette.gold} size={16} /> : null}
