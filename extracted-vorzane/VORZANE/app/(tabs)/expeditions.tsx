@@ -11,7 +11,7 @@ export default function RoamingScreen() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [merchantBought, setMerchantBought] = useState<string[]>([]);
-  const merchant = useMemo(() => getTravellingMerchant(state), [state.roaming.eventsCompleted, state.gold, state.roaming.fragments]);
+  const merchant = useMemo(() => getTravellingMerchant(state), [state.roaming.eventsCompleted, state.gold, state.roaming.fragments, state.hero?.level]);
   const explore = () => {
     if (!state.hero) { setNotice("أنشئ شخصيتك أولًا."); return; }
     if (state.roaming.health <= 0) { setNotice("تحتاج إلى استعادة صحتك قبل مواصلة التجوال."); return; }
@@ -30,9 +30,10 @@ export default function RoamingScreen() {
   };
   const buy = (itemId: string) => {
     const result = buyMerchantItem(state, itemId);
-    if (result.error) { setNotice(result.error); return; }
+    if (result.error) { setNotice(result.error); return false; }
     update(() => result.state);
-    setNotice("تمت الصفقة. أضيفت المكافأة إلى تقدمك.");
+    setNotice("تمت الصفقة. أضيفت المكافأة إلى ممتلكاتك.");
+    return true;
   };
 
   return <AppScreen>
@@ -71,7 +72,7 @@ export default function RoamingScreen() {
             <Txt muted style={styles.small}>{item.description}</Txt>
             <Txt style={styles.price}>{item.price.toLocaleString("en-US")} {item.currency === "gold" ? "ذهب" : "قطعة"}</Txt>
           </View>
-          <AppButton label={merchantBought.includes(item.id) ? "تم الشراء" : "شراء"} icon="cart-outline" small variant="secondary" disabled={merchantBought.includes(item.id)} onPress={() => { buy(item.id); setMerchantBought((items) => [...items, item.id]); }} />
+          <AppButton label={merchantBought.includes(item.id) ? "تم الشراء" : "شراء"} icon="cart-outline" small variant="secondary" disabled={merchantBought.includes(item.id)} onPress={() => { if (buy(item.id)) setMerchantBought((items) => [...items, item.id]); }} />
         </View>)}
       </Card> : null}
       <SectionTitle title="ماذا ستفعل؟" icon="git-branch-outline" />
