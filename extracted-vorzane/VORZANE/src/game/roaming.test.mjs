@@ -84,7 +84,7 @@ test("active roaming story chapters wait for random intervening encounters", () 
 
   const result = resolveRoamingChoice(state, event, "press", Date.UTC(2026, 10, 11));
   assert.equal(result.state.roaming.chainStage, 1);
-  assert.match(result.message, /علامة على جذع قديم/);
+  assert.match(result.message, /ورقة مطوية/);
   assert.equal(result.state.roaming.chainNextAtEvent >= result.state.roaming.eventsCompleted + 2, true);
   assert.match(result.message, /الدفتر|العلامة/);
   assert.doesNotMatch(result.message, /في حكاية|نفذت|الخطوة التالية:/);
@@ -123,7 +123,8 @@ test("story-chain chapters have context-specific actions and no generic route sl
   const first = getRoamingEvent(state, Date.UTC(2026, 10, 11) + 13);
   assert.deepEqual(first.choices.map((choice) => choice.label), ["اقرأ دفتر الملاح", "اتبع العلامة على الخريطة"]);
   const firstResult = resolveRoamingChoice(state, first, "press", Date.UTC(2026, 10, 11));
-  const second = getRoamingEvent(firstResult.state, Date.UTC(2026, 10, 11) + 1);
+  const delayedState = { ...firstResult.state, roaming: { ...firstResult.state.roaming, eventsCompleted: firstResult.state.roaming.chainNextAtEvent } };
+  const second = getRoamingEvent(delayedState, Date.UTC(2026, 10, 11) + 13);
   assert.deepEqual(second.choices.map((choice) => choice.label), ["افحص النقش على الجذع", "قارن اتجاه الظلال"]);
   assert.notDeepEqual(first.choices.map((choice) => choice.label), second.choices.map((choice) => choice.label));
   assert.doesNotMatch(second.story, /مسار المواجهة|اختبارات أشد وغنائم أعلى/);
