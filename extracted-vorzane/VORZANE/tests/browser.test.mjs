@@ -380,8 +380,8 @@ test("primary game navigation stays visible and switches between core screens", 
   assert.equal(await navigation.getByRole("button").count(), 6, "the primary navigation should expose six core destinations, including the separate Dimas arena");
   await navigation.getByRole("button", { name: "الديماس" }).click();
   await page.waitForURL((url) => url.pathname.endsWith("/dimas"), { timeout: 10_000 });
-  await page.getByText("300", { exact: false }).first().waitFor({ timeout: 10_000 });
-  const journeys = navigation.getByRole("button", { name: "الرحلات" });
+  await page.getByText("درج المجد", { exact: true }).waitFor({ timeout: 10_000 });
+  const journeys = navigation.getByRole("button", { name: "التجوال" });
   await journeys.click();
   await page.waitForURL((url) => url.pathname.endsWith("/expeditions"), { timeout: 10_000 });
   await page.getByText("التجوال", { exact: true }).waitFor({ timeout: 10_000 });
