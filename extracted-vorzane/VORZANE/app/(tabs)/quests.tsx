@@ -194,7 +194,7 @@ export default function QuestsScreen() {
     })}
 
     <Card style={styles.summary}>
-      <View style={styles.summaryTop}><Icon name="scroll" color={palette.gold} size={23} /><Txt style={styles.summaryTitle}>لوحة التكليفات</Txt></View>
+      <View style={styles.summaryTop}><Icon name="book-outline" color={palette.gold} size={23} /><Txt style={styles.summaryTitle}>لوحة التكليفات</Txt></View>
       <View style={styles.summaryStats}>
         <View style={styles.stat}><Txt style={styles.statValue}>{LONG_QUESTS.length}</Txt><Txt muted style={styles.statLabel}>مهمة متنوعة</Txt></View>
         <View style={styles.stat}><Txt style={styles.statValue}>{readyCount}</Txt><Txt muted style={styles.statLabel}>جاهزة للاستلام</Txt></View>
