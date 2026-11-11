@@ -466,7 +466,7 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
     ? reward.chainEnd
       ? chainEndings[event.chainId] ?? "تكتمل الحكاية أخيرًا، وتتضح لك حقيقة العلامات التي قادتك منذ البداية."
       : redOrchardRootResult ?? redOrchardFlowerResult ?? chainContinuations[event.chainId]?.[choiceId === "press" ? 0 : 1] ?? "تتكشف أمامك علامة جديدة، وتفهم من تفاصيلها شيئًا لم يكن واضحًا من قبل."
-    : sceneResult ?? "يهدأ المكان من حولك، وتترك خطوتك أثرًا في هذا اللقاء قبل أن تواصل الطريق.";
+    : sceneResult ?? `تختار «${choice.label}»، ويهدأ المكان من حولك وتترك خطوتك أثرًا في هذا اللقاء قبل أن تواصل الطريق.`;
   return { state: next, message: storyResult, rewards: rewards || "لم تحصل على مكافآت في هذا الاختيار." };
 }
 
