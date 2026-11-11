@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter } from "./engine.ts";
 import { createFreshState, normalizeGameState } from "./model.ts";
+import { buyRoamingHealthRefill } from "./roaming.ts";
 
 test("quest rewards are one-time and require completed progress", () => {
   const state = createHeroState("اختبار", "Warrior");
@@ -325,4 +326,41 @@ test("weekly and seasonal mission progress uses period baselines", () => {
 
   const nextMonth = ensureMissionPeriods(state, Date.UTC(2026, 1, 1, 12));
   assert.equal(getRecurringMissions(nextMonth, "season", Date.UTC(2026, 1, 1, 12)).find((mission) => mission.id === "season-wins")?.progress, 0);
+});
+
+
+test("roaming gem refills restore health and enforce a ten-purchase daily cap", () => {
+  const now = Date.UTC(2026, 10, 11, 12, 0, 0);
+  const state = createHeroState("اختبار التجوال", "Warrior");
+  state.gems = 250;
+  state.roaming.health = 0;
+  state.roaming.healthUpdatedAt = now;
+  state.roaming.gemRefillDate = new Date(now).toISOString().slice(0, 10);
+  state.roaming.gemRefillsUsed = 0;
+
+  let current = state;
+  for (let index = 0; index < 10; index += 1) {
+    const result = buyRoamingHealthRefill(current, now + index);
+    assert.equal(result.error, undefined);
+    assert.equal(result.restored, 20);
+    current = result.state;
+  }
+
+  assert.equal(current.roaming.health, 100);
+  assert.equal(current.gems, 50);
+  assert.equal(current.roaming.gemRefillsUsed, 10);
+  const capped = buyRoamingHealthRefill({ ...current, roaming: { ...current.roaming, health: 0 } }, now + 20);
+  assert.equal(capped.error, "وصلت إلى الحد اليومي: 10 تعبئات.");
+  assert.equal(capped.state.gems, 50);
+});
+
+test("roaming gem refill rejects insufficient gems and full health", () => {
+  const now = Date.UTC(2026, 10, 11, 12, 0, 0);
+  const state = createHeroState("اختبار التجوال", "Warrior");
+  state.gems = 19;
+  state.roaming.health = 10;
+  state.roaming.gemRefillDate = new Date(now).toISOString().slice(0, 10);
+  assert.equal(buyRoamingHealthRefill(state, now).error, "لا تملك 20 جوهرة كافية.");
+  state.roaming.health = state.roaming.maxHealth;
+  assert.equal(buyRoamingHealthRefill(state, now).error, "صحتك مكتملة بالفعل.");
 });
