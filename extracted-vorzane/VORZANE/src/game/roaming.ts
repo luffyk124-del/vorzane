@@ -386,7 +386,6 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   const sceneIndex = event.id.startsWith("roam-") ? Number(event.id.split("-")[1]) : -1;
   const choiceIndex = event.choices.findIndex((item) => item.id === choiceId);
   const sceneResult = sceneIndex >= 0 ? SCENE_RESULTS[sceneIndex]?.[choiceIndex] : undefined;
-  const chainStage = event.chainStage ?? 0;
   const chainContinuations: Record<string, string[]> = {
     "lost-cartographer": ["تفتح الدفتر فتنساب منه ورقة مطوية، وعلى حافتها رسم لشجرة تحمل العلامة نفسها. ترفع عينيك نحو الغابة وتدرك أن الطريق لم ينتهِ بعد.", "تتبع الظلال حتى تتلاقى عند صخرة ملساء؛ تحتها أثر قديم يشبه توقيع الملاح، فتحتفظ بمكانه في ذاكرتك."],
     "black-sail": ["تهب نسمة بحرية فتتحرك الراية، ويسقط من طياتها ختم نحاسي عليه رمز السفينة المفقودة.", "تزيل الملح عن الزجاجة فتظهر كتابة باهتة، وتكشف كلماتها عن سر لم يكن واضحًا من قبل."],
