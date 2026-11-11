@@ -72,7 +72,7 @@ export function AppScreen({ children, scroll = true, contentStyle, safe = true }
           key={item.href}
           accessibilityRole="button"
           accessibilityLabel={item.label}
-          accessibilityState={{ selected: active }}
+          aria-current={active ? "page" : undefined}
           onPress={() => { if (!active) router.push(item.href); }}
           style={[styles.bottomNavItem, active && styles.bottomNavItemActive]}
         >
