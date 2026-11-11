@@ -322,7 +322,7 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
     : event.kind === "encounter" && (gold > 0 || lootName)
       ? "هدأ المكان بعد المواجهة. تفقدت ما تركه خصمك، وجمعت ما استطعت حمله قبل أن تواصل رحلتك."
       : "";
-  return { state: next, message: [continuation, rewards || "تابعت طريقك دون غنيمة."].filter(Boolean).join("\\n\\n") };
+  return { state: next, message: [continuation, rewards || "تابعت طريقك دون غنيمة."].filter(Boolean).join("\n\n") };
 }
 
 export function getTravellingMerchant(state: GameState, now = Date.now()): RoamingMerchantItem[] {
