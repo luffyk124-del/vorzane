@@ -33,8 +33,8 @@ export default function ProfileScreen() {
       if (!active) return;
       if (profile) {
         setDisplayName(profile.display_name);
-        if (["brand", "Warrior", "Mage", "Assassin", "Archer"].includes(profile.avatar_id)) {
-          update((current) => ({ ...current, profileAvatarId: profile.avatar_id as ClassId | "brand" }));
+        if (["brand", "Warrior", "Mage", "Assassin", "Archer", "golem"].includes(profile.avatar_id)) {
+          update((current) => ({ ...current, profileAvatarId: profile.avatar_id as ProfileAvatarId }));
         }
       }
       else if (hero?.name) setDisplayName(hero.name);
