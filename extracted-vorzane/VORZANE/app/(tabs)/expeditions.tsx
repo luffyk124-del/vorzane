@@ -15,7 +15,6 @@ export default function RoamingScreen() {
   const [merchantBought, setMerchantBought] = useState<string[]>([]);
   const [eventResult, setEventResult] = useState("");
   const [eventRewards, setEventRewards] = useState("");
-  const [nextChainEvent, setNextChainEvent] = useState<RoamingEvent | null>(null);
   const [battleSequence, setBattleSequence] = useState<BattleSequence | null>(null);
   const [clock, setClock] = useState(Date.now());
   useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer); }, []);
@@ -29,7 +28,6 @@ export default function RoamingScreen() {
     setNotice("");
     setEventResult("");
     setEventRewards("");
-    setNextChainEvent(null);
   };
   const choose = (choiceId: string) => {
     if (!event || busy) return;
@@ -41,7 +39,6 @@ export default function RoamingScreen() {
     setNotice("");
     setEventResult(result.message);
     setEventRewards(result.rewards);
-    setNextChainEvent(result.state.roaming.activeChain ? getRoamingEvent(result.state, Date.now() + result.state.roaming.eventsCompleted * 97) : null);
     setEvent(null);
     setBusy(false);
   };
@@ -71,7 +68,7 @@ export default function RoamingScreen() {
         <Pill label={`${state.gold.toLocaleString("en-US")} ذهب`} icon="logo-usd" tone="muted" />
         <Pill label={`${state.gems.toLocaleString("en-US")} جوهرة`} icon="diamond" tone="jade" />
       </View>
-      <AppButton label={event ? "أكمل الحدث الحالي" : eventResult ? nextChainEvent ? "تابع الحكاية" : "تابع التجوال" : "ابدأ التجوال"} icon="compass" onPress={event ? () => {} : eventResult ? () => { if (nextChainEvent) { setEvent(nextChainEvent); setNextChainEvent(null); setEventResult(""); setEventRewards(""); setNotice(""); return; } if (state.roaming.health < 20) { setNotice("انخفضت صحتك عن 20؛ لا يمكنك مواصلة السير الآن."); return; } setEventResult(""); setEventRewards(""); setNotice(""); explore(); } : explore} disabled={!!event || busy || !state.hero || (!event && !eventResult && state.roaming.health < 20)} />
+      <AppButton label={event ? "أكمل الحدث الحالي" : eventResult ? "تابع التجوال" : "ابدأ التجوال"} icon="compass" onPress={event ? () => {} : eventResult ? () => { if (state.roaming.health < 20) { setNotice("انخفضت صحتك عن 20؛ لا يمكنك مواصلة السير الآن."); return; } setEventResult(""); setEventRewards(""); setNotice(""); explore(); } : explore} disabled={!!event || busy || !state.hero || (!event && !eventResult && state.roaming.health < 20)} />
     </Card>
 
     {event ? <Card style={styles.eventCard}>
@@ -80,7 +77,7 @@ export default function RoamingScreen() {
       </View>
       <Txt style={styles.region}>{event.region}</Txt>
       <Txt style={styles.eventTitle}>{event.title}</Txt>
-      <Txt muted style={styles.eventStory}>{event.story}</Txt>
+      <View style={styles.storyPanel}><Txt style={styles.storyHeading}>الحكاية</Txt><Txt style={styles.eventStory}>{event.story}</Txt></View>
       {event.kind === "merchant" ? <Card style={styles.merchantCard}>
         <View style={styles.merchantHeader}><Icon name="storefront" color={palette.gold} size={22} /><View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={styles.merchantTitle}>بضاعة ساهر لهذا اللقاء</Txt><Txt muted style={styles.small}>هذه القافلة لن تبقى هنا طويلًا</Txt></View></View>
         {merchant.map((item) => <View key={item.id} style={styles.merchantRow}>
@@ -129,7 +126,9 @@ const styles = StyleSheet.create({
   eventTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   region: { color: palette.jade, fontSize: 11, fontWeight: "800", textAlign: "right" },
   eventTitle: { fontSize: 21, fontWeight: "900", textAlign: "right" },
-  eventStory: { fontSize: 13, lineHeight: 22, textAlign: "right" },
+  storyPanel: { padding: 12, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.035)", borderWidth: 1, borderColor: "rgba(230,199,124,0.16)", gap: 7 },
+  storyHeading: { color: palette.gold, fontSize: 12, fontWeight: "900", textAlign: "right" },
+  eventStory: { fontSize: 13, lineHeight: 23, textAlign: "right" },
   choiceButton: { marginTop: 1 },
   choiceWrap: { gap: 0 },
   resultCard: { padding: 16, gap: 9, borderColor: "rgba(98,216,195,0.3)", backgroundColor: "#14272A" },
