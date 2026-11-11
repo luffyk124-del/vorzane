@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, Meter, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, buyRoamingHealthRefill, refreshRoamingHealth, ROAMING_EVENT_COUNT, type RoamingEvent, type RoamingOutcome } from "../../src/game/roaming";
+import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, buyRoamingHealthRefill, refreshRoamingHealth, ROAMING_EVENT_COUNT, type RoamingEvent } from "../../src/game/roaming";
 import { useGame } from "../../src/contexts/GameContext";
 import { BattleArena } from "../../src/components/BattleArena";
 import { createBattleSequence, type BattleSequence, type BattleResult } from "../../src/game/engine";
@@ -14,6 +14,8 @@ export default function RoamingScreen() {
   const [busy, setBusy] = useState(false);
   const [merchantBought, setMerchantBought] = useState<string[]>([]);
   const [eventResult, setEventResult] = useState("");
+  const [eventRewards, setEventRewards] = useState("");
+  const [nextChainEvent, setNextChainEvent] = useState<RoamingEvent | null>(null);
   const [battleSequence, setBattleSequence] = useState<BattleSequence | null>(null);
   const [clock, setClock] = useState(Date.now());
   useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer); }, []);
@@ -26,16 +28,20 @@ export default function RoamingScreen() {
     setEvent(getRoamingEvent(state, Date.now() + state.roaming.eventsCompleted * 97));
     setNotice("");
     setEventResult("");
+    setEventRewards("");
+    setNextChainEvent(null);
   };
   const choose = (choiceId: string) => {
     if (!event || busy) return;
     const selected = event.choices.find((choice) => choice.id === choiceId);
-    if (selected?.outcome.battle) { const sequence = createBattleSequence(state, "roaming"); if (!sequence) { setNotice("تعذر بدء المواجهة."); return; } setBattleSequence(sequence); setEvent(null); setEventResult(""); return; }
+    if (selected?.outcome.battle) { const sequence = createBattleSequence(state, "roaming"); if (!sequence) { setNotice("تعذر بدء المواجهة."); return; } setBattleSequence(sequence); setEvent(null); setEventResult(""); setEventRewards(""); setNextChainEvent(null); return; }
     setBusy(true);
     const result = resolveRoamingChoice(state, event, choiceId);
     update(() => result.state);
-    setNotice(result.message);
+    setNotice("");
     setEventResult(result.message);
+    setEventRewards(result.rewards);
+    setNextChainEvent(result.state.roaming.activeChain ? getRoamingEvent(result.state, Date.now() + result.state.roaming.eventsCompleted * 97) : null);
     setEvent(null);
     setBusy(false);
   };
@@ -54,7 +60,7 @@ export default function RoamingScreen() {
         <View style={styles.travelIcon}><Icon name="compass" color={palette.gold} size={24} /></View>
         <View style={styles.travelText}>
           <Txt style={styles.travelTitle}>دروب VORZANE</Txt>
-          <Txt muted style={styles.travelCopy}>مكتبة تضم {ROAMING_EVENT_COUNT}+ حدثًا متنوعًا، بينها حكايات مترابطة تنكشف على عدة مراحل.</Txt>
+          <Txt muted style={styles.travelCopy}>مكتبة تضم {ROAMING_EVENT_COUNT}+ حدثًا متنوعًا في مناطق العالم.</Txt>
         </View>
       </View>
       <View style={styles.healthHeader}><Txt muted style={styles.small}>الصحة أثناء التجوال</Txt><Txt style={styles.healthValue}>{state.roaming.health} / {state.roaming.maxHealth}</Txt></View>
@@ -65,12 +71,11 @@ export default function RoamingScreen() {
         <Pill label={`${state.gold.toLocaleString("en-US")} ذهب`} icon="logo-usd" tone="muted" />
         <Pill label={`${state.gems.toLocaleString("en-US")} جوهرة`} icon="diamond" tone="jade" />
       </View>
-      <AppButton label={event ? "أكمل الحدث الحالي" : eventResult ? "تابع التجوال" : "ابدأ التجوال"} icon="compass" onPress={event ? () => {} : eventResult ? () => { if (state.roaming.health < 20) { setNotice("انخفضت صحتك عن 20؛ لا يمكنك مواصلة السير الآن."); return; } setEventResult(""); setNotice(""); explore(); } : explore} disabled={!!event || busy || !state.hero || (!event && !eventResult && state.roaming.health < 20)} />
+      <AppButton label={event ? "أكمل الحدث الحالي" : eventResult ? nextChainEvent ? "تابع الحكاية" : "تابع التجوال" : "ابدأ التجوال"} icon="compass" onPress={event ? () => {} : eventResult ? () => { if (nextChainEvent) { setEvent(nextChainEvent); setNextChainEvent(null); setEventResult(""); setEventRewards(""); setNotice(""); return; } if (state.roaming.health < 20) { setNotice("انخفضت صحتك عن 20؛ لا يمكنك مواصلة السير الآن."); return; } setEventResult(""); setEventRewards(""); setNotice(""); explore(); } : explore} disabled={!!event || busy || !state.hero || (!event && !eventResult && state.roaming.health < 20)} />
     </Card>
 
     {event ? <Card style={styles.eventCard}>
       <View style={styles.eventTop}>
-        <Pill label={event.kind === "special" ? "حدث مميز" : event.kind === "chain" ? "حلقة من حكاية طويلة" : event.kind === "encounter" ? "مواجهة" : event.kind === "traveler" ? "لقاء عابر" : event.kind === "cache" ? "اكتشاف" : event.kind === "merchant" ? "تاجر متنقل" : "حدث غامض"} tone="gold" />
         <Icon name={event.kind === "merchant" ? "storefront" : "sparkles"} size={21} color={palette.gold} />
       </View>
       <Txt style={styles.region}>{event.region}</Txt>
@@ -88,29 +93,24 @@ export default function RoamingScreen() {
         </View>)}
       </Card> : null}
       <SectionTitle title="ماذا ستفعل؟" icon="git-branch-outline" />
-      {event.choices.map((choice) => <PressChoice key={choice.id} label={choice.label} hint={choice.hint} outcome={choice.outcome} heroLevel={state.hero?.level ?? 1} onPress={() => choose(choice.id)} disabled={busy} />)}
+      {event.choices.map((choice) => <PressChoice key={choice.id} label={choice.label} onPress={() => choose(choice.id)} disabled={busy} />)}
     </Card> : null}
 
-    {battleSequence ? <BattleArena sequence={battleSequence} onBattleSettled={(result: BattleResult) => { const last = battleSequence.turns[battleSequence.turns.length - 1]; const remaining = last?.heroHP ?? 0; const health = Math.max(0, Math.round(state.roaming.maxHealth * remaining / battleSequence.heroMaxHP)); update(() => ({ ...result.state, roaming: { ...result.state.roaming, health, healthUpdatedAt: Date.now(), eventsCompleted: result.state.roaming.eventsCompleted + 1 } })); setEventResult(result.won ? "انتصرت في المواجهة وتستطيع متابعة الطريق." : "لم تنجح في المواجهة؛ تحتاج إلى استعادة صحتك قبل متابعة الطريق."); setNotice(result.won ? "انتصرت في المواجهة." : "انتهت المواجهة بهزيمتك."); }} onClose={() => setBattleSequence(null)} /> : null}
+    {eventResult ? <Card style={styles.resultCard}>
+      <Txt style={styles.resultTitle}>نتيجة اختيارك</Txt>
+      <Txt style={styles.resultStory}>{eventResult}</Txt>
+      {eventRewards ? <Txt style={styles.resultRewards}>{eventRewards}</Txt> : null}
+    </Card> : null}
+
+    {battleSequence ? <BattleArena sequence={battleSequence} onBattleSettled={(result: BattleResult) => { const last = battleSequence.turns[battleSequence.turns.length - 1]; const remaining = last?.heroHP ?? 0; const health = Math.max(0, Math.round(state.roaming.maxHealth * remaining / battleSequence.heroMaxHP)); update(() => ({ ...result.state, roaming: { ...result.state.roaming, health, healthUpdatedAt: Date.now(), eventsCompleted: result.state.roaming.eventsCompleted + 1 } })); setEventResult(result.won ? "انتصرت في المواجهة وتستطيع متابعة الطريق." : "لم تنجح في المواجهة؛ تحتاج إلى استعادة صحتك قبل متابعة الطريق."); setEventRewards(result.won ? "تم تسجيل نتيجة المواجهة." : "استعد صحتك قبل العودة إلى الطريق."); setNextChainEvent(null); setNotice(result.won ? "انتصرت في المواجهة." : "انتهت المواجهة بهزيمتك."); }} onClose={() => setBattleSequence(null)} /> : null}
     {notice ? <Card style={styles.notice}><Icon name="information-circle-outline" color={palette.jade} size={18} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
 
   </AppScreen>;
 }
 
-function PressChoice({ label, hint, outcome, heroLevel, onPress, disabled }: { label: string; hint: string; outcome: RoamingOutcome; heroLevel: number; onPress: () => void; disabled: boolean }) {
-  const scale = 1 + Math.log2(Math.max(1, heroLevel)) * 0.13;
-  const scaledGold = Math.round((outcome.gold ?? 0) * scale);
-  const scaledXp = Math.round((outcome.xp ?? 0) * scale);
-  const rewardParts = outcome.battle ? [] : [
-    scaledGold ? `+${scaledGold.toLocaleString("en-US")} ذهب` : "",
-    outcome.gems ? `+${outcome.gems} جواهر` : "",
-    scaledXp ? `+${scaledXp} خبرة` : "",
-    outcome.heal ? `+${outcome.heal} صحة` : "",
-  ].filter(Boolean);
+function PressChoice({ label, onPress, disabled }: { label: string; onPress: () => void; disabled: boolean }) {
   return <View style={styles.choiceWrap}>
     <AppButton label={label} onPress={onPress} disabled={disabled} variant="secondary" style={styles.choiceButton} />
-    <Txt muted style={styles.choiceHint}>{hint}</Txt>
-    {rewardParts.length > 0 ? <Txt style={styles.choiceRewards}>{rewardParts.join("  •  ")}</Txt> : null}
   </View>;
 }
 
@@ -131,9 +131,11 @@ const styles = StyleSheet.create({
   eventTitle: { fontSize: 21, fontWeight: "900", textAlign: "right" },
   eventStory: { fontSize: 13, lineHeight: 22, textAlign: "right" },
   choiceButton: { marginTop: 1 },
-  choiceWrap: { gap: 4 },
-  choiceHint: { fontSize: 10, lineHeight: 16, textAlign: "right" },
-  choiceRewards: { fontSize: 10, lineHeight: 16, color: palette.jade, fontWeight: "800", textAlign: "right" },
+  choiceWrap: { gap: 0 },
+  resultCard: { padding: 16, gap: 9, borderColor: "rgba(98,216,195,0.3)", backgroundColor: "#14272A" },
+  resultTitle: { fontSize: 14, fontWeight: "900", textAlign: "right", color: palette.jade },
+  resultStory: { fontSize: 13, lineHeight: 22, textAlign: "right" },
+  resultRewards: { fontSize: 12, lineHeight: 19, textAlign: "right", color: palette.gold, fontWeight: "900" },
   notice: { padding: 12, flexDirection: "row", alignItems: "center", gap: 8 },
   noticeText: { flex: 1, fontSize: 12, textAlign: "right" },
   merchantCard: { padding: 14, gap: 12, backgroundColor: "#25251F", borderColor: "rgba(230,199,124,0.28)" },

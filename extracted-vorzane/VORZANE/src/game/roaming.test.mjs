@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHeroState, getQuestProgress, getStoryChapterProgress } from "./engine.ts";
-import { buyRoamingHealthRefill, refreshRoamingHealth } from "./roaming.ts";
+import { buyRoamingHealthRefill, refreshRoamingHealth, getRoamingEvent, resolveRoamingChoice } from "./roaming.ts";
 
 test("roaming health regenerates one point per minute and respects its maximum", () => {
   const now = Date.UTC(2026, 10, 11, 12, 0, 0);
@@ -54,4 +54,38 @@ test("story and player quests now track Dimas and roaming progression", () => {
   assert.equal(getStoryChapterProgress(state, 3), 5);
   assert.equal(getQuestProgress(state, "dimas-entry"), 3);
   assert.equal(getQuestProgress(state, "roaming-path"), 5);
+});
+
+
+test("roaming choices return story and rewards separately", () => {
+  const state = createHeroState("اختبار نتيجة التجوال", "Warrior");
+  const event = {
+    id: "test-footprints",
+    title: "أثر أقدام غريب",
+    region: "غابة الرماد",
+    story: "تظهر آثار أقدام قرب صخرة.",
+    kind: "omen",
+    choices: [{ id: "follow", label: "تتبع الأثر", hint: "اختبار", outcome: { gold: 50, xp: 25 } }],
+  };
+  const result = resolveRoamingChoice(state, event, "follow", Date.UTC(2026, 10, 11));
+  assert.match(result.message, /تتبع الأثر/);
+  assert.match(result.rewards, /ذهب/);
+  assert.doesNotMatch(result.message, /ذهب|خبرة/);
+});
+
+test("active roaming story chains advance immediately to their next choice", () => {
+  const state = createHeroState("اختبار تسلسل الحكاية", "Warrior");
+  state.roaming.activeChain = "lost-cartographer";
+  state.roaming.chainStage = 0;
+  state.roaming.eventsCompleted = 1;
+  const event = getRoamingEvent(state, Date.UTC(2026, 10, 11));
+  assert.equal(event.kind, "chain");
+  assert.equal(event.chainStage, 0);
+
+  const result = resolveRoamingChoice(state, event, "press", Date.UTC(2026, 10, 11));
+  assert.equal(result.state.roaming.chainStage, 1);
+  assert.match(result.message, /آثار أقدام/);
+  const nextEvent = getRoamingEvent(result.state, Date.UTC(2026, 10, 11) + 1);
+  assert.equal(nextEvent.kind, "chain");
+  assert.equal(nextEvent.chainStage, 1);
 });
