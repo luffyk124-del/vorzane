@@ -3,6 +3,8 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { clearDimasFloor, getDimasFloor, getDimasFloors } from "../../src/game/dimas";
 import { combatStats } from "../../src/game/stats";
+import { BattleArena } from "../../src/components/BattleArena";
+import { createBattleSequence, type BattleSequence, type BattleResult } from "../../src/game/engine";
 import { useGame } from "../../src/contexts/GameContext";
 import { palette } from "../../src/theme";
 
@@ -17,20 +19,44 @@ export default function DimasScreen() {
   const { state, update } = useGame();
   const [selected, setSelected] = useState(Math.min(300, state.dimas.highestFloor + 1));
   const [notice, setNotice] = useState("");
+  const [battleSequence, setBattleSequence] = useState<BattleSequence | null>(null);
+  const [battleFloor, setBattleFloor] = useState(0);
   const heroLevel = state.hero?.level ?? 1;
   const floors = useMemo(() => getDimasFloors(heroLevel), [heroLevel]);
   const current = getDimasFloor(selected, heroLevel);
   const power = state.hero ? combatStats(state).power : 0;
   const challenge = () => {
-    const result = clearDimasFloor(state, selected);
-    if (result.error) { setNotice(result.error); return; }
-    update(() => result.state);
-    const extra = result.loot ? ` وسقط لك ${result.loot.name}.` : "";
-    setNotice(result.reward?.reward ? `اجتزت الطابق ${selected}! المكافأة الإضافية: ${milestoneLabel(result.reward.reward)}.${extra}` : `اجتزت الطابق ${selected} وحصلت على الذهب والخبرة.${extra}`);
-    setSelected(Math.min(300, result.state.dimas.highestFloor + 1));
+    if (!state.hero) { setNotice("أنشئ شخصيتك أولًا."); return; }
+    if (selected !== state.dimas.highestFloor + 1 || power < current.requiredPower) return;
+    const battleState = { ...state, tower: selected - 1 };
+    const sequence = createBattleSequence(battleState, "tower");
+    if (!sequence) { setNotice("تعذر بدء المواجهة."); return; }
+    setBattleFloor(selected);
+    setBattleSequence({
+      ...sequence,
+      id: `dimas-${selected}-${sequence.id}`,
+      modeLabel: `الديماس • الطابق ${selected}`,
+      enemy: { ...sequence.enemy, title: current.title },
+    });
+    setNotice("");
+  };
+  const settleBattle = (result: BattleResult) => {
+    if (!result.won) {
+      setNotice(`لم تجتز الطابق ${battleFloor}. يمكنك المحاولة مجددًا بعد تحسين جاهزيتك.`);
+      return;
+    }
+    const cleared = clearDimasFloor(state, battleFloor);
+    if (cleared.error) { setNotice(cleared.error); return; }
+    update(() => cleared.state);
+    const extra = cleared.loot ? ` وسقطت لك غنيمة: ${cleared.loot.name}.` : "";
+    setNotice(cleared.reward?.reward
+      ? `اجتزت الطابق ${battleFloor}! المكافأة الإضافية: ${milestoneLabel(cleared.reward.reward)}.${extra}`
+      : `اجتزت الطابق ${battleFloor} وحصلت على الذهب والخبرة.${extra}`);
+    setSelected(Math.min(300, cleared.state.dimas.highestFloor + 1));
   };
 
   return <AppScreen>
+    {battleSequence ? <BattleArena sequence={battleSequence} onBattleSettled={settleBattle} onClose={() => setBattleSequence(null)} /> : null}
     <PageTitle eyebrow="الميدان الأسطوري" title="الديماس" subtitle="300 طابق متصاعد الصعوبة. كل طابق يمنح ذهبًا وخبرة، ومحطات محددة تخفي جوائز استثنائية." trailing={<Pill label={`${state.dimas.highestFloor}/300`} icon="layers" tone="gold" />} />
     <Card style={styles.hero}>
       <View style={styles.heroTop}><Icon name="trophy" color={palette.gold} size={27} /><View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={styles.heroTitle}>درج المجد</Txt><Txt muted style={styles.small}>أعلى طابق وصلت إليه: {state.dimas.highestFloor}</Txt></View></View>

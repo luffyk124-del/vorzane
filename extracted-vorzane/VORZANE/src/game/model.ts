@@ -72,6 +72,7 @@ export type RoamingState = {
   activeChain: string | null;
   chainStage: number;
   chainRoute: "bold" | "cautious" | null;
+  chainNextAtEvent: number;
   lastEventAt: number;
   merchantRefreshAt: number;
   gemRefillDate: string;
@@ -161,7 +162,7 @@ export function createFreshState(): GameState {
       weekly: { key: missionWeekKey(), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
       season: { key: new Date().toISOString().slice(0, 7), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
     },
-    roaming: { health: 100, maxHealth: 100, fragments: 0, eventsCompleted: 0, healthUpdatedAt: Date.now(), storyFlags: [], fairyNextAt: 0, fairyReunited: false, echoStarted: false, echoStage: 0, echoFailures: 0, echoNextAt: 0, echoRoute: null, eventsSeen: [], activeChain: null, chainStage: 0, chainRoute: null, lastEventAt: 0, merchantRefreshAt: 0, gemRefillDate: new Date().toISOString().slice(0, 10), gemRefillsUsed: 0 },
+    roaming: { health: 100, maxHealth: 100, fragments: 0, eventsCompleted: 0, healthUpdatedAt: Date.now(), storyFlags: [], fairyNextAt: 0, fairyReunited: false, echoStarted: false, echoStage: 0, echoFailures: 0, echoNextAt: 0, echoRoute: null, eventsSeen: [], activeChain: null, chainStage: 0, chainRoute: null, chainNextAtEvent: 0, lastEventAt: 0, merchantRefreshAt: 0, gemRefillDate: new Date().toISOString().slice(0, 10), gemRefillsUsed: 0 },
     dimas: { highestFloor: 0, claimedMilestones: [], lastCompletedAt: 0 },
     longQuestStartedAt: Date.now(),
     claimedLongQuestIds: [],
@@ -325,6 +326,7 @@ export function normalizeGameState(value: unknown): GameState | null {
       activeChain: typeof source.roaming?.activeChain === "string" ? source.roaming.activeChain.slice(0, 80) : null,
       chainStage: finite(source.roaming?.chainStage, 0, 0, 100),
       chainRoute: source.roaming?.chainRoute === "bold" || source.roaming?.chainRoute === "cautious" ? source.roaming.chainRoute : null,
+      chainNextAtEvent: finite(source.roaming?.chainNextAtEvent, 0, 0, 1_000_000_000),
       lastEventAt: finite(source.roaming?.lastEventAt, 0, 0),
       merchantRefreshAt: finite(source.roaming?.merchantRefreshAt, 0, 0),
       gemRefillDate: typeof source.roaming?.gemRefillDate === "string" ? source.roaming.gemRefillDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
