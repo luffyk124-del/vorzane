@@ -113,7 +113,7 @@ test("store companions can be purchased from level 40 while event companions sta
   const state = createHeroState("اختبار", "Warrior");
   state.gold = 500_000_000;
   const lowLevel = buyPet(state, "wolf");
-  assert.match(lowLevel.error ?? "", /المستوى المطلوب/);
+  assert.match(lowLevel.error ?? "", /للمستوى المطلوب/);
   assert.equal(lowLevel.state.gold, state.gold);
 
   const eligible = { ...state, hero: { ...state.hero, level: 40 } };
