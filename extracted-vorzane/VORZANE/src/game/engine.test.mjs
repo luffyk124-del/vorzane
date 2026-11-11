@@ -14,7 +14,7 @@ test("quest rewards are one-time and require completed progress", () => {
   assert.equal(claimQuest(claimed, "first").gold, claimed.gold);
 });
 
-test("Ashen World campaign chapters unlock in order and pay rewards once", () => {
+test("Dimas story chapters unlock in order and pay rewards once", () => {
   const state = createHeroState("رحّالة الرماد", "Warrior");
   assert.equal(getStoryChapterProgress(state, 1), 0);
   assert.equal(canClaimStoryChapter(state, 1), false);
@@ -26,7 +26,7 @@ test("Ashen World campaign chapters unlock in order and pay rewards once", () =>
   assert.equal(first.gold, state.gold + 120);
   assert.equal(claimStoryChapter(first, 1).gold, first.gold, "a completed chapter must not pay twice");
 
-  first.dungeonFloor = 4;
+  first.dimas.highestFloor = 4;
   assert.equal(getStoryChapterProgress(first, 2), 3);
   assert.equal(canClaimStoryChapter(first, 2), true);
   assert.equal(canClaimStoryChapter(first, 3), false, "later chapters must remain locked until the previous chapter is claimed");
