@@ -214,6 +214,22 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
         list_my_friends: [],
         list_incoming_friend_requests: [],
         search_players: [{ user_id: "e2e-player-0002", display_name: "صديق تجريبي", avatar_id: "brand", friend_state: "none" }],
+        get_public_player_profile: {
+          user_id: "e2e-player-0002",
+          display_name: "صديق تجريبي",
+          avatar_id: "brand",
+          character_gender: "male",
+          hero_name: "بطل الاختبار",
+          class_name: "Warrior",
+          level: 5,
+          stats: { str: 15, def: 12, vit: 12, agi: 8, luck: 5 },
+          equipped: { weapon: { name: "سيف الاختبار", rarity: "rare" } },
+          active_pet: null,
+          wins: 12,
+          battles: 20,
+          dimas_floor: 4,
+          roaming_events: 9,
+        },
         send_friend_request: "e2e-request-0001",
       };
       if (!(rpc in responses)) {
@@ -543,4 +559,25 @@ test("character, player profile, and settings have separate responsibilities", a
   assert.equal(hasHorizontalOverflow, false, "separated screens must not overflow horizontally");
   assert.deepEqual(unexpectedRequests, []);
   await context.close();
+});
+
+
+test("public player profiles use a static web route with a query id", async () => {
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  const pageErrors = [];
+  const { unexpectedRequests } = await installSupabaseMock(page, { social: true });
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await signInWithMock(page);
+  await page.goto(`${appUrl}/player?id=e2e-player-0002`);
+  await page.getByText("ملف لاعب عام", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByText("صديق تجريبي", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByText("بطل الاختبار", { exact: true }).waitFor({ timeout: 10_000 });
+
+  const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  assert.equal(hasHorizontalOverflow, false, "public player profile must fit a narrow mobile viewport");
+  assert.deepEqual(unexpectedRequests, []);
+  assert.deepEqual(pageErrors, []);
+  await browserContext.close();
 });
