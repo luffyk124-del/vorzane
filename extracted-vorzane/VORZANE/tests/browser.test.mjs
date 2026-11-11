@@ -384,7 +384,7 @@ test("primary game navigation stays visible and switches between core screens", 
   const journeys = navigation.getByRole("button", { name: "التجوال" });
   await journeys.click();
   await page.waitForURL((url) => url.pathname.endsWith("/expeditions"), { timeout: 10_000 });
-  await page.getByText("التجوال", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByText("التجوال", { exact: true }).first().waitFor({ state: "visible", timeout: 10_000 });
   assert.match(page.url(), /expeditions/);
   await navigation.getByRole("button", { name: "المخيم" }).click();
   await page.waitForURL((url) => url.pathname.endsWith("/home"), { timeout: 10_000 });
