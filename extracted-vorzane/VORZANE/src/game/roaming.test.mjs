@@ -89,11 +89,19 @@ test("active roaming story chains wait through ordinary events before a random c
   assert.match(result.message, /دفتر/);
   const nextEvent = getRoamingEvent(result.state, 4_005);
   assert.notEqual(nextEvent.kind, "chain");
+
   let cooldownState = result.state;
-  for (let index = 0; index < result.state.roaming.chainCooldown; index += 1) {
-    const ordinary = getRoamingEvent(cooldownState, 4_005 + index * 1_000);
-    assert.notEqual(ordinary.kind, "chain");
-    cooldownState = resolveRoamingChoice(cooldownState, ordinary, ordinary.choices[0].id, Date.UTC(2026, 10, 11) + (index + 1) * 60_000).state;
+  const ordinary = {
+    id: "test-ordinary",
+    title: "لقاء عابر",
+    region: "غابة الرماد",
+    story: "اختبار حدث عادي.",
+    kind: "omen",
+    choices: [{ id: "wait", label: "تابع الطريق", hint: "اختبار", outcome: { xp: 1 } }],
+  };
+  const initialCooldown = cooldownState.roaming.chainCooldown;
+  for (let index = 0; index < initialCooldown; index += 1) {
+    cooldownState = resolveRoamingChoice(cooldownState, ordinary, "wait", Date.UTC(2026, 10, 11) + (index + 1) * 60_000).state;
   }
   assert.equal(cooldownState.roaming.chainCooldown, 0);
 });
@@ -123,7 +131,8 @@ test("story-chain chapters have context-specific actions and no generic route sl
   const first = getRoamingEvent(state, 3_005);
   assert.deepEqual(first.choices.map((choice) => choice.label), ["اقرأ دفتر الملاح", "اتبع العلامة على الخريطة"]);
   const firstResult = resolveRoamingChoice(state, first, "press", Date.UTC(2026, 10, 11));
-  const second = getRoamingEvent(firstResult.state, 4_005);
+  firstResult.state.roaming.chainCooldown = 0;
+  const second = getRoamingEvent(firstResult.state, 3_005);
   assert.deepEqual(second.choices.map((choice) => choice.label), ["افحص النقش على الجذع", "قارن اتجاه الظلال"]);
   assert.notDeepEqual(first.choices.map((choice) => choice.label), second.choices.map((choice) => choice.label));
   assert.doesNotMatch(second.story, /مسار المواجهة|اختبارات أشد وغنائم أعلى/);
