@@ -179,11 +179,13 @@ export default function GearScreen() {
          </Pressable>)}
        </View>
        {visibleShopItems.map((item) => {
-        const canAfford = state.gold >= item.price;
+        const owned = state.inventory.some((ownedItem) => findEquipmentTemplate(ownedItem)?.id === item.id)
+          || Object.values(state.equipped).some((ownedItem) => ownedItem ? findEquipmentTemplate(ownedItem)?.id === item.id : false);
+        const canPurchase = !!state.hero && !owned;
         const levelLocked = heroLevel < (item.requiredLevel ?? 1);
         return <Card key={item.id} style={styles.itemRow}>
-          <AppButton label={levelLocked ? "تفعيل" : `شراء ${item.price.toLocaleString("en-US")}`} onPress={() => levelLocked ? message("لم تصل للمستوى المطلوب.") : canAfford ? purchaseItem(item.id) : message("لا تملك ذهبًا كافيًا.")} variant={levelLocked || !canAfford ? "secondary" : "jade"} small icon="cart-outline" />
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, levelLocked && { color: palette.red }]}>المستوى المطلوب: {item.requiredLevel ?? 1}</Txt></View>
+          <AppButton label={owned ? "مملوك" : "شراء"} onPress={() => purchaseItem(item.id)} variant={owned ? "secondary" : "jade"} small icon={owned ? "checkmark-circle-outline" : "cart-outline"} disabled={!canPurchase} />
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, levelLocked && { color: palette.red }]}>المستوى المطلوب للتجهيز: {item.requiredLevel ?? 1}</Txt><Txt style={styles.shopPrice}>{item.price.toLocaleString("en-US")} ذهب</Txt></View>
           <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
         </Card>;
       })}
@@ -193,11 +195,10 @@ export default function GearScreen() {
         const owned = state.pets.includes(pet.id);
         const locked = !state.hero || heroLevel < pet.requiredLevel;
         const active = state.activePet === pet.id && !locked;
-        const canAfford = state.gold >= pet.price;
         return <Card key={pet.id} style={styles.petCard}>
           <View style={styles.petBadge}><Icon name={pet.icon as never} color={active ? palette.gold : palette.jade} size={23} /></View>
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : <Pill label={pet.rarity === "mythic" ? "خرافي" : pet.rarity === "legendary" ? "أسطوري" : pet.rarity === "epic" ? "ملحمي" : "نادر"} tone="gold" />}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, locked && { color: palette.red }]}>المستوى المطلوب: {pet.requiredLevel} • القيمة: {pet.price.toLocaleString("en-US")} ذهب</Txt><Txt muted style={styles.petDescription}>مصدر الحصول: {pet.source}</Txt></View>
-           {owned ? <AppButton label={locked ? "تفعيل" : active ? "النشط" : "تفعيل"} onPress={() => locked ? message("لم تصل للمستوى المطلوب.") : update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active} /> : pet.shopAvailable ? <AppButton label={locked ? "تفعيل" : `شراء ${pet.price.toLocaleString("en-US")}`} onPress={() => locked ? message("لم تصل للمستوى المطلوب.") : canAfford ? purchasePet(pet.id) : message("لا تملك ذهبًا كافيًا.")} variant={locked || !canAfford ? "secondary" : "jade"} small icon="cart-outline" /> : <Pill label="حصري • حدث / ديماس" tone="muted" />}
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : <Pill label={pet.rarity === "mythic" ? "خرافي" : pet.rarity === "legendary" ? "أسطوري" : pet.rarity === "epic" ? "ملحمي" : "نادر"} tone="gold" />}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, locked && { color: palette.red }]}>المستوى المطلوب: {pet.requiredLevel}</Txt><Txt style={styles.shopPrice}>{pet.price.toLocaleString("en-US")} ذهب</Txt><Txt muted style={styles.petDescription}>مصدر الحصول: {pet.source}</Txt></View>
+           {owned ? <AppButton label={active ? "النشط" : locked ? "المستوى غير كافٍ" : "تفعيل"} onPress={() => update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active || locked} /> : pet.shopAvailable ? <AppButton label="شراء" onPress={() => purchasePet(pet.id)} variant="jade" small icon="cart-outline" /> : <Pill label="حصري • حدث / ديماس" tone="muted" />}
         </Card>;
       })}
       </> : null}
@@ -246,6 +247,7 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 13, fontWeight: "900" },
   itemBonus: { fontSize: 10, lineHeight: 16, textAlign: "right" },
   requirement: { fontSize: 9, color: palette.gold, marginTop: 2, textAlign: "right" },
+  shopPrice: { fontSize: 11, color: palette.gold, fontWeight: "900", marginTop: 2, textAlign: "right" },
   emptySlot: { fontSize: 12, marginTop: 7 },
   itemRow: { padding: 12, flexDirection: "row", alignItems: "center", gap: 9 },
   empty: { padding: 20, gap: 9, alignItems: "center" },

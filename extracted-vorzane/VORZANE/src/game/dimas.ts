@@ -142,7 +142,7 @@ export function buyDimasMerchantItem(state: GameState, floor: number, itemId: st
   const stock = getDimasMerchantStock(state.hero.level, floor, seed);
   const item = stock.find((entry) => entry.id === itemId);
   if (!item) return { state, error: "انتهى عرض هذا التاجر." };
-  if (state.gold < item.price) return { state, error: "ذهبك لا يكفي لهذه الصفقة." };
+  if (state.gold < item.price) return { state, error: "لا تملك الذهب الكافي." };
   const next = JSON.parse(JSON.stringify(state)) as GameState;
   next.gold -= item.price;
   if (item.kind === "gear") {

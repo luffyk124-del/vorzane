@@ -157,7 +157,7 @@ export function buyItem(state: GameState, itemId: string): { state: GameState; e
   if (!item) return { state, error: "هذا العنصر غير متاح للشراء." };
   if (!state.hero) return { state, error: "أنشئ شخصية أولًا." };
   if (state.inventory.length >= 500) return { state, error: "حقيبتك ممتلئة؛ بع بعض القطع أولًا." };
-  if (state.gold < item.price) return { state, error: "الذهب غير كافٍ." };
+  if (state.gold < item.price) return { state, error: "لا تملك الذهب الكافي." };
   return { state: { ...state, gold: state.gold - item.price, inventory: [...state.inventory, createItemInstance(item)] } };
 }
 
@@ -226,7 +226,7 @@ export function buyPet(state: GameState, petId: string): { state: GameState; err
   if (!state.hero) return { state, error: "أنشئ شخصية أولًا." };
   if (state.pets.includes(petId)) return { state, error: "هذا الرفيق لديك بالفعل." };
   if (state.hero.level < pet.requiredLevel) return { state, error: "لم تصل للمستوى المطلوب." };
-  if (state.gold < pet.price) return { state, error: "لا تملك ذهبًا كافيًا." };
+  if (state.gold < pet.price) return { state, error: "لا تملك الذهب الكافي." };
   return { state: { ...state, gold: state.gold - pet.price, pets: [...state.pets, petId], activePet: state.activePet ?? petId } };
 }
 
