@@ -235,9 +235,13 @@ test("Sahir merchant has no dialogue choices and closes as a completed visit", (
   const event = getRoamingEvent(state, 40_000);
   assert.equal(event.kind, "merchant");
   assert.deepEqual(event.choices, []);
+  state.roaming.fragmentProgress = 1;
   const next = completeRoamingMerchantVisit(state, event, 50_000);
   assert.equal(next.roaming.eventsCompleted, state.roaming.eventsCompleted + 1);
   assert.ok(next.roaming.eventsSeen.includes(event.id));
+  assert.equal(next.roaming.fragments, 1);
+  assert.equal(next.roaming.fragmentsCollected, 1);
+  assert.equal(next.roaming.fragmentProgress, 0);
 });
 
 test("Sahir stock is randomized per visit and purchases the exact displayed gear", () => {
