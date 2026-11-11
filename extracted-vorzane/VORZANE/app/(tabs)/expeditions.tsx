@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, Meter, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, buyRoamingHealthRefill, refreshRoamingHealth, ROAMING_EVENT_COUNT, type RoamingEvent } from "../../src/game/roaming";
+import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, buyRoamingHealthRefill, refreshRoamingHealth, ROAMING_EVENT_COUNT, type RoamingEvent, type RoamingOutcome } from "../../src/game/roaming";
 import { useGame } from "../../src/contexts/GameContext";
 import { BattleArena } from "../../src/components/BattleArena";
 import { createBattleSequence, type BattleSequence, type BattleResult } from "../../src/game/engine";
@@ -88,7 +88,7 @@ export default function RoamingScreen() {
         </View>)}
       </Card> : null}
       <SectionTitle title="ماذا ستفعل؟" icon="git-branch-outline" />
-      {event.choices.map((choice) => <PressChoice key={choice.id} label={choice.label} hint={choice.hint} onPress={() => choose(choice.id)} disabled={busy} />)}
+      {event.choices.map((choice) => <PressChoice key={choice.id} label={choice.label} hint={choice.hint} outcome={choice.outcome} onPress={() => choose(choice.id)} disabled={busy} />)}
     </Card> : null}
 
     {battleSequence ? <BattleArena sequence={battleSequence} onBattleSettled={(result: BattleResult) => { const last = battleSequence.turns[battleSequence.turns.length - 1]; const remaining = last?.heroHP ?? 0; const health = Math.max(0, Math.round(state.roaming.maxHealth * remaining / battleSequence.heroMaxHP)); update(() => ({ ...result.state, roaming: { ...result.state.roaming, health, healthUpdatedAt: Date.now(), eventsCompleted: result.state.roaming.eventsCompleted + 1 } })); setEventResult(result.won ? "انتصرت في المواجهة وتستطيع متابعة الطريق." : "لم تنجح في المواجهة؛ تحتاج إلى استعادة صحتك قبل متابعة الطريق."); setNotice(result.won ? "انتصرت في المواجهة." : "انتهت المواجهة بهزيمتك."); }} onClose={() => setBattleSequence(null)} /> : null}
@@ -97,8 +97,18 @@ export default function RoamingScreen() {
   </AppScreen>;
 }
 
-function PressChoice({ label, hint, onPress, disabled }: { label: string; hint: string; onPress: () => void; disabled: boolean }) {
-  return <View style={styles.choiceWrap}><AppButton label={label} onPress={onPress} disabled={disabled} variant="secondary" style={styles.choiceButton} /><Txt muted style={styles.choiceHint}>{hint}</Txt></View>;
+function PressChoice({ label, hint, outcome, onPress, disabled }: { label: string; hint: string; outcome: RoamingOutcome; onPress: () => void; disabled: boolean }) {
+  const rewardParts = outcome.battle ? [] : [
+    outcome.gold ? `+${outcome.gold.toLocaleString("en-US")} ذهب` : "",
+    outcome.gems ? `+${outcome.gems} جواهر` : "",
+    outcome.xp ? `+${outcome.xp} خبرة` : "",
+    outcome.heal ? `+${outcome.heal} صحة` : "",
+  ].filter(Boolean);
+  return <View style={styles.choiceWrap}>
+    <AppButton label={label} onPress={onPress} disabled={disabled} variant="secondary" style={styles.choiceButton} />
+    <Txt muted style={styles.choiceHint}>{hint}</Txt>
+    {rewardParts.length > 0 ? <Txt style={styles.choiceRewards}>{rewardParts.join("  •  ")}</Txt> : null}
+  </View>;
 }
 
 const styles = StyleSheet.create({
@@ -120,6 +130,7 @@ const styles = StyleSheet.create({
   choiceButton: { marginTop: 1 },
   choiceWrap: { gap: 4 },
   choiceHint: { fontSize: 10, lineHeight: 16, textAlign: "right" },
+  choiceRewards: { fontSize: 10, lineHeight: 16, color: palette.jade, fontWeight: "800", textAlign: "right" },
   notice: { padding: 12, flexDirection: "row", alignItems: "center", gap: 8 },
   noticeText: { flex: 1, fontSize: 12, textAlign: "right" },
   merchantCard: { padding: 14, gap: 12, backgroundColor: "#25251F", borderColor: "rgba(230,199,124,0.28)" },
