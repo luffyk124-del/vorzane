@@ -12,7 +12,7 @@ export type DimasEvent = {
   id: string; kind: "encounter" | "cache" | "traveler" | "merchant" | "omen";
   title: string; region: string; story: string; choices: DimasChoice[];
 };
-export type DimasMerchantItem = { id: string; name: string; description: string; price: number; kind: "gear" | "tonic" | "fragments"; };
+export type DimasMerchantItem = { id: string; name: string; description: string; price: number; kind: "gear" | "tonic" | "gold"; };
 
 const MILESTONES: Record<number, DimasFloor["reward"]> = {
   10: { kind: "gems", name: "جواهر الديماس", amount: 10 },
@@ -152,7 +152,7 @@ export function buyDimasMerchantItem(state: GameState, floor: number, itemId: st
   } else if (item.kind === "tonic") {
     next.roaming.health = Math.min(next.roaming.maxHealth, next.roaming.health + 35);
   } else {
-    next.roaming.fragments += 3;
+    next.gold += Math.round(item.price * 0.8);
   }
   return { state: next };
 }
