@@ -96,8 +96,8 @@ export function getStoryChapterProgress(state: GameState, chapterId: number): nu
   if (!chapter) return 0;
   switch (chapter.metric) {
     case "wins": return state.wins;
-    case "dungeonFloors": return Math.max(0, state.dungeonFloor - 1);
-    case "towerFloors": return state.tower;
+    case "dimasFloor": return state.dimas.highestFloor;
+    case "roamingEvents": return state.roaming.eventsCompleted;
     case "expeditions": return state.expeditionsCompleted;
     case "level": return state.hero?.level ?? 1;
     default: return 0;
@@ -125,10 +125,9 @@ export function getQuestProgress(state: GameState, questId: string): number {
   switch (quest.metric) {
     case "wins": return state.wins;
     case "level": return state.hero?.level ?? 1;
-    case "caveWins": return state.battleWinsByMode.cave;
-    case "dungeonWins": return state.battleWinsByMode.dungeon;
-    case "towerWins": return state.battleWinsByMode.tower;
-    case "hardWins": return state.battleWinsByMode.hard;
+    case "dimasFloor": return state.dimas.highestFloor;
+    case "roamingEvents": return state.roaming.eventsCompleted;
+    case "companions": return state.pets.length;
     case "expeditions": return state.expeditionsCompleted;
     case "equipped": return Object.values(state.equipped).filter(Boolean).length;
     default: return 0;

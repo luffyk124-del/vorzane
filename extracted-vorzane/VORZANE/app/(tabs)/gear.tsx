@@ -180,10 +180,16 @@ export default function GearScreen() {
        </View>
        {visibleShopItems.map((item) => {
         const canAfford = state.gold >= item.price;
-        const levelLocked = heroLevel < (item.requiredLevel ?? 1);
+        const owned = state.inventory.some((ownedItem) => ownedItem.catalogId === item.id) || Object.values(state.equipped).some((ownedItem) => ownedItem?.catalogId === item.id);
+        const levelLocked = owned && heroLevel < (item.requiredLevel ?? 1);
+        const activate = () => {
+          if (!owned) { if (canAfford) purchaseItem(item.id); else message("لا تملك ذهبًا كافيًا."); return; }
+          if (levelLocked) { message("لم تصل للمستوى المطلوب."); return; }
+          message("هذه القطعة موجودة لديك بالفعل.");
+        };
         return <Card key={item.id} style={styles.itemRow}>
-          <AppButton label={levelLocked ? "تفعيل" : `شراء ${item.price.toLocaleString("en-US")}`} onPress={() => levelLocked ? message("لم تصل للمستوى المطلوب.") : canAfford ? purchaseItem(item.id) : message("لا تملك ذهبًا كافيًا.")} variant={levelLocked || !canAfford ? "secondary" : "jade"} small icon="cart-outline" />
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, levelLocked && { color: palette.red }]}>المستوى المطلوب: {item.requiredLevel ?? 1}</Txt></View>
+          <AppButton label={owned ? (levelLocked ? "تفعيل" : "مملوكة") : "شراء"} onPress={activate} variant={owned ? "secondary" : canAfford ? "jade" : "secondary"} small icon={owned ? "lock-closed-outline" : "cart-outline"} />
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, { color: !canAfford && !owned ? palette.red : levelLocked ? palette.red : palette.muted }]}>السعر: {item.price.toLocaleString("en-US")} ذهب • المستوى المطلوب: {item.requiredLevel ?? 1}</Txt></View>
           <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
         </Card>;
       })}
