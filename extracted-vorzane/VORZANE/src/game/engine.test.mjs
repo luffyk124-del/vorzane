@@ -28,13 +28,16 @@ test("Ashen World campaign chapters unlock in order and pay rewards once", () =>
   assert.equal(first.gold, state.gold + 120);
   assert.equal(claimStoryChapter(first, 1).gold, first.gold, "a completed chapter must not pay twice");
 
-  first.dungeonFloor = 4;
+  first.dimas.highestFloor = 3;
   assert.equal(getStoryChapterProgress(first, 2), 3);
   assert.equal(canClaimStoryChapter(first, 2), true);
   assert.equal(canClaimStoryChapter(first, 3), false, "later chapters must remain locked until the previous chapter is claimed");
   const second = claimStoryChapter(first, 2);
   assert.equal(second.story, 2);
   assert.equal(second.gold, first.gold + 240);
+  second.roaming.eventsCompleted = 3;
+  assert.equal(getStoryChapterProgress(second, 3), 3);
+  assert.equal(canClaimStoryChapter(second, 3), true);
   assert.equal(state.story, 0, "claiming story chapters must not mutate the original save");
 });
 
@@ -170,7 +173,7 @@ test("stat allocation requires a hero and respects the stat ceiling", () => {
   assert.equal(hero.hero.statPoints, 1);
 });
 
-test("winning a dungeon battle advances the floor and grants catalog loot", () => {
+test("Guard Arena victory advances its stage and grants only reduced gold and XP", () => {
   const state = createHeroState("اختبار", "Warrior");
   const battle = createBattleSequence(state, "dungeon", () => 0.01);
 
@@ -179,9 +182,10 @@ test("winning a dungeon battle advances the floor and grants catalog loot", () =
   assert.equal(state.dungeonFloor, 1);
   assert.equal(state.inventory.length, 0);
   assert.equal(battle.result.state.dungeonFloor, 2);
-  assert.equal(battle.result.state.inventory.length, 1);
-  assert.ok(battle.result.gold > 0);
-  assert.ok(battle.result.xp > 0);
+  assert.equal(battle.result.state.inventory.length, 0);
+  assert.equal(battle.result.dropped, null);
+  assert.ok(battle.result.gold > 0 && battle.result.gold <= 2);
+  assert.ok(battle.result.xp > 0 && battle.result.xp <= 14);
 });
 
 test("each hero class has a distinct passive that appears in combat", () => {
@@ -211,7 +215,7 @@ test("each hero class has a distinct passive that appears in combat", () => {
   assert.ok(warrior.turns[0].damage < mageWithSlowStart.turns[0].damage, "Warrior passive should reduce the incoming hit");
 });
 
-test("dungeon victories can yield no item when the random drop roll fails", () => {
+test("Guard Arena never drops equipment regardless of the random roll", () => {
   const state = createHeroState("اختبار", "Warrior");
   const battle = createBattleSequence(state, "dungeon", () => 0.99);
 
