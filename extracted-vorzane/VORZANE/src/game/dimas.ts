@@ -50,15 +50,10 @@ export function getDimasFloors(level = 1): DimasFloor[] {
 }
 
 function rareWeapon(floor: number, rewardName: string, level: number): EquipmentItem {
-  const rarity: Rarity = floor >= 250 ? "mythic" : floor >= 100 ? "legendary" : "epic";
-  const scale = 1 + Math.min(2.5, level * 0.025);
-  return {
-    id: `dimas-weapon-${floor}`, catalogId: `dimas-weapon-${floor}`, name: rewardName,
-    slot: "سلاح", rarity,
-    bonus: { str: Math.round((12 + floor * 1.4) * scale), agi: Math.round((6 + floor * 0.55) * scale), luck: Math.max(1, Math.floor(floor / 8)) },
-    price: floor * 1800, requiredLevel: Math.min(999, Math.max(1, Math.floor(floor / 2))),
-    requiredDungeonFloor: 1, icon: "sword",
-  };
+  // Use a real catalogue template so the reward is immediately equippable and sellable.
+  const template = getDungeonDrop(floor, level, () => 0.999999);
+  const item = createItemInstance(template, `dimas-milestone-${floor}`);
+  return { ...item, name: rewardName, bonus: { ...item.bonus } };
 }
 
 export function clearDimasFloor(state: GameState, floor: number): { state: GameState; error?: string; reward?: DimasFloor; loot?: EquipmentItem } {
