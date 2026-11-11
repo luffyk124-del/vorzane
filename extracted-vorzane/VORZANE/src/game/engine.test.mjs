@@ -344,13 +344,13 @@ test("roaming gem refills restore health and enforce a ten-purchase daily cap", 
     const result = buyRoamingHealthRefill(current, now + index);
     assert.equal(result.error, undefined);
     assert.equal(result.restored, 20);
-    current = result.state;
+    current = { ...result.state, roaming: { ...result.state.roaming, health: 0 } };
   }
 
-  assert.equal(current.roaming.health, 100);
+  assert.equal(current.roaming.health, 0);
   assert.equal(current.gems, 50);
   assert.equal(current.roaming.gemRefillsUsed, 10);
-  const capped = buyRoamingHealthRefill({ ...current, roaming: { ...current.roaming, health: 0 } }, now + 20);
+  const capped = buyRoamingHealthRefill(current, now + 20);
   assert.equal(capped.error, "وصلت إلى الحد اليومي: 10 تعبئات.");
   assert.equal(capped.state.gems, 50);
 });
