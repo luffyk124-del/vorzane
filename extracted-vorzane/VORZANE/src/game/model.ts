@@ -58,6 +58,8 @@ export type RoamingState = {
   health: number;
   maxHealth: number;
   fragments: number;
+  fragmentsCollected: number;
+  fragmentProgress: number;
   eventsCompleted: number;
   healthUpdatedAt: number;
   storyFlags: string[];
@@ -162,7 +164,7 @@ export function createFreshState(): GameState {
       weekly: { key: missionWeekKey(), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
       season: { key: new Date().toISOString().slice(0, 7), baseline: { wins: 0, expeditions: 0, level: 1 }, claimed: {} },
     },
-    roaming: { health: 100, maxHealth: 100, fragments: 0, eventsCompleted: 0, healthUpdatedAt: Date.now(), storyFlags: [], fairyNextAt: 0, fairyReunited: false, echoStarted: false, echoStage: 0, echoFailures: 0, echoNextAt: 0, echoRoute: null, eventsSeen: [], activeChain: null, chainStage: 0, chainRoute: null, chainNextAtEvent: 0, lastEventAt: 0, merchantRefreshAt: 0, gemRefillDate: new Date().toISOString().slice(0, 10), gemRefillsUsed: 0 },
+    roaming: { health: 100, maxHealth: 100, fragments: 0, fragmentsCollected: 0, fragmentProgress: 0, eventsCompleted: 0, healthUpdatedAt: Date.now(), storyFlags: [], fairyNextAt: 0, fairyReunited: false, echoStarted: false, echoStage: 0, echoFailures: 0, echoNextAt: 0, echoRoute: null, eventsSeen: [], activeChain: null, chainStage: 0, chainRoute: null, chainNextAtEvent: 0, lastEventAt: 0, merchantRefreshAt: 0, gemRefillDate: new Date().toISOString().slice(0, 10), gemRefillsUsed: 0 },
     dimas: { highestFloor: 0, claimedMilestones: [], lastCompletedAt: 0 },
     longQuestStartedAt: Date.now(),
     claimedLongQuestIds: [],
@@ -311,7 +313,9 @@ export function normalizeGameState(value: unknown): GameState | null {
     roaming: {
       health: finite(source.roaming?.health, 100, 0, 100_000),
       maxHealth: finite(source.roaming?.maxHealth, 100, 1, 100_000),
-      fragments: 0,
+      fragments: finite(source.roaming?.fragments, 0, 0, 1_000_000_000),
+      fragmentsCollected: finite(source.roaming?.fragmentsCollected, finite(source.roaming?.fragments, 0, 0, 1_000_000_000), 0, 1_000_000_000),
+      fragmentProgress: finite(source.roaming?.fragmentProgress, 0, 0, 1),
       eventsCompleted: finite(source.roaming?.eventsCompleted, 0, 0, 1_000_000_000),
       healthUpdatedAt: finite(source.roaming?.healthUpdatedAt, Date.now(), 0),
       storyFlags: Array.isArray(source.roaming?.storyFlags) ? source.roaming.storyFlags.filter((flag): flag is string => typeof flag === "string").slice(-100) : [],
