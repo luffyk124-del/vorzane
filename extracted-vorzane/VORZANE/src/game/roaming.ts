@@ -386,6 +386,7 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   const sceneIndex = event.id.startsWith("roam-") ? Number(event.id.split("-")[1]) : -1;
   const choiceIndex = event.choices.findIndex((item) => item.id === choiceId);
   const sceneResult = sceneIndex >= 0 ? SCENE_RESULTS[sceneIndex]?.[choiceIndex] : undefined;
+  const chainStage = event.chainStage ?? 0;
   const chainContinuations: Record<string, string[]> = {
     "lost-cartographer": ["تفتح الدفتر فتنساب منه ورقة مطوية، وعلى حافتها رسم لشجرة تحمل العلامة نفسها. ترفع عينيك نحو الغابة وتدرك أن الطريق لم ينتهِ بعد.", "تتبع الظلال حتى تتلاقى عند صخرة ملساء؛ تحتها أثر قديم يشبه توقيع الملاح، فتحتفظ بمكانه في ذاكرتك."],
     "black-sail": ["تهب نسمة بحرية فتتحرك الراية، ويسقط من طياتها ختم نحاسي عليه رمز السفينة المفقودة.", "تزيل الملح عن الزجاجة فتظهر كتابة باهتة، وتكشف كلماتها عن سر لم يكن واضحًا من قبل."],
@@ -410,10 +411,20 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
     "star-forge": "يستعيد المعدن بريقه تحت ضوء الفرن، ويكتمل العمل الذي بدأ بالشظية الساقطة. تهدأ المطرقة ويبقى أثر النجمة شاهدًا على الرحلة.",
     "hollow-mask": "تنكشف الروايات المتضاربة وتجتمع الشهادات على حقيقة واحدة. تعيد القناع إلى موضعه، وتُسدل الستارة على الحكاية."
   };
+  const redOrchardRootResult = event.chainId === "red-orchard" && chainStage === 3
+    ? choiceId === "press"
+      ? "تنحني فوق الجذر وتزيل عنه السم المتراكم، ثم تغسله بماء النبع حتى يعود النسغ إلى عروقه. يخفّ السواد عن اللحاء، وتستعيد الأغصان شيئًا من لونها بعد طول ذبول."
+      : "تتبع مجرى الماء حتى تصل إلى موضع التلوث، فتغلق مصدره وتعيد الماء الصافي إلى التربة. يتشرب الجذر الماء النقي، وتبدأ الأشجار باستعادة حيويتها."
+    : null;
+  const redOrchardFlowerResult = event.chainId === "red-orchard" && chainStage === 4
+    ? choiceId === "press"
+      ? "تقطف الزهرة برفق بعد أن تفتحت أخيرًا، وتلف بذورها في قطعة قماش كي لا تضيع. ينساب عطرها في البستان، وتعرف أن الجذر تعافى كما ينبغي."
+      : "تجمع البذور الناضجة وتحفظها في التربة القريبة من النبع. تتفتح بتلات الزهرة تحت ضوء الصباح، ويصبح للبستان أمل بموسم جديد."
+    : null;
   const storyResult = event.chainId
     ? reward.chainEnd
       ? chainEndings[event.chainId] ?? "تكتمل الحكاية أخيرًا، وتتضح لك حقيقة العلامات التي قادتك منذ البداية."
-      : chainContinuations[event.chainId]?.[choiceId === "press" ? 0 : 1] ?? "تتكشف أمامك علامة جديدة، وتفهم من تفاصيلها شيئًا لم يكن واضحًا من قبل."
+      : redOrchardRootResult ?? redOrchardFlowerResult ?? chainContinuations[event.chainId]?.[choiceId === "press" ? 0 : 1] ?? "تتكشف أمامك علامة جديدة، وتفهم من تفاصيلها شيئًا لم يكن واضحًا من قبل."
     : sceneResult ?? "يهدأ المكان من حولك، وتترك خطوتك أثرًا في هذا اللقاء قبل أن تواصل الطريق.";
   return { state: next, message: storyResult, rewards: rewards || "لم تحصل على مكافآت في هذا الاختيار." };
 }
