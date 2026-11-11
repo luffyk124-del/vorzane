@@ -1,11 +1,36 @@
 import type { GameState } from "./model.ts";
+import { PETS } from "./catalog.ts";
+import { EVENT_RELICS } from "./dungeonItems.ts";
 import { addExperience } from "./stats.ts";
 import { createItemInstance, getDungeonDrop } from "./dungeonItems.ts";
 
-export type RoamingOutcome = { gold?: number; gems?: number; xp?: number; damage?: number; heal?: number; chain?: string; chainEnd?: boolean; gear?: boolean; battle?: boolean };
+export type RoamingOutcome = { gold?: number; gems?: number; xp?: number; damage?: number; heal?: number; chain?: string; chainEnd?: boolean; gear?: boolean; battle?: boolean; companion?: string; fairyRescue?: boolean; fairyReturn?: boolean; relic?: string };
 export type RoamingChoice = { id: string; label: string; hint: string; outcome: RoamingOutcome };
 export type RoamingEvent = { id: string; title: string; region: string; story: string; kind: "encounter" | "traveler" | "cache" | "omen" | "chain" | "merchant" | "special"; choices: RoamingChoice[]; chainId?: string; chainStage?: number };
 type RoamingMerchantItem = { id: string; name: string; description: string; price: number; currency: "gold"; stock: number; gear?: boolean; heal?: number; gems?: number; gold?: number; xp?: number };
+
+const COMPANION_EVENT_BANK = [
+  { petId: "wolf", kind: "encounter" as const, title: "ذئب الرماد الجريح", region: "ممرّ الصنوبر", story: "تجد ذئبًا رماديًا مصابًا قرب آثار قطيع مفترس. لا يهاجمك، لكنه يراقب يديك بحذر، وعلى عنقه أثر طوق قديم.", choices: [
+    { id: "treat", label: "عالج جرحه وأبعد المفترسات", hint: "تخاطر بوقتك لتكسب ثقته.", outcome: { xp: 220, companion: "wolf" } },
+    { id: "leave", label: "اترك له الطعام وانسحب", hint: "تساعده دون أن تقترب.", outcome: { xp: 90, gold: 70 } },
+  ] },
+  { petId: "golem", kind: "cache" as const, title: "قلب الحارس الحجري", region: "مقلع الحراس", story: "تجد تمثالًا حجريًا متشققًا يحرس بوابة منسية. في صدره نواة خامدة، وعلى الأرض نقوش إصلاح قديمة.", choices: [
+    { id: "restore", label: "أعد تثبيت النواة", hint: "تحتاج إلى الصبر وفهم النقوش.", outcome: { xp: 280, companion: "golem" } },
+    { id: "take", label: "اجمع شظايا الحجر", hint: "مكسب سريع دون إيقاظ الحارس.", outcome: { gold: 240, xp: 80 } },
+  ] },
+  { petId: "fox", kind: "traveler" as const, title: "صفقة ثعلب السراب", region: "سهول الزجاج", story: "يظهر ثعلب بلون الرمال ويحمل في فمه مفتاحًا فضيًا. يقودك إلى صندوق صغير ثم ينتظر ليرى إن كنت ستفي بوعدك.", choices: [
+    { id: "share", label: "شاركه الغنيمة", hint: "تختار الوفاء بالاتفاق.", outcome: { xp: 340, companion: "fox" } },
+    { id: "keep", label: "احتفظ بالصندوق لنفسك", hint: "تربح بعض الذهب لكن الثعلب يختفي.", outcome: { gold: 320, xp: 75 } },
+  ] },
+  { petId: "phoenix", kind: "omen" as const, title: "رماد العنقاء", region: "فوهة الفجر", story: "تجد عشًا متفحمًا تتوهج في وسطه جمرة لا تنطفئ. تحوم فوقها طيور سوداء وتنتظر أن تبتعد.", choices: [
+    { id: "shield", label: "احمِ الجمرة حتى تفقس", hint: "تتحمل حرارة المكان حتى يظهر أثرها.", outcome: { xp: 460, damage: 14, companion: "phoenix" } },
+    { id: "collect", label: "اجمع الرماد المتوهج", hint: "تحصل على مادة نادرة وتغادر.", outcome: { gold: 450, xp: 120 } },
+  ] },
+  { petId: "dragon", kind: "cache" as const, title: "بيضة تنين الياقوت", region: "كهف الياقوت", story: "بين بلورات حمراء تجد بيضة تنبض بضوء خافت. آثار المخالب حولها حديثة، ويبدو أن الحارس قد يعود في أي لحظة.", choices: [
+    { id: "guard", label: "احرس البيضة حتى تفقس", hint: "تختار حماية المخلوق بدل الاستيلاء على جوهره.", outcome: { xp: 520, damage: 18, companion: "dragon" } },
+    { id: "retreat", label: "ابتعد عن العش", hint: "تتفادى مواجهة الحارس.", outcome: { xp: 140, gold: 180 } },
+  ] },
+] satisfies { petId: string; kind: "encounter" | "cache" | "traveler" | "omen"; title: string; region: string; story: string; choices: RoamingChoice[] }[];
 
 const REGIONS = ["غابة الرماد", "سهول الزجاج", "مستنقع الهمس", "طريق الملوك", "وادي الشهب", "أطلال القمر", "مرتفعات الصقيع", "ساحل العظام", "سراديب النور", "حدود العاصفة", "بساتين الظلال", "ممرّ العمالقة"];
 const SCENES = [
@@ -115,6 +140,29 @@ export const ROAMING_EVENT_PREVIEW = SCENES.flatMap((scene, sceneIndex) => VARIA
 
 export function getRoamingEvent(state: GameState, seed = Date.now()): RoamingEvent {
   const roaming = state.roaming;
+  if (roaming.storyFlags.includes("fairy-rescued") && !roaming.fairyReunited && roaming.fairyNextAt > 0 && seed >= roaming.fairyNextAt && roaming.eventsCompleted >= 4) {
+    return { id: "fairy-reunion", title: "أثر يعرفك", region: "غابة الندى", story: "تظهر الجنية التي أنقذتها من قطيع الغيلان، وتدعوك إلى موطن قبيلتها. يفتح أفراد القبيلة الطريق أمامك ويقدمون لك عهدًا قديمًا.", kind: "traveler", choices: [
+      { id: "follow", label: "اتبعها إلى موطن القبيلة", hint: "تقبل دعوتها وتكمل المعروف.", outcome: { xp: 520, gold: 800, companion: "fairy-warden", fairyReturn: true } },
+      { id: "farewell", label: "ودّعها وتابع طريقك", hint: "تكتفي بالاطمئنان عليها.", outcome: { xp: 240, fairyReturn: true } },
+    ] };
+  }
+  if (!roaming.storyFlags.includes("fairy-rescued") && Math.abs(Math.floor(seed / 41)) % 37 === 0) {
+    return { id: "fairy-rescue", title: "أسيرة بين الغيلان", region: "وادي الغيلان", story: "تسمع نداءً خافتًا خلف الصخور. جنية صغيرة محاصرة قرب قطيع من الغيلان، وعلى الأرض أثر ممر ضيق يمكن فتحه دون الاقتراب من القطيع.", kind: "traveler", choices: [
+      { id: "rescue", label: "افتح الممر وأنقذها", hint: "تتدخل رغم الخطر.", outcome: { xp: 260, damage: 12, gold: 140, fairyRescue: true } },
+      { id: "distract", label: "شتّت الغيلان بالحيلة", hint: "تستخدم البيئة لصنع فرصة للهروب.", outcome: { xp: 220, gold: 90, fairyRescue: true } },
+      { id: "leave", label: "انسحب بهدوء", hint: "تتجنب المخاطرة.", outcome: { xp: 20 } },
+    ] };
+  }
+  if (state.hero && state.hero.level >= 40 && Math.abs(Math.floor(seed / 29)) % 13 === 0) {
+    const eligible = COMPANION_EVENT_BANK.filter((entry) => {
+      const pet = PETS.find((item) => item.id === entry.petId);
+      return !!pet && state.hero!.level >= pet.requiredLevel && !state.pets.includes(entry.petId);
+    });
+    if (eligible.length) {
+      const entry = eligible[Math.abs(Math.floor(seed / 7)) % eligible.length]!;
+      return { id: `companion-${entry.petId}`, title: entry.title, region: entry.region, story: entry.story, kind: entry.kind, choices: entry.choices };
+    }
+  }
   if (roaming.activeChain && roaming.eventsCompleted > 0 && roaming.eventsCompleted % 5 === 0) {
     const chain = CHAINS.find((item) => item.id === roaming.activeChain);
     if (chain) {
@@ -171,6 +219,22 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   next.roaming.health = Math.min(next.roaming.maxHealth, Math.max(0, next.roaming.health - damage + (reward.heal ?? 0)));
   if (xp) { const trained = addExperience(next, xp); Object.assign(next, trained.state); }
   let lootName = "";
+  if (reward.companion && PETS.some((pet) => pet.id === reward.companion) && !next.pets.includes(reward.companion)) {
+    next.pets.push(reward.companion);
+    lootName = `رفيق جديد: ${PETS.find((pet) => pet.id === reward.companion)?.name ?? reward.companion}`;
+  }
+  if (reward.fairyRescue) {
+    next.roaming.storyFlags = [...new Set([...next.roaming.storyFlags, "fairy-rescued"])];
+    next.roaming.fairyNextAt = now + (4 + Math.floor(Math.random() * 8)) * 60 * 60 * 1000;
+    const pendant = EVENT_RELICS.find((item) => item.id === "event-fairy-pendant");
+    if (pendant && next.inventory.length < 500) { next.inventory.unshift(createItemInstance(pendant, `fairy-${now}`)); lootName = pendant.name; }
+  }
+  if (reward.fairyReturn) next.roaming.fairyReunited = true;
+  if (reward.relic) {
+    const relic = EVENT_RELICS.find((item) => item.id === reward.relic);
+    if (relic && next.inventory.length < 500) { next.inventory.unshift(createItemInstance(relic, `event-${now}`)); lootName = relic.name; }
+  }
+
   const lootChance = Math.min(0.28, 0.055 + Math.log2(level) * 0.025 + Math.min(0.07, (next.hero?.stats.luck ?? 0) * 0.001));
   if ((reward.gear || (gold > 0 && choice.id !== "ignore" && choice.id !== "retreat" && Math.random() < lootChance)) && next.inventory.length < 500) {
     const loot = createItemInstance(getDungeonDrop(0, level), `roam-${now}`);
@@ -180,8 +244,7 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   next.roaming.eventsCompleted += 1;
   next.roaming.lastEventAt = now;
   next.roaming.healthUpdatedAt = now;
-  next.roaming.healthUpdatedAt = now;
-  next.roaming.eventsSeen = [...next.roaming.eventsSeen.filter((id) => id !== event.id), event.id].slice(-500);
+  if (!event.id.startsWith("companion-") || reward.companion) next.roaming.eventsSeen = [...next.roaming.eventsSeen.filter((id) => id !== event.id), event.id].slice(-500);
   if (event.chainId && reward.chainEnd) {
     next.roaming.activeChain = null;
     next.roaming.chainStage = 0;
