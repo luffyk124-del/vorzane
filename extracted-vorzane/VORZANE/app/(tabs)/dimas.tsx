@@ -19,8 +19,9 @@ export default function DimasScreen() {
   const [notice, setNotice] = useState("");
   const [event, setEvent] = useState<DimasEvent | null>(null);
   const [merchantBought, setMerchantBought] = useState<string[]>([]);
-  const floors = useMemo(() => getDimasFloors(), []);
-  const current = getDimasFloor(selected);
+  const heroLevel = state.hero?.level ?? 1;
+  const floors = useMemo(() => getDimasFloors(heroLevel), [heroLevel]);
+  const current = getDimasFloor(selected, heroLevel);
   const power = state.hero ? combatStats(state).power : 0;
   const challenge = () => {
     const result = clearDimasFloor(state, selected);
@@ -108,7 +109,7 @@ export default function DimasScreen() {
     <SectionTitle title="المحطات الكبرى" icon="gift-outline" />
     <Card style={styles.milestoneList}>
       {[10,25,50,75,100,125,150,175,200,225,250,275,300].map((floor) => {
-        const item = getDimasFloor(floor);
+        const item = getDimasFloor(floor, heroLevel);
         return <View key={floor} style={styles.milestoneRow}>
           <Pill label={`طابق ${floor}`} tone={state.dimas.highestFloor >= floor ? "jade" : "gold"} />
           <Txt style={styles.milestoneName}>{milestoneLabel(item.reward)}</Txt>
