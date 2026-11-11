@@ -340,7 +340,7 @@ export function buyMerchantItem(state: GameState, itemId: string) {
   const item = getTravellingMerchant(state).find((entry) => entry.id === itemId);
   if (!item) return { state, error: "هذا المنتج غير متاح." };
   if (!state.hero) return { state, error: "أنشئ شخصيتك أولًا." };
-  if (item.currency === "gold" && state.gold < item.price) return { state, error: "لا تملك ذهبًا كافيًا." };
+  if (item.currency === "gold" && state.gold < item.price) return { state, error: "لا تملك الذهب الكافي." };
   if (item.gear && state.inventory.length >= 500) return { state, error: "حقيبتك ممتلئة." };
   const next = JSON.parse(JSON.stringify(state)) as GameState;
   if (item.currency === "gold") next.gold -= item.price;
