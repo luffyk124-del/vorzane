@@ -192,7 +192,7 @@ export function getRoamingEvent(state: GameState, seed = Date.now()): RoamingEve
       return { id: `companion-${entry.petId}`, title: entry.title, region: entry.region, story: entry.story, kind: entry.kind, choices: entry.choices };
     }
   }
-  if (roaming.activeChain && roaming.eventsCompleted > 0 && roaming.eventsCompleted % 5 === 0) {
+  if (roaming.activeChain && roaming.eventsCompleted > 0) {
     const chain = CHAINS.find((item) => item.id === roaming.activeChain);
     if (chain) {
       const stage = Math.min(chain.stages.length - 1, roaming.chainStage);
@@ -233,9 +233,9 @@ export function getRoamingEvent(state: GameState, seed = Date.now()): RoamingEve
   return { ...scene, choices };
 }
 
-export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choiceId: string, now = Date.now()): { state: GameState; message: string } {
+export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choiceId: string, now = Date.now()): { state: GameState; message: string; rewards: string } {
   const choice = event.choices.find((item) => item.id === choiceId);
-  if (!choice || !state.hero) return { state, message: "هذا الاختيار غير متاح." };
+  if (!choice || !state.hero) return { state, message: "هذا الاختيار غير متاح.", rewards: "" };
   const next = JSON.parse(JSON.stringify(state)) as GameState;
   const reward = choice.outcome;
   const level = Math.max(1, next.hero?.level ?? 1);
@@ -305,7 +305,7 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
   if (next.roaming.health <= 0) {
     next.roaming.health = 0;
     next.gold = Math.max(0, next.gold - 25);
-    return { state: next, message: "أُنهكت في الطريق. توقفت رحلتك حتى تستعيد 20 نقطة صحة على الأقل." };
+    return { state: next, message: "أُنهكت في الطريق. توقفت رحلتك حتى تستعيد 20 نقطة صحة على الأقل.", rewards: "" };
   }
   const rewards = [
     gold ? `+${gold} ذهب` : "",
@@ -322,7 +322,22 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
     : event.kind === "encounter" && (gold > 0 || lootName)
       ? "هدأ المكان بعد المواجهة. تفقدت ما تركه خصمك، وجمعت ما استطعت حمله قبل أن تواصل رحلتك."
       : "";
-  return { state: next, message: [continuation, rewards || "تابعت طريقك دون غنيمة."].filter(Boolean).join("\n\n") };
+  const chain = event.chainId ? CHAINS.find((item) => item.id === event.chainId) : undefined;
+  const nextStageName = chain?.stages[(event.chainStage ?? 0) + 1];
+  const storyResult = event.chainId
+    ? reward.chainEnd
+      ? `وصلت إلى نهاية حكاية «${chain?.name ?? "الرحلة"}». اكتملت الأدلة، وانكشف السر الذي بدأت منه رحلتك.`
+      : choice.id === "press"
+        ? `تابعت التحقيق، ووجدت آثار أقدام قادتك إلى «${nextStageName ?? "المعلم التالي"}». قرب المكان عثرت على رسالة مختومة تحمل دليلاً جديدًا.`
+        : `تقدمت بحذر، وفحصت العلامات المحيطة حتى عثرت على ممر جانبي يقود إلى «${nextStageName ?? "المعلم التالي"}». احتفظت بالدليل لمتابعة التحقيق.`
+    : continuation || (event.kind === "cache"
+      ? `نفذت اختيارك «${choice.label}»، وفحصت ما حولك بعناية قبل أن تجمع ما أمكن من آثار المكان.`
+      : event.kind === "traveler"
+        ? `نفذت اختيارك «${choice.label}». انتهى اللقاء، وأصبحت تعرف المزيد عن الطريق الذي أمامك.`
+        : event.kind === "omen"
+          ? `اتبعت اختيارك «${choice.label}»، وكشفت العلامات المحيطة عن أثر جديد يرشدك إلى وجهتك التالية.`
+          : `نفذت اختيارك «${choice.label}»، ثم هدأ الموقف وأصبحت قادرًا على مواصلة رحلتك.`);
+  return { state: next, message: storyResult, rewards: rewards || "لم تحصل على مكافآت في هذا الاختيار." };
 }
 
 export function getTravellingMerchant(state: GameState, now = Date.now()): RoamingMerchantItem[] {
