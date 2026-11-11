@@ -37,7 +37,7 @@ export default function RoamingScreen() {
     <PageTitle eyebrow="استكشف العالم المفتوح" title="التجوال" subtitle="تحرك بحرية بين المناطق؛ كل رحلة قد تحمل لقاءً أو خطرًا أو فرصة لا تتكرر." trailing={<Pill label={`${state.roaming.eventsCompleted} حدث`} icon="compass" tone="jade" />} />
     <Card style={styles.travelCard}>
       <View style={styles.travelTop}>
-        <View style={styles.travelIcon}><Icon name="footprints" color={palette.gold} size={24} /></View>
+        <View style={styles.travelIcon}><Icon name="compass" color={palette.gold} size={24} /></View>
         <View style={styles.travelText}>
           <Txt style={styles.travelTitle}>دروب VORZANE</Txt>
           <Txt muted style={styles.travelCopy}>مكتبة تضم {ROAMING_EVENT_COUNT}+ حدثًا متنوعًا، بينها حكايات مترابطة تتكشف على عدة مراحل.</Txt>
