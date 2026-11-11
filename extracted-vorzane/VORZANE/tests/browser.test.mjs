@@ -232,6 +232,12 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
 }
 
 async function signInWithMock(page) {
+  const pageErrors = [];
+  const consoleErrors = [];
+  const failedResponses = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  page.on("response", (response) => { if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`); });
   await page.goto(`${appUrl}/login`);
   const emailField = page.getByPlaceholder("name@example.com");
   try {
@@ -239,7 +245,7 @@ async function signInWithMock(page) {
   } catch (error) {
     const diagnostic = await page.locator("body").innerText().catch(() => "<body unavailable>");
     const title = await page.title().catch(() => "<title unavailable>");
-    throw new Error(`Login screen did not become interactive. URL=${page.url()} title=${title} body=${diagnostic.slice(0, 3000)}; cause=${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Login screen did not become interactive. URL=${page.url()} title=${title} body=${diagnostic.slice(0, 3000)} pageErrors=${JSON.stringify(pageErrors)} consoleErrors=${JSON.stringify(consoleErrors)} failedResponses=${JSON.stringify(failedResponses)} serverOutput=${serverOutput.slice(-5000)}; cause=${error instanceof Error ? error.message : String(error)}`);
   }
   await emailField.fill("player@example.test");
   await page.getByPlaceholder("8 أحرف على الأقل").fill("local-test-password");
