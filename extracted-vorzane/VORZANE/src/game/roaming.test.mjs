@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHeroState, getQuestProgress, getStoryChapterProgress } from "./engine.ts";
-import { buyRoamingHealthRefill, refreshRoamingHealth, getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, ROAMING_EVENT_PREVIEW } from "./roaming.ts";
+import { normalizeGameState } from "./model.ts";
+import { getLongQuestProgress, LONG_QUESTS } from "./longQuests.ts";
+import { buyRoamingHealthRefill, refreshRoamingHealth, getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, ROAMING_EVENT_PREVIEW, ROAMING_ARCHIVE_ENTRIES, unlockRoamingArchiveEntry } from "./roaming.ts";
 
 test("roaming health regenerates one point per minute and respects its maximum", () => {
   const now = Date.UTC(2026, 10, 11, 12, 0, 0);
@@ -71,6 +73,70 @@ test("roaming choices return story and rewards separately", () => {
   assert.match(result.message, /تتبع الأثر/);
   assert.match(result.rewards, /ذهب/);
   assert.doesNotMatch(result.message, /ذهب|خبرة/);
+});
+
+test("roaming choices award a relic shard every two completed story encounters", () => {
+  const state = createHeroState("جامع الشظايا", "Warrior");
+  const event = {
+    id: "test-relic-drop",
+    title: "علامة قديمة",
+    region: "غابة الرماد",
+    story: "تظهر علامة صغيرة على حجر.",
+    kind: "cache",
+    choices: [{ id: "inspect", label: "افحص العلامة", hint: "تقرأ النقش.", outcome: { gold: 10, xp: 10 } }],
+  };
+
+  const first = resolveRoamingChoice(state, event, "inspect", Date.UTC(2026, 10, 11));
+  assert.equal(first.state.roaming.fragments, 0);
+  assert.equal(first.state.roaming.fragmentsCollected, 0);
+  assert.equal(first.state.roaming.fragmentProgress, 1);
+  assert.doesNotMatch(first.rewards, /شظية أثر/);
+
+  const second = resolveRoamingChoice(first.state, event, "inspect", Date.UTC(2026, 10, 11) + 1);
+  assert.equal(second.state.roaming.fragments, 1);
+  assert.equal(second.state.roaming.fragmentsCollected, 1);
+  assert.equal(second.state.roaming.fragmentProgress, 0);
+  assert.match(second.rewards, /\+1 شظية أثر/);
+});
+
+test("normalized saves preserve relic balance and lifetime collection", () => {
+  const state = createHeroState("حافظ الآثار", "Warrior");
+  state.roaming.fragments = 7;
+  state.roaming.fragmentsCollected = 19;
+  state.roaming.fragmentProgress = 1;
+  const normalized = normalizeGameState(state);
+  assert.equal(normalized?.roaming.fragments, 7);
+  assert.equal(normalized?.roaming.fragmentsCollected, 19);
+  assert.equal(normalized?.roaming.fragmentProgress, 1);
+
+  const legacy = { ...state, roaming: { ...state.roaming } };
+  delete legacy.roaming.fragmentsCollected;
+  delete legacy.roaming.fragmentProgress;
+  const migrated = normalizeGameState(legacy);
+  assert.equal(migrated?.roaming.fragmentsCollected, 7, "older balances should seed the lifetime counter");
+  assert.equal(migrated?.roaming.fragmentProgress, 0);
+});
+
+test("the lore archive spends shards once and keeps collection progress cumulative", () => {
+  const state = createHeroState("قارئ الأرشيف", "Warrior");
+  const entry = ROAMING_ARCHIVE_ENTRIES[0];
+  assert.ok(entry);
+  state.roaming.fragments = entry.cost - 1;
+  assert.equal(unlockRoamingArchiveEntry(state, entry.id).error, "لا تملك شظايا أثر كافية.");
+
+  state.roaming.fragments = entry.cost;
+  const opened = unlockRoamingArchiveEntry(state, entry.id);
+  assert.equal(opened.error, undefined);
+  assert.equal(opened.state.roaming.fragments, 0);
+  assert.ok(opened.state.roaming.storyFlags.includes(`archive:${entry.id}`));
+  assert.equal(unlockRoamingArchiveEntry(opened.state, entry.id).error, "فتحت هذه الصفحة من قبل.");
+
+  const collectionQuest = LONG_QUESTS.find((quest) => quest.metric === "fragments");
+  assert.ok(collectionQuest);
+  opened.state.roaming.fragmentsCollected = collectionQuest.target;
+  assert.equal(getLongQuestProgress(opened.state, collectionQuest), collectionQuest.target);
+  assert.equal(ROAMING_ARCHIVE_ENTRIES.length, 6);
+  assert.equal(new Set(ROAMING_ARCHIVE_ENTRIES.map((item) => item.id)).size, 6);
 });
 
 test("active roaming story chapters wait for random intervening encounters", () => {
