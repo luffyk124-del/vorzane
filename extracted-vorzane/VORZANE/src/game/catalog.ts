@@ -106,8 +106,8 @@ export const STORY_CHAPTERS = [
   { id: 5, title: "قلب الكسوف", chapter: "الفصل الخامس", narrative: "اكتملت العلامات. حان وقت مواجهة القوة التي أيقظت الهاوية.", objective: "بلغ المستوى العاشر واستعد للمواجهة الأخيرة.", metric: "level", target: 10, rewardGold: 900, rewardXP: 450 },
 ] as const;
 
-export type QuestMetric = "wins" | "level" | "caveWins" | "dungeonWins" | "towerWins" | "hardWins" | "expeditions" | "equipped";
-export type QuestCategory = "قتال" | "الزنزانة" | "البرج" | "الرحلات" | "العتاد" | "تطور";
+export type QuestMetric = "wins" | "level" | "dimasFloor" | "roamingEvents" | "companions" | "expeditions" | "equipped";
+export type QuestCategory = "قتال" | "الديماس" | "التجوال" | "الرفقاء" | "الرحلات" | "العتاد" | "تطور";
 export const DUNGEON_ITEM_POOL_SIZE = 8 * 6 * 6;
 export const QUESTS = [
   { id: "first", title: "الخطوة الأولى", description: "أكمل أول معركة في أي ميدان.", rewardGold: 100, icon: "sparkles", category: "قتال", metric: "wins", target: 1 },
