@@ -186,7 +186,7 @@ test("story-chain chapters have context-specific actions and no generic route sl
   state.roaming.activeChain = "lost-cartographer";
   state.roaming.chainStage = 0;
   state.roaming.eventsCompleted = 1;
-  const first = getRoamingEvent(state, Date.UTC(2026, 10, 11) + 13);
+  const first = getRoamingEvent(state, 100_005);
   assert.deepEqual(first.choices.map((choice) => choice.label), ["اقرأ دفتر الملاح", "اتبع العلامة على الخريطة"]);
   const firstResult = resolveRoamingChoice(state, first, "press", Date.UTC(2026, 10, 11));
   const delayedState = { ...firstResult.state, roaming: { ...firstResult.state.roaming, eventsCompleted: firstResult.state.roaming.chainNextAtEvent } };
