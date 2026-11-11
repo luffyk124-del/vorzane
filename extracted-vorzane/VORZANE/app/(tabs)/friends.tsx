@@ -10,7 +10,6 @@ import {
   listMyFriends,
   removeFriend,
   respondToFriendRequest,
-  saveMyProfile,
   searchPlayers,
   sendFriendRequest,
   type FriendSummary,
@@ -25,7 +24,6 @@ export default function FriendsScreen() {
   const { state } = useGame();
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [results, setResults] = useState<PlayerSearchResult[]>([]);
   const [friends, setFriends] = useState<FriendSummary[]>([]);
@@ -51,9 +49,7 @@ export default function FriendsScreen() {
     setIncoming(requestRows);
     const validProfile = myProfile && typeof myProfile.display_name === "string" ? myProfile : null;
     setProfile(validProfile);
-    if (validProfile) setDisplayName(validProfile.display_name);
-    else if (typeof state.hero?.name === "string" && state.hero.name && !displayName) setDisplayName(state.hero.name);
-  }, [user?.id, state.hero?.name, displayName]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -77,18 +73,6 @@ export default function FriendsScreen() {
     } finally {
       if (mountedRef.current) setBusy(false);
     }
-  };
-
-  const saveProfile = async () => {
-    const name = typeof displayName === "string" ? displayName.trim() : "";
-    if (name.length < 3 || name.length > 24) {
-      setNotice("اسم اللاعب يجب أن يتكون من 3 إلى 24 حرفًا.");
-      return;
-    }
-    await run(async () => {
-      const saved = await saveMyProfile(name, String(state.profileAvatarId));
-      if (mountedRef.current) setProfile(saved);
-    }, "تم حفظ ملف اللاعب.");
   };
 
   const sendRequest = async (playerId: string) => {
