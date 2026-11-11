@@ -18,6 +18,7 @@ export default function DimasScreen() {
   const [selected, setSelected] = useState(Math.min(300, state.dimas.highestFloor + 1));
   const [notice, setNotice] = useState("");
   const [event, setEvent] = useState<DimasEvent | null>(null);
+  const [merchantBought, setMerchantBought] = useState<string[]>([]);
   const floors = useMemo(() => getDimasFloors(), []);
   const current = getDimasFloor(selected);
   const power = state.hero ? combatStats(state).power : 0;
@@ -28,6 +29,7 @@ export default function DimasScreen() {
     const extra = result.loot ? ` وسقط لك ${result.loot.name}.` : "";
     setNotice(result.reward?.reward ? `اجتزت الطابق ${selected}! المكافأة الإضافية: ${milestoneLabel(result.reward.reward)}.${extra}` : `اجتزت الطابق ${selected} وحصلت على الذهب والخبرة.${extra}`);
     setSelected(Math.min(300, result.state.dimas.highestFloor + 1));
+    setMerchantBought([]);
     setEvent(getDimasEvent(selected, result.state.hero?.level ?? 1, Date.now()));
   };
 
@@ -67,10 +69,11 @@ export default function DimasScreen() {
             <Txt muted style={styles.eventHint}>{item.description}</Txt>
             <Txt style={styles.merchantPrice}>{item.price.toLocaleString("en-US")} ذهب</Txt>
           </View>
-          <AppButton label="شراء" icon="cart-outline" small variant="secondary" onPress={() => {
+          <AppButton label={merchantBought.includes(item.id) ? "تم الشراء" : "شراء"} icon="cart-outline" small variant="secondary" disabled={merchantBought.includes(item.id)} onPress={() => {
             const bought = buyDimasMerchantItem(state, state.dimas.highestFloor, item.id, Number(event.id.split("-").pop()) || Date.now());
             if (bought.error) { setNotice(bought.error); return; }
             update(() => bought.state);
+            setMerchantBought((items) => [...items, item.id]);
             setNotice("تمت الصفقة؛ أضيفت البضاعة إلى ممتلكاتك.");
           }} />
         </View>)}
