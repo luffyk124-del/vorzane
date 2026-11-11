@@ -1,5 +1,5 @@
 import { BATTLE_ENEMIES } from "./catalog.ts";
-import { createItemInstance, getDungeonDrop, getEquipmentSellPrice } from "./dungeonItems.ts";
+
 import { addExperience, combatStats } from "./stats.ts";
 import { CLASS_PASSIVES, type BattleMode, type ClassId, type EquipmentItem, type GameState } from "./model.ts";
 import type { EnemyBlueprint } from "./catalog.ts";
@@ -132,28 +132,14 @@ export function createBattleSequence(state: GameState, mode: BattleMode, random:
     const modeBase = mode === "hard" ? 5 : mode === "tower" ? 4 : mode === "dungeon" ? 3 : mode === "roaming" ? 3 : 2;
     const modeMultiplier = mode === "hard" ? 1.35 : mode === "tower" ? 1.15 : mode === "dungeon" ? 1 : mode === "roaming" ? 1.05 : 0.8;
     const modeGold = (modeBase + levelProgress * 0.9 + floorProgress * 1.4) * modeMultiplier;
-    gold = Math.max(1, Math.round(modeGold));
-    xp = Math.max(1, Math.round((mode === "dungeon" ? 22 + Math.min(50, floor) * 1.1 : 16 + Math.min(20, floor) * 0.7) + Math.min(40, level) * (mode === "dungeon" ? 2 : 1.5)));
+    gold = Math.max(1, Math.round(modeGold * (mode === "dungeon" ? 0.55 : 1)));
+    xp = Math.max(1, Math.round(mode === "dungeon"
+      ? 12 + Math.min(20, floor) * 0.5 + Math.min(40, level) * 0.8
+      : 16 + Math.min(20, floor) * 0.7 + Math.min(40, level) * 1.5));
     next.gold = Math.min(1_000_000_000, next.gold + gold);
     const leveled = addExperience(next, xp);
     next = leveled.state;
 
-    if (mode === "dungeon") {
-      const dropChance = clamp(0.20 + player.stats.luck * 0.003, 0.20, 0.65);
-      if (random() < dropChance) {
-        const template = getDungeonDrop(floor, level, random);
-        const item: EquipmentItem = createItemInstance(template, `drop-${Date.now()}-${Math.floor(random() * 1_000_000)}`);
-        if (next.inventory.length < 500) {
-          next.inventory.push(item);
-          dropped = template.name;
-        } else {
-          const quickSale = Math.floor(template.price / 2);
-          next.gold = Math.min(1_000_000_000, next.gold + quickSale);
-          gold += quickSale;
-          dropped = `بيع تلقائي: ${template.name}`;
-        }
-      }
-    }
   }
 
   return {
