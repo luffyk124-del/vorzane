@@ -15,6 +15,8 @@ export default function RoamingScreen() {
   const [merchantBought, setMerchantBought] = useState<string[]>([]);
   const [eventResult, setEventResult] = useState("");
   const [battleSequence, setBattleSequence] = useState<BattleSequence | null>(null);
+  const [clock, setClock] = useState(Date.now());
+  useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer); }, []);
   useEffect(() => { const timer = setInterval(() => update((current) => refreshRoamingHealth(current)), 60_000); update((current) => refreshRoamingHealth(current)); return () => clearInterval(timer); }, [update]);
   const merchant = useMemo(() => getTravellingMerchant(state), [state.roaming.eventsCompleted, state.gold, state.hero?.level]);
   const explore = () => {
@@ -52,11 +54,12 @@ export default function RoamingScreen() {
         <View style={styles.travelIcon}><Icon name="compass" color={palette.gold} size={24} /></View>
         <View style={styles.travelText}>
           <Txt style={styles.travelTitle}>دروب VORZANE</Txt>
-          <Txt muted style={styles.travelCopy}>مكتبة تضم {ROAMING_EVENT_COUNT}+ حدثًا متنوعًا، بينها حكايات مترابطة تتكشف على عدة مراحل.</Txt>
+          <Txt muted style={styles.travelCopy}>مكتبة تضم {ROAMING_EVENT_COUNT}+ حدثًا متنوعًا، بينها حكايات مترابطة تنكشف على عدة مراحل.</Txt>
         </View>
       </View>
       <View style={styles.healthHeader}><Txt muted style={styles.small}>الصحة أثناء التجوال</Txt><Txt style={styles.healthValue}>{state.roaming.health} / {state.roaming.maxHealth}</Txt></View>
       <Meter value={state.roaming.health} max={state.roaming.maxHealth} color={state.roaming.health < 35 ? palette.red : palette.jade} height={9} />
+      <Txt muted style={styles.small}>{state.roaming.health >= state.roaming.maxHealth ? "الصحة مكتملة." : `الصحة التالية بعد ${Math.max(1, 60 - Math.floor(Math.max(0, clock - (state.roaming.healthUpdatedAt || clock)) / 1000) % 60)} ثانية • نقطة واحدة كل دقيقة`}</Txt>
       <View style={styles.resources}>
         <Pill label={`${state.gold.toLocaleString("en-US")} ذهب`} icon="logo-usd" tone="muted" />
         <Pill label={`${state.gems.toLocaleString("en-US")} جوهرة`} icon="diamond" tone="jade" />
@@ -90,11 +93,6 @@ export default function RoamingScreen() {
     {battleSequence ? <BattleArena sequence={battleSequence} onBattleSettled={(result: BattleResult) => { const last = battleSequence.turns[battleSequence.turns.length - 1]; const remaining = last?.heroHP ?? 0; const health = Math.max(0, Math.round(state.roaming.maxHealth * remaining / battleSequence.heroMaxHP)); update(() => ({ ...result.state, roaming: { ...result.state.roaming, health, healthUpdatedAt: Date.now(), eventsCompleted: result.state.roaming.eventsCompleted + 1 } })); setEventResult(result.won ? "انتصرت في المواجهة وتستطيع متابعة الطريق." : "لم تنجح في المواجهة؛ تحتاج إلى استعادة صحتك قبل متابعة الطريق."); setNotice(result.won ? "انتصرت في المواجهة." : "انتهت المواجهة بهزيمتك."); }} onClose={() => setBattleSequence(null)} /> : null}
     {notice ? <Card style={styles.notice}><Icon name="information-circle-outline" color={palette.jade} size={18} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
 
-    <SectionTitle title="سجل رحلاتك" icon="book-outline" />
-    <Card style={styles.historyCard}>
-      <View style={styles.historyRow}><Txt style={styles.historyValue}>{state.roaming.eventsCompleted}</Txt><Txt muted style={styles.small}>أحداث مكتملة</Txt></View>
-      <View style={styles.historyRow}><Txt style={styles.historyValue}>{state.roaming.activeChain ? "مستمرة" : "لا توجد"}</Txt><Txt muted style={styles.small}>حكاية متفرعة نشطة</Txt></View>
-    </Card>
   </AppScreen>;
 }
 
