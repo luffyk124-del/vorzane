@@ -3,7 +3,6 @@ import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { useAuth } from "../../src/contexts/AuthContext";
-import { useGame } from "../../src/contexts/GameContext";
 import {
   getMyProfile,
   listIncomingFriendRequests,
@@ -21,7 +20,6 @@ import { palette } from "../../src/theme";
 
 export default function FriendsScreen() {
   const { user } = useAuth();
-  const { state } = useGame();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
