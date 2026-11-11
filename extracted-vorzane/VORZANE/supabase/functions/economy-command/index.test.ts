@@ -318,6 +318,8 @@ Deno.test("resetSave replaces the caller's state with a canonical fresh state wi
   // createFreshState intentionally stamps the current date/time, so compare
   // all canonical game data while carrying over only those generated values.
   canonical.lastSeenAt = saved.lastSeenAt;
+  canonical.roaming.healthUpdatedAt = saved.roaming.healthUpdatedAt;
+  canonical.longQuestStartedAt = saved.longQuestStartedAt;
   canonical.missionPeriods.daily.key = saved.missionPeriods.daily.key;
   canonical.missionPeriods.weekly.key = saved.missionPeriods.weekly.key;
   canonical.missionPeriods.season.key = saved.missionPeriods.season.key;
