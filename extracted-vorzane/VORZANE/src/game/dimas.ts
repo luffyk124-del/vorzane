@@ -153,7 +153,7 @@ export function buyDimasMerchantItem(state: GameState, floor: number, itemId: st
   next.gold -= item.price;
   if (item.kind === "gear") {
     if (next.inventory.length >= 500) return { state, error: "حقيبتك ممتلئة." };
-    const template = getDungeonDrop(floor, next.hero?.level ?? 1, () => 0.41);
+    const template = getDungeonDrop(floor, next.hero?.level ?? 1, () => Math.min(0.999, Math.abs(Math.sin(seed * 0.001)) * 0.999));
     next.inventory.unshift(createItemInstance(template, `merchant-${seed}`));
   } else if (item.kind === "tonic") {
     next.roaming.health = Math.min(next.roaming.maxHealth, next.roaming.health + 35);
