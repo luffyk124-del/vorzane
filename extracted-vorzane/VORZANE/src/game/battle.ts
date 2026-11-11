@@ -65,7 +65,8 @@ export function createBattleSequence(state: GameState, mode: BattleMode, random:
   const enemyTemplate = chooseEnemy(state, mode, random);
   const floorScale = mode === "dungeon" ? 1 + (floor - 1) * 0.018 : mode === "tower" ? Math.min(2.5, 1 + (floor - 1) * 0.045) : mode === "hard" ? 1 + Math.min(0.5, (floor - 1) * 0.01) : mode === "roaming" ? 1 + Math.min(0.45, (floor - 1) * 0.012) : 1 + Math.min(0.28, (floor - 1) * 0.008);
   const level = hero.level;
-  const combatScale = options?.enemyScale ?? MODE_SCALE[mode] * floorScale;\n  const enemyMaxHP = clamp(Math.round((108 + level * 18) * combatScale * enemyTemplate.hpScale), 40, 1_000_000);
+  const combatScale = options?.enemyScale ?? MODE_SCALE[mode] * floorScale;
+  const enemyMaxHP = clamp(Math.round((108 + level * 18) * combatScale * enemyTemplate.hpScale), 40, 1_000_000);
   const enemyAttack = clamp(Math.round((8 + level * 3.3) * combatScale * enemyTemplate.attackScale), 4, 250_000);
   const enemyDefense = clamp(Math.round((4 + level * 1.4) * combatScale * enemyTemplate.defenseScale), 0, 100_000);
   const heroMaxHP = player.maxHP;
