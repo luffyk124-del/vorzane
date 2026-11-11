@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, Meter, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, buyRoamingHealthRefill, refreshRoamingHealth, ROAMING_EVENT_COUNT, type RoamingEvent, type RoamingMerchantItem } from "../../src/game/roaming";
+import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, buyRoamingHealthRefill, refreshRoamingHealth, unlockRoamingArchiveEntry, ROAMING_ARCHIVE_ENTRIES, ROAMING_EVENT_COUNT, type RoamingEvent, type RoamingMerchantItem } from "../../src/game/roaming";
 import { useGame } from "../../src/contexts/GameContext";
 import { BattleArena } from "../../src/components/BattleArena";
 import { createBattleSequence, type BattleSequence, type BattleResult } from "../../src/game/engine";
@@ -71,6 +71,7 @@ export default function RoamingScreen() {
       <View style={styles.resources}>
         <Pill label={`${state.gold.toLocaleString("en-US")} ذهب`} icon="logo-usd" tone="muted" />
         <Pill label={`${state.gems.toLocaleString("en-US")} جوهرة`} icon="diamond" tone="jade" />
+        <Pill label={`${state.roaming.fragments.toLocaleString("en-US")} شظية أثر`} icon="sparkles" tone="gold" />
       </View>
       <AppButton label={event ? "أكمل الحدث الحالي" : eventResult ? "تابع التجوال" : "ابدأ التجوال"} icon="compass" onPress={event ? () => {} : eventResult ? () => { if (state.roaming.health < 20) { setNotice("انخفضت صحتك عن 20؛ لا يمكنك مواصلة السير الآن."); return; } setEventResult(""); setEventRewards(""); setNotice(""); explore(); } : explore} disabled={!!event || busy || !state.hero || (!event && !eventResult && state.roaming.health < 20)} />
     </Card>
@@ -95,10 +96,13 @@ export default function RoamingScreen() {
       </Card> : null}
       {isSahirEvent ? (
         <AppButton label="تابع الطريق" icon="compass" onPress={() => {
-          update(() => completeRoamingMerchantVisit(state, event));
+          const completed = completeRoamingMerchantVisit(state, event);
+          update(() => completed);
           setEvent(null);
           setMerchantStock([]);
-          setNotice("غادرت قافلة ساهر، ويمكنك مواصلة التجوال.");
+          setNotice(completed.roaming.fragments > state.roaming.fragments
+            ? "غادرت قافلة ساهر وعثرت على شظية أثر."
+            : "غادرت قافلة ساهر، ويمكنك مواصلة التجوال.");
         }} />
       ) : (
         <>
@@ -116,6 +120,47 @@ export default function RoamingScreen() {
 
     {battleSequence ? <BattleArena sequence={battleSequence} onBattleSettled={(result: BattleResult) => { const last = battleSequence.turns[battleSequence.turns.length - 1]; const remaining = last?.heroHP ?? 0; const health = Math.max(0, Math.round(state.roaming.maxHealth * remaining / battleSequence.heroMaxHP)); update(() => ({ ...result.state, roaming: { ...result.state.roaming, health, healthUpdatedAt: Date.now(), eventsCompleted: result.state.roaming.eventsCompleted + 1 } })); setEventResult(result.won ? "انتصرت في المواجهة وتستطيع متابعة الطريق." : "لم تنجح في المواجهة؛ تحتاج إلى استعادة صحتك قبل متابعة الطريق."); setEventRewards(result.won ? "تم تسجيل نتيجة المواجهة." : "استعد صحتك قبل العودة إلى الطريق."); setNotice(result.won ? "انتصرت في المواجهة." : "انتهت المواجهة بهزيمتك."); }} onClose={() => setBattleSequence(null)} /> : null}
     {notice ? <Card style={styles.notice}><Icon name="information-circle-outline" color={palette.jade} size={18} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
+
+
+    <SectionTitle title="أرشيف الآثار" icon="book-outline" action={<Pill label={`${ROAMING_ARCHIVE_ENTRIES.filter((entry) => state.roaming.storyFlags.includes(`archive:${entry.id}`)).length}/${ROAMING_ARCHIVE_ENTRIES.length} مفتوح`} tone="gold" />} />
+    <Card style={styles.archiveIntro}>
+      <View style={styles.archiveHeader}>
+        <Icon name="library-outline" color={palette.gold} size={23} />
+        <View style={styles.archiveHeaderText}>
+          <Txt style={styles.archiveTitle}>ذاكرة العالم المنسي</Txt>
+          <Txt muted style={styles.small}>اجمع شظايا الأثر من قرارات التجوال وافتح ست وثائق تكشف تاريخ المناطق وأسرارها</Txt>
+        </View>
+      </View>
+      <View style={styles.archiveBalance}>
+        <Txt muted style={styles.small}>رصيدك الحالي</Txt>
+        <Pill label={`${state.roaming.fragments} شظية أثر`} icon="sparkles" tone="gold" />
+      </View>
+    </Card>
+    {ROAMING_ARCHIVE_ENTRIES.map((entry) => {
+      const unlocked = state.roaming.storyFlags.includes(`archive:${entry.id}`);
+      return <Card key={entry.id} style={styles.archiveEntry}>
+        <View style={styles.archiveEntryTop}>
+          <View style={styles.archiveEntryText}>
+            <Txt style={styles.archiveEntryTitle}>{entry.title}</Txt>
+            <Txt muted style={styles.small}>{entry.region} • {entry.summary}</Txt>
+          </View>
+          <Icon name={unlocked ? "book" : "lock-closed"} color={unlocked ? palette.jade : palette.muted} size={20} />
+        </View>
+        {unlocked ? <View style={styles.archiveStory}><Txt style={styles.archiveStoryText}>{entry.story}</Txt></View> : <AppButton
+          label={`افتح الوثيقة • ${entry.cost} شظايا`}
+          icon="key-outline"
+          variant="secondary"
+          small
+          disabled={!state.hero || state.roaming.fragments < entry.cost}
+          onPress={() => {
+            const result = unlockRoamingArchiveEntry(state, entry.id);
+            if (result.error) { setNotice(result.error); return; }
+            update(() => result.state);
+            setNotice(`فُتحت وثيقة «${entry.title}» وأضيفت إلى أرشيفك.`);
+          }}
+        />}
+      </Card>;
+    })}
 
   </AppScreen>;
 }
@@ -162,4 +207,16 @@ const styles = StyleSheet.create({
   historyCard: { flexDirection: "row", justifyContent: "space-around", padding: 14 },
   historyRow: { alignItems: "center", gap: 4 },
   historyValue: { fontSize: 18, fontWeight: "900", color: palette.gold },
+
+  archiveIntro: { padding: 14, gap: 12, backgroundColor: "#211F2B", borderColor: "rgba(230,199,124,0.25)" },
+  archiveHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  archiveHeaderText: { flex: 1, alignItems: "flex-end", gap: 4 },
+  archiveTitle: { fontSize: 15, fontWeight: "900", textAlign: "right" },
+  archiveBalance: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: palette.line, paddingTop: 9 },
+  archiveEntry: { padding: 13, gap: 10, backgroundColor: "#171F27" },
+  archiveEntryTop: { flexDirection: "row", alignItems: "center", gap: 10 },
+  archiveEntryText: { flex: 1, alignItems: "flex-end", gap: 4 },
+  archiveEntryTitle: { fontSize: 13, fontWeight: "900", textAlign: "right" },
+  archiveStory: { borderTopWidth: 1, borderTopColor: palette.line, paddingTop: 10 },
+  archiveStoryText: { fontSize: 12, lineHeight: 22, textAlign: "right", color: palette.text },
 });
