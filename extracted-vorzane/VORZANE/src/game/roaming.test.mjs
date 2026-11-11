@@ -129,3 +129,17 @@ test("story-chain chapters have context-specific actions and no generic route sl
   assert.notDeepEqual(first.choices.map((choice) => choice.label), second.choices.map((choice) => choice.label));
   assert.doesNotMatch(second.story, /مسار المواجهة|اختبارات أشد وغنائم أعلى/);
 });
+
+
+test("red orchard root chapter returns an in-world result for the chosen action", () => {
+  const state = createHeroState("اختبار البستان الأحمر", "Warrior");
+  state.roaming.activeChain = "red-orchard";
+  state.roaming.chainStage = 3;
+  state.roaming.eventsCompleted = 4;
+  const event = getRoamingEvent(state, 104);
+  assert.equal(event.title, "جذر مسموم");
+  const result = resolveRoamingChoice(state, event, "press", Date.UTC(2026, 10, 11));
+  assert.match(result.message, /تزيل عنه السم|يزيل/);
+  assert.match(result.message, /النسغ إلى عروقه/);
+  assert.doesNotMatch(result.message, /في حكاية|نفذت|الخطوة التالية:/);
+});
