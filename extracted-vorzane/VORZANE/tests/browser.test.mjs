@@ -548,11 +548,11 @@ test("friends screen guides new players to create a public profile before search
   await page.getByText("أنشئ ملفك العام أولًا لتتمكن من البحث عن اللاعبين وإرسال طلبات الصداقة.", { exact: true }).waitFor({ timeout: 10_000 });
   const setupButton = page.getByRole("button", { name: "إعداد الملف الشخصي" });
   assert.equal(await setupButton.isEnabled(), true, "new players should have an actionable route to profile setup");
-  await setupButton.click();
-  await page.getByText("هويتك في العالم", { exact: true }).waitFor({ timeout: 10_000 });
-
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   assert.equal(hasHorizontalOverflow, false, "profile setup guidance must fit a narrow mobile viewport");
+  await setupButton.click();
+  await page.waitForURL(/\\/profile(?:\\?|$)/, { timeout: 10_000 });
+  await page.getByText("هويتك في العالم", { exact: true }).waitFor({ timeout: 10_000 });
   assert.deepEqual(unexpectedRequests, []);
   assert.deepEqual(pageErrors, []);
   await browserContext.close();
