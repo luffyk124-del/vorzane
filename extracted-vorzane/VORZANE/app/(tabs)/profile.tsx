@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { CharacterPortrait } from "../../src/components/CharacterPortrait";
 import { ProfileAvatar } from "../../src/components/ProfileAvatar";
-import { CLASS_NAMES, type ClassId } from "../../src/game/model";
+import { CLASS_NAMES, type ProfileAvatarId } from "../../src/game/model";
 import { useAuth } from "../../src/contexts/AuthContext";
 import { useGame } from "../../src/contexts/GameContext";
 import { getMyProfile, saveMyProfile } from "../../src/lib/social";
@@ -20,7 +20,7 @@ export default function ProfileScreen() {
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [draftAvatarId, setDraftAvatarId] = useState<ClassId | "brand">(state.profileAvatarId);
+  const [draftAvatarId, setDraftAvatarId] = useState<ProfileAvatarId>(state.profileAvatarId);
   const [notice, setNotice] = useState("");
   const hero = state.hero;
   const totals = totalStats(state);
@@ -33,8 +33,8 @@ export default function ProfileScreen() {
       if (!active) return;
       if (profile) {
         setDisplayName(profile.display_name);
-        if (["brand", "Warrior", "Mage", "Assassin", "Archer"].includes(profile.avatar_id)) {
-          update((current) => ({ ...current, profileAvatarId: profile.avatar_id as ClassId | "brand" }));
+        if (["brand", "Warrior", "Mage", "Assassin", "Archer", "golem"].includes(profile.avatar_id)) {
+          update((current) => ({ ...current, profileAvatarId: profile.avatar_id as ProfileAvatarId }));
         }
       }
       else if (hero?.name) setDisplayName(hero.name);
@@ -86,11 +86,11 @@ export default function ProfileScreen() {
     <Card style={styles.avatarPanel}>
       <Txt muted style={styles.hint}>اختر صورة الملف هنا؛ الشخصية الأساسية والفئة لا تتغيران.</Txt>
       <View style={styles.avatarChoices}>
-        {(["brand", "Warrior", "Mage", "Assassin", "Archer"] as const).map((avatar) => {
+        {(["brand", "Warrior", "Mage", "Assassin", "Archer", "golem"] as const).map((avatar) => {
           const selected = draftAvatarId === avatar;
           return <Pressable key={avatar} accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={() => setDraftAvatarId(avatar)} style={[styles.avatarChoice, selected && styles.avatarChoiceSelected]}>
             <ProfileAvatar avatarId={avatar} size={48} />
-            <Txt style={styles.avatarLabel}>{avatar === "brand" ? "الختم" : CLASS_NAMES[avatar]}</Txt>
+            <Txt style={styles.avatarLabel}>{avatar === "brand" ? "الختم" : avatar === "golem" ? "حارس الصخور" : CLASS_NAMES[avatar]}</Txt>
             {selected ? <Icon name="checkmark-circle" color={palette.gold} size={16} /> : null}
           </Pressable>;
         })}
