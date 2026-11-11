@@ -16,7 +16,7 @@ export function ProfileAvatar({ avatarId, size = 40 }: ProfileAvatarProps) {
 
   return (
     <View accessible accessibilityLabel={`رمز الملف الشخصي: ${label}`} style={[styles.frame, { width: size, height: size, borderRadius: size / 2 }]}>
-      {isGolem ? <Image source={GOLEM_AVATAR} resizeMode="cover" style={StyleSheet.absoluteFillObject} accessibilityLabel={label} /> : <Icon name={iconName as never} color={isBrand ? palette.gold : palette.jade} size={size * 0.54} />}
+      {isGolem ? <Image source={GOLEM_AVATAR} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityLabel={label} /> : <Icon name={iconName as never} color={isBrand ? palette.gold : palette.jade} size={size * 0.54} />}
     </View>
   );
 }
