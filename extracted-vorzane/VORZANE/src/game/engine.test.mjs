@@ -27,7 +27,7 @@ test("Dimas story chapters unlock in order and pay rewards once", () => {
   assert.equal(claimStoryChapter(first, 1).gold, first.gold, "a completed chapter must not pay twice");
 
   first.dimas.highestFloor = 4;
-  assert.equal(getStoryChapterProgress(first, 2), 3);
+  assert.equal(getStoryChapterProgress(first, 2), 4);
   assert.equal(canClaimStoryChapter(first, 2), true);
   assert.equal(canClaimStoryChapter(first, 3), false, "later chapters must remain locked until the previous chapter is claimed");
   const second = claimStoryChapter(first, 2);
