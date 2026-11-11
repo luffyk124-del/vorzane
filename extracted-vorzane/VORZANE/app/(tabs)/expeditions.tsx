@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, Meter, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, refreshRoamingHealth, ROAMING_EVENT_COUNT, type RoamingEvent } from "../../src/game/roaming";
+import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, buyRoamingHealthRefill, refreshRoamingHealth, ROAMING_EVENT_COUNT, type RoamingEvent } from "../../src/game/roaming";
 import { useGame } from "../../src/contexts/GameContext";
 import { BattleArena } from "../../src/components/BattleArena";
 import { createBattleSequence, type BattleSequence, type BattleResult } from "../../src/game/engine";
@@ -60,6 +60,7 @@ export default function RoamingScreen() {
       <View style={styles.healthHeader}><Txt muted style={styles.small}>الصحة أثناء التجوال</Txt><Txt style={styles.healthValue}>{state.roaming.health} / {state.roaming.maxHealth}</Txt></View>
       <Meter value={state.roaming.health} max={state.roaming.maxHealth} color={state.roaming.health < 35 ? palette.red : palette.jade} height={9} />
       <Txt muted style={styles.small}>{state.roaming.health >= state.roaming.maxHealth ? "الصحة مكتملة." : `الصحة التالية بعد ${Math.max(1, 60 - Math.floor(Math.max(0, clock - (state.roaming.healthUpdatedAt || clock)) / 1000) % 60)} ثانية • نقطة واحدة كل دقيقة`}</Txt>
+      <AppButton label={`تعبئة +20 صحة • 20 جوهرة (${state.roaming.gemRefillDate === new Date().toISOString().slice(0, 10) ? state.roaming.gemRefillsUsed : 0}/10 اليوم)`} icon="heart" variant="secondary" small disabled={!state.hero || state.roaming.health >= state.roaming.maxHealth || state.gems < 20 || (state.roaming.gemRefillDate === new Date().toISOString().slice(0, 10) && state.roaming.gemRefillsUsed >= 10)} onPress={() => { const result = buyRoamingHealthRefill(state); if (result.error) { setNotice(result.error); return; } update(() => result.state); setNotice(`تمت تعبئة ${result.restored} نقطة صحة مقابل 20 جوهرة.`); }} />
       <View style={styles.resources}>
         <Pill label={`${state.gold.toLocaleString("en-US")} ذهب`} icon="logo-usd" tone="muted" />
         <Pill label={`${state.gems.toLocaleString("en-US")} جوهرة`} icon="diamond" tone="jade" />
