@@ -41,18 +41,20 @@ test("roaming story chains preserve a branch and reveal the first sequel stage",
   assert.equal(boldChoice.state.roaming.chainRoute, "bold");
 });
 
-test("Dimas has 300 independent floors and milestone rare rewards", () => {
+test("Dimas has 300 independent floors, starts at 150 power, and gates milestones", () => {
   const floors = getDimasFloors();
   assert.equal(floors.length, 300);
+  assert.equal(getDimasFloor(1).requiredPower, 150);
+  assert.ok(getDimasFloor(2).requiredPower > getDimasFloor(1).requiredPower);
   assert.equal(getDimasFloor(50).reward?.kind, "weapon");
   assert.equal(getDimasFloor(75).reward?.kind, "companion");
   assert.equal(getDimasFloor(300).reward?.kind, "companion");
 
   const state = createHeroState("بطل الديماس", "Warrior");
-  const cleared = clearDimasFloor(state, 1);
-  assert.equal(cleared.error, undefined);
-  assert.equal(cleared.state.dimas.highestFloor, 1);
-  assert.equal(cleared.state.tower, state.tower, "Dimas progress must not advance the legacy combat tower");
+  const blocked = clearDimasFloor(state, 1);
+  assert.match(blocked.error ?? "", /قوة 150/);
+  assert.equal(blocked.state.dimas.highestFloor, 0);
+  assert.equal(blocked.state.tower, state.tower, "Dimas progress must not advance the legacy combat tower");
 });
 
 test("long quests progress across five tiers and pay their reward only once", () => {
