@@ -1,4 +1,4 @@
-import type { EquipmentItem, GameState, Rarity } from "./model.ts";
+import type { EquipmentItem, GameState } from "./model.ts";
 import { addExperience, combatStats } from "./stats.ts";
 import { createItemInstance, getDungeonDrop } from "./dungeonItems.ts";
 
