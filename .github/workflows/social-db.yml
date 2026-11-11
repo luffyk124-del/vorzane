@@ -34,8 +34,15 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Use PostgreSQL client from service container
+        run: |
+          PG_CONTAINER="$(docker ps --filter 'ancestor=postgres:16' --format '{{.ID}}' | head -n 1)"
+          if [ -z "$PG_CONTAINER" ]; then
+            echo 'PostgreSQL service container was not found' >&2
+            exit 1
+          fi
+          echo "PG_CONTAINER=$PG_CONTAINER" >> "$GITHUB_ENV"
+          echo 'psql() { docker exec -i "$PG_CONTAINER" psql "$@"; }' >> "$GITHUB_ENV"
       - name: Create isolated Supabase auth test schema
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/vorzane_test
