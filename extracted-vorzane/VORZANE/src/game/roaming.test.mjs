@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHeroState, getQuestProgress, getStoryChapterProgress } from "./engine.ts";
-import { buyRoamingHealthRefill, refreshRoamingHealth, getRoamingEvent, resolveRoamingChoice } from "./roaming.ts";
+import { buyRoamingHealthRefill, refreshRoamingHealth, getRoamingEvent, resolveRoamingChoice, ROAMING_EVENT_PREVIEW } from "./roaming.ts";
 
 test("roaming health regenerates one point per minute and respects its maximum", () => {
   const now = Date.UTC(2026, 10, 11, 12, 0, 0);
@@ -84,8 +84,39 @@ test("active roaming story chains advance immediately to their next choice", () 
 
   const result = resolveRoamingChoice(state, event, "press", Date.UTC(2026, 10, 11));
   assert.equal(result.state.roaming.chainStage, 1);
-  assert.match(result.message, /آثار أقدام/);
+  assert.match(result.message, /علامة على جذع قديم/);
   const nextEvent = getRoamingEvent(result.state, Date.UTC(2026, 10, 11) + 1);
   assert.equal(nextEvent.kind, "chain");
   assert.equal(nextEvent.chainStage, 1);
+});
+
+
+test("each roaming scene has its own choices and its own story continuation", () => {
+  const scenes = Array.from({ length: 14 }, (_, index) => ROAMING_EVENT_PREVIEW.slice(index * 12, (index + 1) * 12)[0]);
+  assert.equal(scenes.length, 14);
+  for (const scene of scenes) {
+    assert.equal(scene.choices.length, 3);
+    assert.equal(new Set(scene.choices.map((choice) => choice.label)).size, 3);
+    assert.ok(scene.choices.every((choice) => choice.hint.length > 0));
+  }
+  assert.equal(new Set(scenes.map((scene) => scene.choices.map((choice) => choice.label).join("|"))).size, 14);
+  const state = createHeroState("اختبار اختيارات الأحداث", "Warrior");
+  const event = ROAMING_EVENT_PREVIEW[0];
+  const result = resolveRoamingChoice(state, event, event.choices[0].id, Date.UTC(2026, 10, 11));
+  assert.match(result.message, /علامة ملاح قديمة/);
+  assert.doesNotMatch(result.message, /نفذت اختيارك.*ثم واصلت طريقك/);
+});
+
+test("story-chain chapters have context-specific actions and no generic route slogan", () => {
+  const state = createHeroState("اختبار فصول الحكاية", "Warrior");
+  state.roaming.activeChain = "lost-cartographer";
+  state.roaming.chainStage = 0;
+  state.roaming.eventsCompleted = 1;
+  const first = getRoamingEvent(state, Date.UTC(2026, 10, 11));
+  assert.deepEqual(first.choices.map((choice) => choice.label), ["اقرأ دفتر الملاح", "اتبع العلامة على الخريطة"]);
+  const firstResult = resolveRoamingChoice(state, first, "press", Date.UTC(2026, 10, 11));
+  const second = getRoamingEvent(firstResult.state, Date.UTC(2026, 10, 11) + 1);
+  assert.deepEqual(second.choices.map((choice) => choice.label), ["افحص النقش على الجذع", "قارن اتجاه الظلال"]);
+  assert.notDeepEqual(first.choices.map((choice) => choice.label), second.choices.map((choice) => choice.label));
+  assert.doesNotMatch(second.story, /مسار المواجهة|اختبارات أشد وغنائم أعلى/);
 });
