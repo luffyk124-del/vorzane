@@ -250,7 +250,7 @@ async function signInWithMock(page) {
   await emailField.fill("player@example.test");
   await page.getByPlaceholder("8 أحرف على الأقل").fill("local-test-password");
   await page.getByRole("button", { name: "متابعة بالبريد" }).click();
-  await page.getByText("ميادين القتال", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("ساحة الحراس", { exact: true }).waitFor({ timeout: 15_000 });
 }
 
 async function waitForServer() {
@@ -439,7 +439,7 @@ test("new hero creator renders character controls only once", async () => {
   await page.getByText("الساحر", { exact: true }).click();
   await page.getByPlaceholder("اسمٌ يليق بالأساطير").fill("بطلة الاختبار");
   await page.getByRole("button", { name: "ابدأ الرحلة" }).click();
-  await page.getByText("ميادين القتال", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByText("ساحة الحراس", { exact: true }).waitFor({ timeout: 10_000 });
   assert.equal(await page.getByText("اختر شخصيتك", { exact: true }).count(), 0, "character selection must disappear after creation");
   assert.equal(await page.getByText("اختر فئتك", { exact: true }).count(), 0, "class selection must disappear after creation");
   assert.ok(await page.getByLabel("صورة البطلة").count() >= 1, "the selected heroine portrait remains available in the hero UI");
