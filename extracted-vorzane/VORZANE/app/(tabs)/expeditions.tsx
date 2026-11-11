@@ -16,7 +16,7 @@ export default function RoamingScreen() {
   const [eventResult, setEventResult] = useState("");
   const [battleSequence, setBattleSequence] = useState<BattleSequence | null>(null);
   useEffect(() => { const timer = setInterval(() => update((current) => refreshRoamingHealth(current)), 60_000); update((current) => refreshRoamingHealth(current)); return () => clearInterval(timer); }, [update]);
-  const merchant = useMemo(() => getTravellingMerchant(state), [state.roaming.eventsCompleted, state.gold, state.roaming.fragments, state.hero?.level]);
+  const merchant = useMemo(() => getTravellingMerchant(state), [state.roaming.eventsCompleted, state.gold, state.hero?.level]);
   const explore = () => {
     if (!state.hero) { setNotice("أنشئ شخصيتك أولًا."); return; }
     if (state.roaming.health < 20) { setNotice("تحتاج إلى 20 صحة على الأقل لبدء التجوال."); return; }

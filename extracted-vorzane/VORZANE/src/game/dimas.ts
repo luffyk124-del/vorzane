@@ -134,7 +134,7 @@ export function getDimasMerchantStock(level: number, floor: number, seed = Date.
   return [
     { id: "dimas-gear", name: sample.name, description: `${sample.slot} • ${sample.rarity} • يتطلب مستوى ${sample.requiredLevel ?? 1}`, price: Math.max(80, Math.round(sample.price * factor * 0.72)), kind: "gear" },
     { id: "dimas-tonic", name: "إكسير الديماس", description: "استعادة صحية بعد المواجهات.", price: Math.round(90 * factor), kind: "tonic" },
-    { id: "dimas-fragments", name: "حزمة القطع الأثرية", description: "مواد نادرة من مخازن البرج.", price: Math.round(140 * factor), kind: "fragments" },
+    { id: "dimas-supply", name: "صندوق إمداد الحراس", description: "ذهب إضافي من مخازن البرج.", price: Math.round(180 * factor), kind: "gold" },
   ];
 }
 export function buyDimasMerchantItem(state: GameState, floor: number, itemId: string, seed = Date.now()): { state: GameState; error?: string } {
