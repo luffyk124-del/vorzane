@@ -31,7 +31,8 @@ test("roaming story chains preserve a branch and reveal the first sequel stage",
   assert.equal(started.state.roaming.chainRoute, "cautious");
 
   started.state.roaming.eventsCompleted = 5;
-  const sequel = getRoamingEvent(started.state, 123);
+  started.state.roaming.chainCooldown = 0;
+  const sequel = getRoamingEvent(started.state, 3_005);
   assert.equal(sequel.kind, "chain");
   assert.equal(sequel.title, "الملاح الضائع");
   assert.match(sequel.story, /تفاصيل لم تكن ظاهرة من الطريق الرئيسي/);

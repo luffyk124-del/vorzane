@@ -254,7 +254,7 @@ export function getRoamingEvent(state: GameState, seed = Date.now()): RoamingEve
       return { id: `companion-${entry.petId}`, title: entry.title, region: entry.region, story: entry.story, kind: entry.kind, choices: entry.choices };
     }
   }
-  if (roaming.activeChain && roaming.eventsCompleted > 0) {
+  if (roaming.activeChain && roaming.eventsCompleted > 0 && (roaming.chainCooldown ?? 0) <= 0 && Math.abs(Math.floor(seed / 1000)) % 3 === 0) {
     const chain = CHAINS.find((item) => item.id === roaming.activeChain);
     if (chain) {
       const stage = Math.min(chain.stages.length - 1, roaming.chainStage);
@@ -361,10 +361,14 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
     next.roaming.activeChain = null;
     next.roaming.chainStage = 0;
     next.roaming.chainRoute = null;
+    next.roaming.chainCooldown = 0;
   } else if (reward.chain) {
     next.roaming.activeChain = reward.chain;
     next.roaming.chainStage = event.chainId ? (event.chainStage ?? 0) + 1 : 0;
     next.roaming.chainRoute = ["careful", "study", "sneak", "pray", "help", "trade"].includes(choice.id) ? "cautious" : "bold";
+    next.roaming.chainCooldown = 2 + Math.floor(Math.random() * 3);
+  } else if (next.roaming.activeChain && (next.roaming.chainCooldown ?? 0) > 0) {
+    next.roaming.chainCooldown -= 1;
   }
   if (next.roaming.health <= 0) {
     next.roaming.health = 0;
@@ -380,15 +384,42 @@ export function resolveRoamingChoice(state: GameState, event: RoamingEvent, choi
     lootName ? `غنيمة: ${lootName}` : "",
   ].filter(Boolean).join(" • ");
   const chain = event.chainId ? CHAINS.find((item) => item.id === event.chainId) : undefined;
-  const nextStageName = chain?.stages[(event.chainStage ?? 0) + 1];
+  const chainStage = event.chainStage ?? 0;
   const sceneIndex = event.id.startsWith("roam-") ? Number(event.id.split("-")[1]) : -1;
   const choiceIndex = event.choices.findIndex((item) => item.id === choiceId);
   const sceneResult = sceneIndex >= 0 ? SCENE_RESULTS[sceneIndex]?.[choiceIndex] : undefined;
+  const chainNarrative = (() => {
+    if (!event.chainId || !chain) return "";
+    if (reward.chainEnd) {
+      const endings: Record<string, string> = {
+        "red-orchard": "امتدت الحياة من جديد بين أشجار البستان، واخضرّت الأغصان التي ظلت صامتة طويلًا. عاد المكان إلى عطره، ولم يبقَ من اللعنة إلا ذكرى بعيدة.",
+        "lost-cartographer": "وضعت آخر صفحة في موضعها، فاكتملت الخريطة أمامك. ظهر الملاح عند نهاية الطريق، وعرف من العلامات أنك أعدت إليه ما فقده.",
+        "black-sail": "انكشف سر الراية أخيرًا؛ ظهر سجل الرحلة الذي يروي ما حدث للسفينة وطاقمها. أغلقت السجل وتركت البحر يحتفظ ببقية أسراره.",
+        "silent-bell": "عادت النغمة إلى الجرس، وظهر معنى الصمت الذي أحاط بالمكان. انتهت الرحلة وبقي صدى النغمة في الممر.",
+      };
+      return endings[chain.id] ?? "اكتملت تفاصيل الرحلة، واتضحت لك حقيقة العلامات التي قادتك من البداية.";
+    }
+    if (chain.id === "red-orchard" && chainStage === 3) {
+      return choiceId === "press"
+        ? "أزلت السم عن الجذر وغسلت موضعه بماء النبع. بدأ النسغ يسري في العروق اليابسة، وارتجفت الأغصان فوقك قبل أن تتفتح بينها زهرة نادرة لم تظهر منذ أعوام."
+        : "اتبعت مجرى الماء حتى منبعه، فعثرت على ما كان يفسد التربة وأوقفت تسربه. عاد الماء النقي إلى الجذور، وانفرجت الأغصان كاشفةً عن زهرة نادرة في قلب البستان.";
+    }
+    const nextStage = chain.stages[chainStage + 1];
+    const continuations: Record<string, string[]> = {
+      "lost-cartographer": ["انفرجت صفحات الدفتر عن رسم قديم، وقادتك علاماته إلى نقش لم يظهر على الخريطة من قبل.", "قارنت الظلال بخطوط الخريطة، فبان ممر ضيق لم ينتبه إليه الملاح."],
+      "black-sail": ["تحركت الراية مع نسيم البحر، فسقط من طياتها ختم صغير يحمل أثر السفينة المفقودة.", "تفحصت الخيوط والملح العالق بها، فعثرت على علامة تقود إلى الساحل."],
+      "silent-bell": ["اهتز الجرس دون أن يصدر صوتًا، ثم أضاء نقش خفي على حافته.", "أصغيت إلى الصمت المحيط به، فميزت نقرات متباعدة ترشدك إلى سر النغمة."],
+      "red-orchard": ["تحركت الأغصان مع نسمة لم تهب في المكان، وظهر بين الجذور أثر يقود إلى عمق البستان.", "تتبعت العلامات على الأوراق، فعثرت على خيط يربط هذا الموضع بسر الأشجار."],
+    };
+    const fallback = choiceId === "press"
+      ? "تابعت ما كشفه الدليل، فظهر تفصيل جديد لم يكن واضحًا من قبل."
+      : "تفحصت المكان من زاوية أخرى، فعثرت على علامة صغيرة تقود إلى سر جديد.";
+    const continuation = continuations[chain.id]?.[choiceId === "press" ? 0 : 1] ?? fallback;
+    return nextStage ? continuation + " وعند انحسار الضباب لاح لك معلم جديد في الطريق." : continuation;
+  })();
   const storyResult = event.chainId
-    ? reward.chainEnd
-      ? "اكتملت حكاية «" + (chain?.name ?? "الرحلة") + "». جمعت الأدلة المرتبطة ببدايتها ووصلت إلى خاتمتها عند «" + (chain?.stages[event.chainStage ?? 0] ?? "النهاية") + "»."
-      : "في حكاية «" + (chain?.name ?? "رحلتك") + "»، نفذت «" + choice.label + "» وربطت الدليل الحالي بالخطوة التالية: «" + (nextStageName ?? "الخاتمة") + "». بقيت علامة جديدة تستحق الفحص."
-    : sceneResult ?? "نفذت اختيارك «" + choice.label + "» بما يناسب تفاصيل هذا اللقاء، ثم واصلت طريقك.";
+    ? chainNarrative
+    : sceneResult ?? "هدأ المكان من حولك، وواصلت طريقك وقد ترك اختيارك أثرًا في هذا اللقاء.";
   return { state: next, message: storyResult, rewards: rewards || "لم تحصل على مكافآت في هذا الاختيار." };
 }
 
