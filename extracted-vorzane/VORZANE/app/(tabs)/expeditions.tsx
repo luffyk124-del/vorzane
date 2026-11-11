@@ -10,10 +10,12 @@ export default function RoamingScreen() {
   const [event, setEvent] = useState<RoamingEvent | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
-  const merchant = useMemo(() => getTravellingMerchant(state), [state.roaming.eventsCompleted, state.gold, state.roaming.fragments]);
+  const [merchantBought, setMerchantBought] = useState<string[]>([]);
+  const merchant = useMemo(() => getTravellingMerchant(state), [state.roaming.eventsCompleted, state.gold, state.roaming.fragments, state.hero?.level]);
   const explore = () => {
     if (!state.hero) { setNotice("أنشئ شخصيتك أولًا."); return; }
     if (state.roaming.health <= 0) { setNotice("تحتاج إلى استعادة صحتك قبل مواصلة التجوال."); return; }
+    setMerchantBought([]);
     setEvent(getRoamingEvent(state, Date.now() + state.roaming.eventsCompleted * 97));
     setNotice("");
   };
@@ -28,9 +30,10 @@ export default function RoamingScreen() {
   };
   const buy = (itemId: string) => {
     const result = buyMerchantItem(state, itemId);
-    if (result.error) { setNotice(result.error); return; }
+    if (result.error) { setNotice(result.error); return false; }
     update(() => result.state);
-    setNotice("تمت الصفقة. أضيفت المكافأة إلى تقدمك.");
+    setNotice("تمت الصفقة. أضيفت المكافأة إلى ممتلكاتك.");
+    return true;
   };
 
   return <AppScreen>
@@ -55,30 +58,28 @@ export default function RoamingScreen() {
 
     {event ? <Card style={styles.eventCard}>
       <View style={styles.eventTop}>
-        <Pill label={event.kind === "chain" ? "حلقة من حكاية طويلة" : event.kind === "encounter" ? "مواجهة" : event.kind === "traveler" ? "لقاء عابر" : event.kind === "cache" ? "اكتشاف" : "حدث غامض"} tone="gold" />
-        <Icon name="sparkles" size={21} color={palette.gold} />
+        <Pill label={event.kind === "chain" ? "حلقة من حكاية طويلة" : event.kind === "encounter" ? "مواجهة" : event.kind === "traveler" ? "لقاء عابر" : event.kind === "cache" ? "اكتشاف" : event.kind === "merchant" ? "تاجر متنقل" : "حدث غامض"} tone="gold" />
+        <Icon name={event.kind === "merchant" ? "storefront" : "sparkles"} size={21} color={palette.gold} />
       </View>
       <Txt style={styles.region}>{event.region}</Txt>
       <Txt style={styles.eventTitle}>{event.title}</Txt>
       <Txt muted style={styles.eventStory}>{event.story}</Txt>
+      {event.kind === "merchant" ? <Card style={styles.merchantCard}>
+        <View style={styles.merchantHeader}><Icon name="storefront" color={palette.gold} size={22} /><View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={styles.merchantTitle}>بضاعة ساهر لهذا اللقاء</Txt><Txt muted style={styles.small}>هذه القافلة لن تبقى هنا طويلًا</Txt></View></View>
+        {merchant.map((item) => <View key={item.id} style={styles.merchantRow}>
+          <View style={styles.merchantInfo}>
+            <Txt style={styles.itemName}>{item.name}</Txt>
+            <Txt muted style={styles.small}>{item.description}</Txt>
+            <Txt style={styles.price}>{item.price.toLocaleString("en-US")} {item.currency === "gold" ? "ذهب" : "قطعة"}</Txt>
+          </View>
+          <AppButton label={merchantBought.includes(item.id) ? "تم الشراء" : "شراء"} icon="cart-outline" small variant="secondary" disabled={merchantBought.includes(item.id)} onPress={() => { if (buy(item.id)) setMerchantBought((items) => [...items, item.id]); }} />
+        </View>)}
+      </Card> : null}
       <SectionTitle title="ماذا ستفعل؟" icon="git-branch-outline" />
       {event.choices.map((choice) => <PressChoice key={choice.id} label={choice.label} hint={choice.hint} onPress={() => choose(choice.id)} disabled={busy} />)}
     </Card> : null}
 
     {notice ? <Card style={styles.notice}><Icon name="information-circle-outline" color={palette.jade} size={18} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
-
-    <SectionTitle title="التاجر المتنقل" icon="storefront-outline" action={<Pill label="يغير بضاعته كل 6 ساعات" tone="muted" />} />
-    <Card style={styles.merchantCard}>
-      <View style={styles.merchantHeader}><Icon name="storefront" color={palette.gold} size={23} /><View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={styles.merchantTitle}>قافلة التاجر ساهر</Txt><Txt muted style={styles.small}>لا يظهر في مكان واحد مرتين متتاليتين</Txt></View></View>
-      {merchant.map((item) => <View key={item.id} style={styles.merchantRow}>
-        <View style={styles.merchantInfo}>
-          <Txt style={styles.itemName}>{item.name}</Txt>
-          <Txt muted style={styles.small}>{item.description}</Txt>
-          <Txt style={styles.price}>{item.price} {item.currency === "gold" ? "ذهب" : "قطعة"}</Txt>
-        </View>
-        <AppButton label="شراء" icon="cart-outline" small variant="secondary" onPress={() => buy(item.id)} />
-      </View>)}
-    </Card>
 
     <SectionTitle title="سجل رحلاتك" icon="book-outline" />
     <Card style={styles.historyCard}>
@@ -90,7 +91,7 @@ export default function RoamingScreen() {
 }
 
 function PressChoice({ label, hint, onPress, disabled }: { label: string; hint: string; onPress: () => void; disabled: boolean }) {
-  return <AppButton label={label} onPress={onPress} disabled={disabled} variant="secondary" style={styles.choiceButton} />;
+  return <View style={styles.choiceWrap}><AppButton label={label} onPress={onPress} disabled={disabled} variant="secondary" style={styles.choiceButton} /><Txt muted style={styles.choiceHint}>{hint}</Txt></View>;
 }
 
 const styles = StyleSheet.create({
@@ -110,9 +111,11 @@ const styles = StyleSheet.create({
   eventTitle: { fontSize: 21, fontWeight: "900", textAlign: "right" },
   eventStory: { fontSize: 13, lineHeight: 22, textAlign: "right" },
   choiceButton: { marginTop: 1 },
+  choiceWrap: { gap: 4 },
+  choiceHint: { fontSize: 10, lineHeight: 16, textAlign: "right" },
   notice: { padding: 12, flexDirection: "row", alignItems: "center", gap: 8 },
   noticeText: { flex: 1, fontSize: 12, textAlign: "right" },
-  merchantCard: { padding: 14, gap: 12 },
+  merchantCard: { padding: 14, gap: 12, backgroundColor: "#25251F", borderColor: "rgba(230,199,124,0.28)" },
   merchantHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   merchantTitle: { fontSize: 15, fontWeight: "900" },
   merchantRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: palette.line },
