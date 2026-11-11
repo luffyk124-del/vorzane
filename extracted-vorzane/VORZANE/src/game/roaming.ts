@@ -354,6 +354,23 @@ export function buyMerchantItem(state: GameState, itemId: string) {
 
 
 /** Regenerate one roaming health point for each full minute elapsed. */
+export function buyRoamingHealthRefill(state: GameState, now = Date.now()): { state: GameState; error?: string; restored?: number } {
+  if (!state.hero) return { state, error: "أنشئ شخصيتك أولًا." };
+  if (state.roaming.health >= state.roaming.maxHealth) return { state, error: "صحتك مكتملة بالفعل." };
+  const today = new Date(now).toISOString().slice(0, 10);
+  const used = state.roaming.gemRefillDate === today ? state.roaming.gemRefillsUsed : 0;
+  if (used >= 10) return { state, error: "وصلت إلى الحد اليومي: 10 تعبئات." };
+  if (state.gems < 20) return { state, error: "لا تملك 20 جوهرة كافية." };
+  const restored = Math.min(20, state.roaming.maxHealth - state.roaming.health);
+  const next = JSON.parse(JSON.stringify(state)) as GameState;
+  next.gems -= 20;
+  next.roaming.health += restored;
+  next.roaming.healthUpdatedAt = now;
+  next.roaming.gemRefillDate = today;
+  next.roaming.gemRefillsUsed = used + 1;
+  return { state: next, restored };
+}
+
 export function refreshRoamingHealth(state: GameState, now = Date.now()): GameState {
   const last = state.roaming.healthUpdatedAt || now;
   const minutes = Math.floor(Math.max(0, now - last) / 60_000);
