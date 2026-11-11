@@ -109,7 +109,7 @@ export default function QuestsScreen() {
 
     <SectionTitle title="مهام اللاعب" icon="list-circle-outline" action={<Pill label={`${quests.filter((quest) => quest.available).length} جاهزة`} tone="jade" />} />
     {quests.map((quest) => {
-      const tone = quest.category === "الزنزانة" || quest.category === "البرج" ? "gold" : quest.category === "الرحلات" ? "jade" : quest.category === "قتال" ? "red" : "muted";
+      const tone = quest.category === "الديماس" ? "gold" : quest.category === "التجوال" || quest.category === "الرحلات" || quest.category === "الرفقاء" ? "jade" : quest.category === "قتال" ? "red" : "muted";
       return <Card key={quest.id} style={styles.questCard}>
         <AppButton label={quest.claimed ? "استُلمت" : quest.available ? `استلم ${quest.rewardGold}` : "غير مكتملة"} icon={quest.claimed ? "checkmark" : "gift-outline"} onPress={() => quest.available && update((current) => claimQuest(current, quest.id))} variant={quest.available ? "jade" : "secondary"} small disabled={!quest.available || quest.claimed} />
         <View style={styles.questBody}>
