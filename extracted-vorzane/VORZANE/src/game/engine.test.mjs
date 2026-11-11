@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter } from "./engine.ts";
+import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter, getQuestProgress, QUESTS } from "./engine.ts";
 import { createFreshState, normalizeGameState } from "./model.ts";
 import { buyRoamingHealthRefill } from "./roaming.ts";
 
@@ -363,4 +363,16 @@ test("roaming gem refill rejects insufficient gems and full health", () => {
   assert.equal(buyRoamingHealthRefill(state, now).error, "لا تملك 20 جوهرة كافية.");
   state.roaming.health = state.roaming.maxHealth;
   assert.equal(buyRoamingHealthRefill(state, now).error, "صحتك مكتملة بالفعل.");
+});
+
+
+test("current quest catalog tracks Dimas, roaming, and companion progression", () => {
+  const state = createHeroState("اختبار المهام", "Warrior");
+  state.dimas.highestFloor = 4;
+  state.roaming.eventsCompleted = 3;
+  state.pets = ["wolf"];
+  assert.equal(getQuestProgress(state, "dimas-entry"), 4);
+  assert.equal(getQuestProgress(state, "roaming-path"), 3);
+  assert.equal(getQuestProgress(state, "companion"), 1);
+  assert.ok(QUESTS.every((quest) => !["cave", "tower", "hard"].includes(quest.id)));
 });
