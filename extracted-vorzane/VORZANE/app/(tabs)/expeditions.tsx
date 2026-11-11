@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, Meter, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, ROAMING_EVENT_COUNT, type RoamingEvent } from "../../src/game/roaming";
+import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, refreshRoamingHealth, ROAMING_EVENT_COUNT, type RoamingEvent } from "../../src/game/roaming";
 import { useGame } from "../../src/contexts/GameContext";
 import { palette } from "../../src/theme";
 
@@ -11,13 +11,16 @@ export default function RoamingScreen() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [merchantBought, setMerchantBought] = useState<string[]>([]);
+  const [eventResult, setEventResult] = useState("");
+  useEffect(() => { const timer = setInterval(() => update((current) => refreshRoamingHealth(current)), 60_000); update((current) => refreshRoamingHealth(current)); return () => clearInterval(timer); }, [update]);
   const merchant = useMemo(() => getTravellingMerchant(state), [state.roaming.eventsCompleted, state.gold, state.roaming.fragments, state.hero?.level]);
   const explore = () => {
     if (!state.hero) { setNotice("أنشئ شخصيتك أولًا."); return; }
-    if (state.roaming.health <= 0) { setNotice("تحتاج إلى استعادة صحتك قبل مواصلة التجوال."); return; }
+    if (state.roaming.health < 20) { setNotice("تحتاج إلى 20 صحة على الأقل لبدء التجوال."); return; }
     setMerchantBought([]);
     setEvent(getRoamingEvent(state, Date.now() + state.roaming.eventsCompleted * 97));
     setNotice("");
+    setEventResult("");
   };
   const choose = (choiceId: string) => {
     if (!event || busy) return;
@@ -25,6 +28,7 @@ export default function RoamingScreen() {
     const result = resolveRoamingChoice(state, event, choiceId);
     update(() => result.state);
     setNotice(result.message);
+    setEventResult(result.message);
     setEvent(null);
     setBusy(false);
   };
@@ -53,7 +57,7 @@ export default function RoamingScreen() {
         <Pill label={`${state.gold.toLocaleString("en-US")} ذهب`} icon="logo-usd" tone="muted" />
         <Pill label={`${state.gems.toLocaleString("en-US")} جوهرة`} icon="diamond" tone="jade" />
       </View>
-      <AppButton label={event ? "أكمل الحدث الحالي" : "ابدأ التجوال"} icon="compass" onPress={event ? () => {} : explore} disabled={!!event || busy || !state.hero} />
+      <AppButton label={event ? "أكمل الحدث الحالي" : eventResult ? "تابع التجوال" : "ابدأ التجوال"} icon="compass" onPress={event ? () => {} : eventResult ? () => { if (state.roaming.health < 20) { setNotice("انخفضت صحتك عن 20؛ لا يمكنك مواصلة السير الآن."); return; } setEventResult(""); setNotice(""); explore(); } : explore} disabled={!!event || busy || !state.hero || (!event && !eventResult && state.roaming.health < 20)} />
     </Card>
 
     {event ? <Card style={styles.eventCard}>
@@ -70,7 +74,7 @@ export default function RoamingScreen() {
           <View style={styles.merchantInfo}>
             <Txt style={styles.itemName}>{item.name}</Txt>
             <Txt muted style={styles.small}>{item.description}</Txt>
-            <Txt style={styles.price}>{item.price.toLocaleString("en-US")} {item.currency === "gold" ? "ذهب" : "قطعة"}</Txt>
+            <Txt style={styles.price}>{item.price.toLocaleString("en-US")} ذهب</Txt>
           </View>
           <AppButton label={merchantBought.includes(item.id) ? "تم الشراء" : "شراء"} icon="cart-outline" small variant="secondary" disabled={merchantBought.includes(item.id)} onPress={() => { if (buy(item.id)) setMerchantBought((items) => [...items, item.id]); }} />
         </View>)}
