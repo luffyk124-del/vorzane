@@ -238,3 +238,13 @@ export function buyMerchantItem(state: GameState, itemId: string) {
   if (item.xp && next.hero) Object.assign(next, addExperience(next, item.xp).state);
   return { state: next };
 }
+
+
+/** Regenerate one roaming health point for each full minute elapsed. */
+export function refreshRoamingHealth(state: GameState, now = Date.now()): GameState {
+  const last = state.roaming.healthUpdatedAt || now;
+  const minutes = Math.floor(Math.max(0, now - last) / 60_000);
+  if (!minutes) return state;
+  const health = Math.min(state.roaming.maxHealth, state.roaming.health + minutes);
+  return { ...state, roaming: { ...state.roaming, health, healthUpdatedAt: last + minutes * 60_000 } };
+}
