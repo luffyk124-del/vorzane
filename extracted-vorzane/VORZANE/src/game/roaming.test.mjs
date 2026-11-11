@@ -220,7 +220,7 @@ test("roaming cycles through distinct base scenes before repeating one", () => {
     do {
       seed += 1;
       event = getRoamingEvent(state, seed);
-    } while (!/^roam-\\d+-\\d+$/.test(event.id));
+    } while (!/^roam-\d+-\d+$/.test(event.id));
     const sceneIndex = Number(event.id.split("-")[1]);
     assert.equal(seenScenes.has(sceneIndex), false);
     seenScenes.add(sceneIndex);
