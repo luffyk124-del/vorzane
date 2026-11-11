@@ -22,13 +22,13 @@ export default function DimasScreen() {
 
   const challenge = () => {
     if (!state.hero) { setNotice("أنشئ شخصيتك أولًا."); return; }
-    if (selected !== state.dimas.highestFloor + 1) { setNotice(\`الطابق التالي المتاح هو \${state.dimas.highestFloor + 1}.\`); return; }
-    if (power < current.requiredPower) { setNotice(\`تحتاج إلى قوة \${current.requiredPower} على الأقل. قوتك الحالية \${power}.\`); return; }
+    if (selected !== state.dimas.highestFloor + 1) { setNotice(`الطابق التالي المتاح هو ${state.dimas.highestFloor + 1}.`); return; }
+    if (power < current.requiredPower) { setNotice(`تحتاج إلى قوة ${current.requiredPower} على الأقل. قوتك الحالية ${power}.`); return; }
     const enemyScale = clamp(current.requiredPower / Math.max(1, power), 0.55, 1);
     const sequence = createBattleSequence(state, "tower", Math.random, {
       floor: selected,
       enemyScale,
-      modeLabel: \`الديماس • الطابق \${selected}\`,
+      modeLabel: `الديماس • الطابق ${selected}`,
     });
     if (!sequence) { setNotice("تعذر بدء المواجهة."); return; }
     sequence.enemy.title = selected % 10 === 0 ? "حارس الطابق" : "حارس الديماس";
@@ -43,7 +43,7 @@ export default function DimasScreen() {
         gold: cleared.reward.gold,
         xp: cleared.reward.xp,
         dropped: cleared.loot?.name ?? null,
-        log: [...originalSettler.log, \`مكافأة الطابق: +\${cleared.reward.gold.toLocaleString("en-US")} ذهب و+\${cleared.reward.xp.toLocaleString("en-US")} خبرة.\`, ...(cleared.loot ? [\`غنيمة: \${cleared.loot.name}\`] : [])],
+        log: [...originalSettler.log, `مكافأة الطابق: +${cleared.reward.gold.toLocaleString("en-US")} ذهب و+${cleared.reward.xp.toLocaleString("en-US")} خبرة.`, ...(cleared.loot ? [`غنيمة: ${cleared.loot.name}`] : [])],
       };
     } else {
       sequence.result = {
@@ -61,7 +61,7 @@ export default function DimasScreen() {
   const settleBattle = (result: BattleResult) => {
     update(() => result.state);
     if (result.won) {
-      setNotice(\`انتصار! اجتزت الطابق \${selected} وحصلت على \${result.gold.toLocaleString("en-US")} ذهب و\${result.xp.toLocaleString("en-US")} خبرة.\${result.dropped ? \` الغنيمة: \${result.dropped}.\` : ""}\`);
+      setNotice(`انتصار! اجتزت الطابق ${selected} وحصلت على ${result.gold.toLocaleString("en-US")} ذهب و${result.xp.toLocaleString("en-US")} خبرة.${result.dropped ? ` الغنيمة: ${result.dropped}.` : ""}`);
       setSelected(Math.min(300, selected + 1));
     } else {
       setNotice("لم تتمكن من اجتياز الطابق. طوّر عتادك وسماتك ثم حاول مجددًا.");
@@ -69,7 +69,7 @@ export default function DimasScreen() {
   };
 
   return <AppScreen>
-    <PageTitle eyebrow="الميدان الأسطوري" title="الديماس" subtitle="300 طابق من المواجهات المباشرة. لا أحداث جانبية ولا لقاءات؛ كل طابق خصم واضح وقوة مطلوبة ومكافأة محددة." trailing={<Pill label={\`\${state.dimas.highestFloor}/300\`} icon="layers" tone="gold" />} />
+    <PageTitle eyebrow="الميدان الأسطوري" title="الديماس" subtitle="300 طابق من المواجهات المباشرة. لا أحداث جانبية ولا لقاءات؛ كل طابق خصم واضح وقوة مطلوبة ومكافأة محددة." trailing={<Pill label={`${state.dimas.highestFloor}/300`} icon="layers" tone="gold" />} />
     <Card style={styles.hero}>
       <View style={styles.heroTop}><Icon name="trophy" color={palette.gold} size={27} /><View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={styles.heroTitle}>درج المجد</Txt><Txt muted style={styles.small}>أعلى طابق اجتزته: {state.dimas.highestFloor}</Txt></View></View>
       <View style={styles.stats}>
@@ -80,10 +80,10 @@ export default function DimasScreen() {
       <Txt style={styles.selectedTitle}>{current.title} — {current.name}</Txt>
       <Txt muted style={styles.small}>القوة المطلوبة: {current.requiredPower.toLocaleString("en-US")}</Txt>
       <View style={styles.rewardRow}>
-        <Pill label={\`+\${current.gold.toLocaleString("en-US")} ذهب\`} tone="gold" />
-        <Pill label={\`+\${current.xp.toLocaleString("en-US")} خبرة\`} tone="jade" />
+        <Pill label={`+${current.gold.toLocaleString("en-US")} ذهب`} tone="gold" />
+        <Pill label={`+${current.xp.toLocaleString("en-US")} خبرة`} tone="jade" />
       </View>
-      {current.reward ? <Card style={styles.milestone}><Pill label="مكافأة محطة مميزة" tone="gold" /><Txt style={styles.milestoneText}>{current.reward.name}{current.reward.amount ? \` • \${current.reward.amount}\` : ""}</Txt></Card> : null}
+      {current.reward ? <Card style={styles.milestone}><Pill label="مكافأة محطة مميزة" tone="gold" /><Txt style={styles.milestoneText}>{current.reward.name}{current.reward.amount ? ` • ${current.reward.amount}` : ""}</Txt></Card> : null}
       <AppButton label={selected <= state.dimas.highestFloor ? "تم اجتيازه" : selected === state.dimas.highestFloor + 1 ? "ابدأ قتال الطابق" : "افتح الطوابق بالتتابع"} icon="sword" onPress={challenge} disabled={!state.hero || !!battleSequence || selected !== state.dimas.highestFloor + 1 || power < current.requiredPower} />
       {power < current.requiredPower && selected === state.dimas.highestFloor + 1 ? <Txt muted style={styles.warning}>تحتاج إلى {(current.requiredPower - power).toLocaleString("en-US")} قوة إضافية لتجاوز هذا الطابق.</Txt> : null}
     </Card>
