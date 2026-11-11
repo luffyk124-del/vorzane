@@ -3,14 +3,12 @@ import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { useAuth } from "../../src/contexts/AuthContext";
-import { useGame } from "../../src/contexts/GameContext";
 import {
   getMyProfile,
   listIncomingFriendRequests,
   listMyFriends,
   removeFriend,
   respondToFriendRequest,
-  saveMyProfile,
   searchPlayers,
   sendFriendRequest,
   type FriendSummary,
@@ -22,10 +20,8 @@ import { palette } from "../../src/theme";
 
 export default function FriendsScreen() {
   const { user } = useAuth();
-  const { state } = useGame();
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [results, setResults] = useState<PlayerSearchResult[]>([]);
   const [friends, setFriends] = useState<FriendSummary[]>([]);
@@ -51,9 +47,7 @@ export default function FriendsScreen() {
     setIncoming(requestRows);
     const validProfile = myProfile && typeof myProfile.display_name === "string" ? myProfile : null;
     setProfile(validProfile);
-    if (validProfile) setDisplayName(validProfile.display_name);
-    else if (typeof state.hero?.name === "string" && state.hero.name && !displayName) setDisplayName(state.hero.name);
-  }, [user?.id, state.hero?.name, displayName]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -77,18 +71,6 @@ export default function FriendsScreen() {
     } finally {
       if (mountedRef.current) setBusy(false);
     }
-  };
-
-  const saveProfile = async () => {
-    const name = typeof displayName === "string" ? displayName.trim() : "";
-    if (name.length < 3 || name.length > 24) {
-      setNotice("اسم اللاعب يجب أن يتكون من 3 إلى 24 حرفًا.");
-      return;
-    }
-    await run(async () => {
-      const saved = await saveMyProfile(name, String(state.profileAvatarId));
-      if (mountedRef.current) setProfile(saved);
-    }, "تم حفظ ملف اللاعب.");
   };
 
   const sendRequest = async (playerId: string) => {
@@ -128,25 +110,9 @@ export default function FriendsScreen() {
 
   return <AppScreen>
     <View style={styles.content}>
-      <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء" subtitle="اعثر على اللاعبين وافتح ملفاتهم العامة، وأدر طلبات الصداقة." />
+      <PageTitle eyebrow="مجتمع VORZANE" title="الأصدقاء" subtitle="ابحث عن اللاعبين، وأدر طلبات الصداقة وقائمة أصدقائك." />
       <AppButton label="صندوق الإشعارات" icon="notifications-outline" onPress={() => router.push("/(tabs)/notifications" as never)} variant="secondary" />
       {notice ? <Card style={styles.notice}><Icon name="information-circle-outline" color={palette.gold} size={18} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
-
-      <SectionTitle title="ملفي العام" icon="globe-outline" />
-      <Card style={styles.panel}>
-        {profile ? <>
-          <Txt style={styles.profileName}>{profile.display_name}</Txt>
-          <Txt muted style={styles.playerMeta}>ملفك ظاهر دائمًا لجميع اللاعبين وفي نتائج البحث.</Txt>
-          <AppButton label="عرض ملفي العام" icon="person-circle-outline" onPress={() => openPlayer(user!.id)} variant="secondary" small />
-          <TextInput value={typeof displayName === "string" ? displayName : ""} onChangeText={setDisplayName} maxLength={24} placeholder="اسم اللاعب" placeholderTextColor={palette.muted} style={styles.input} />
-          <AppButton label="حفظ اسم اللاعب" icon="save-outline" onPress={saveProfile} disabled={busy || (typeof displayName === "string" ? displayName.trim() : "") === profile.display_name} variant="secondary" />
-        </> : <>
-          <Txt style={styles.playerName}>أنشئ ملفك داخل مجتمع VORZANE</Txt>
-          <Txt muted style={styles.playerMeta}>اسم الملف مستقل عن بريدك الإلكتروني، وسيكون ظاهرًا لجميع اللاعبين.</Txt>
-          <TextInput value={typeof displayName === "string" ? displayName : ""} onChangeText={setDisplayName} maxLength={24} placeholder="اسم اللاعب (3–24 حرفًا)" placeholderTextColor={palette.muted} style={styles.input} />
-          <AppButton label="إنشاء ملف اللاعب" icon="person-add-outline" onPress={saveProfile} loading={busy} disabled={busy || (typeof displayName === "string" ? displayName.trim().length : 0) < 3} />
-        </>}
-      </Card>
 
       <SectionTitle title={`طلبات الصداقة الواردة (${incoming.length})`} icon="mail-unread-outline" />
       {incoming.length ? incoming.map((request) => <Card key={request.request_id} style={styles.playerRow}>
@@ -187,7 +153,6 @@ const styles = StyleSheet.create({
   content: { gap: 13, width: "100%" },
   panel: { gap: 10, backgroundColor: "#13242C", padding: 13 },
   input: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 12, color: palette.text, textAlign: "right", backgroundColor: "#0B171D" },
-  profileName: { fontSize: 15, fontWeight: "900", textAlign: "right" },
   privacyRow: { minHeight: 54, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingVertical: 5 },
   playerRow: { padding: 12, flexDirection: "row", alignItems: "center", gap: 10 },
   playerInfo: { flex: 1, alignItems: "flex-end" },
