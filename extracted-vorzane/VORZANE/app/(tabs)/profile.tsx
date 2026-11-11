@@ -19,6 +19,7 @@ export default function ProfileScreen() {
   const { state, update } = useGame();
   const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [notice, setNotice] = useState("");
   const hero = state.hero;
   const totals = totalStats(state);
@@ -47,7 +48,8 @@ export default function ProfileScreen() {
     setNotice("");
     try {
       await saveMyProfile(displayName.trim(), String(state.profileAvatarId));
-      setNotice("تم حفظ اسمك. ملفك ظاهر لجميع اللاعبين وفي نتائج البحث.");
+      setEditing(false);
+      setNotice("تم حفظ تعديلات ملفك الشخصي.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "تعذر حفظ الملف الشخصي.");
     } finally {
@@ -56,7 +58,7 @@ export default function ProfileScreen() {
   };
 
   return <AppScreen>
-    <PageTitle eyebrow="هويتك في العالم" title="الملف الشخصي" subtitle="ملف عام يراه جميع اللاعبين، ويعرض شخصيتك وتقدمك وعتادك الحالي." trailing={<CharacterPortrait gender={state.characterStyle.gender} width={66} height={86} />} />
+    <PageTitle eyebrow="هويتك في العالم" title="الملف الشخصي" subtitle="ملفك يعرض هويتك وبطولاتك وعتادك. تغييرات الهوية متاحة من وضع التعديل فقط." trailing={<CharacterPortrait gender={state.characterStyle.gender} width={66} height={86} />} />
     <Card style={styles.heroCard}>
       <View style={styles.heroRow}>
         <CharacterPortrait gender={state.characterStyle.gender} width={104} height={136} />
@@ -75,9 +77,11 @@ export default function ProfileScreen() {
       </View> : null}
     </Card>
 
-    <SectionTitle title="رمز الملف الشخصي" icon="image-outline" />
+    <AppButton label={editing ? "إلغاء التعديل" : "تعديل الملف الشخصي"} icon={editing ? "close-outline" : "create-outline"} variant="secondary" onPress={() => setEditing((value) => !value)} disabled={busy} />
+    {editing ? <>
+    <SectionTitle title="صورة الملف الشخصي" icon="image-outline" />
     <Card style={styles.avatarPanel}>
-      <Txt muted style={styles.hint}>هذا الرمز مستقل عن الشخصية والفئة، ويمكن تغييره من هنا فقط.</Txt>
+      <Txt muted style={styles.hint}>اختر صورة الملف هنا؛ الشخصية الأساسية والفئة لا تتغيران.</Txt>
       <View style={styles.avatarChoices}>
         {(["brand", "Warrior", "Mage", "Assassin", "Archer"] as const).map((avatar) => {
           const selected = state.profileAvatarId === avatar;
@@ -94,9 +98,10 @@ export default function ProfileScreen() {
     <Card style={styles.panel}>
       <TextInput value={displayName} onChangeText={setDisplayName} maxLength={24} placeholder="اسمك الظاهر لجميع اللاعبين" placeholderTextColor={palette.muted} style={styles.input} accessibilityLabel="اسم اللاعب" />
       <Txt muted style={styles.hint}>من 3 إلى 24 حرفًا. هذا الاسم يظهر في البحث وصفحتك العامة.</Txt>
-      <AppButton label="حفظ اسم اللاعب" onPress={save} loading={busy} disabled={busy || !user || displayName.trim().length < 3} icon="save-outline" />
+      <AppButton label="حفظ التعديلات" onPress={save} loading={busy} disabled={busy || !user || displayName.trim().length < 3} icon="save-outline" />
       <View style={styles.publicNotice}><Icon name="globe-outline" color={palette.jade} size={18} /><Txt style={styles.publicNoticeText}>الملف ظاهر دائمًا، ولا يوجد خيار لإخفائه أو تعطيل ظهوره في البحث.</Txt></View>
     </Card>
+    </> : null}
 
     {hero ? <>
       <SectionTitle title="الإحصائيات القتالية" icon="analytics-outline" />
