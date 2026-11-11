@@ -144,7 +144,7 @@ test("active roaming story chapters wait for random intervening encounters", () 
   state.roaming.activeChain = "lost-cartographer";
   state.roaming.chainStage = 0;
   state.roaming.eventsCompleted = 1;
-  const event = getRoamingEvent(state, Date.UTC(2026, 10, 11) + 13);
+  const event = getRoamingEvent(state, 100_005);
   assert.equal(event.kind, "chain");
   assert.equal(event.chainStage, 0);
 
@@ -154,7 +154,7 @@ test("active roaming story chapters wait for random intervening encounters", () 
   assert.equal(result.state.roaming.chainNextAtEvent >= result.state.roaming.eventsCompleted + 2, true);
   assert.match(result.message, /الدفتر|العلامة/);
   assert.doesNotMatch(result.message, /في حكاية|نفذت|الخطوة التالية:/);
-  const beforeCooldown = getRoamingEvent(result.state, Date.UTC(2026, 10, 11) + 1);
+  const beforeCooldown = getRoamingEvent(result.state, 100_006);
   assert.notEqual(beforeCooldown.kind, "chain");
   const afterCooldown = { ...result.state, roaming: { ...result.state.roaming, eventsCompleted: result.state.roaming.chainNextAtEvent } };
   const randomSeed = Array.from({ length: 20 }, (_, i) => Date.UTC(2026, 10, 11) + i * 13).find((seed) => Math.abs(Math.floor(seed / 13)) % 4 === 0);
@@ -190,7 +190,7 @@ test("story-chain chapters have context-specific actions and no generic route sl
   assert.deepEqual(first.choices.map((choice) => choice.label), ["اقرأ دفتر الملاح", "اتبع العلامة على الخريطة"]);
   const firstResult = resolveRoamingChoice(state, first, "press", Date.UTC(2026, 10, 11));
   const delayedState = { ...firstResult.state, roaming: { ...firstResult.state.roaming, eventsCompleted: firstResult.state.roaming.chainNextAtEvent } };
-  const second = getRoamingEvent(delayedState, Date.UTC(2026, 10, 11) + 13);
+  const second = getRoamingEvent(delayedState, 100_005);
   assert.deepEqual(second.choices.map((choice) => choice.label), ["افحص النقش على الجذع", "قارن اتجاه الظلال"]);
   assert.notDeepEqual(first.choices.map((choice) => choice.label), second.choices.map((choice) => choice.label));
   assert.doesNotMatch(second.story, /مسار المواجهة|اختبارات أشد وغنائم أعلى/);
@@ -220,7 +220,7 @@ test("roaming cycles through distinct base scenes before repeating one", () => {
     do {
       seed += 1;
       event = getRoamingEvent(state, seed);
-    } while (!event.id.startsWith("roam-"));
+    } while (!/^roam-\\d+-\\d+$/.test(event.id));
     const sceneIndex = Number(event.id.split("-")[1]);
     assert.equal(seenScenes.has(sceneIndex), false);
     seenScenes.add(sceneIndex);
