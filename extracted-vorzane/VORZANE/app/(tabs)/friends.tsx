@@ -106,7 +106,7 @@ export default function FriendsScreen() {
     }
   };
 
-  const openPlayer = (playerId: string) => router.push((`/player/${playerId}`) as never);
+  const openPlayer = (playerId: string) => router.push({ pathname: "/player", params: { id: playerId } } as never);
 
   return <AppScreen>
     <View style={styles.content}>

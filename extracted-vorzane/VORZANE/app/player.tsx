@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { CharacterPortrait } from "../../src/components/CharacterPortrait";
-import { ProfileAvatar } from "../../src/components/ProfileAvatar";
-import { getPublicPlayerProfile, type PublicPlayerProfile } from "../../src/lib/social";
-import { CLASS_NAMES, type ClassId } from "../../src/game/model";
-import { palette } from "../../src/theme";
+import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../src/components/ui";
+import { CharacterPortrait } from "../src/components/CharacterPortrait";
+import { ProfileAvatar } from "../src/components/ProfileAvatar";
+import { getPublicPlayerProfile, type PublicPlayerProfile } from "../src/lib/social";
+import { CLASS_NAMES, type ClassId } from "../src/game/model";
+import { palette } from "../src/theme";
 
 const STAT_LABELS: Record<string, string> = { str: "القوة", def: "الدفاع", vit: "الحيوية", agi: "الرشاقة", luck: "الحظ" };
 
