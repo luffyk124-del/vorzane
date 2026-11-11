@@ -1,4 +1,5 @@
 export type ClassId = "Warrior" | "Mage" | "Assassin" | "Archer";
+export type ProfileAvatarId = ClassId | "brand" | "golem";
 export type StatKey = "str" | "def" | "vit" | "agi" | "luck";
 export type StatBlock = Record<StatKey, number>;
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "mythic";
@@ -86,7 +87,7 @@ export type GameState = {
   dimas: DimasState;
   longQuestStartedAt: number;
   claimedLongQuestIds: string[];
-  profileAvatarId: ClassId | "brand";
+  profileAvatarId: ProfileAvatarId;
   gold: number;
   gems: number;
   inventory: EquipmentItem[];
@@ -336,7 +337,7 @@ export function normalizeGameState(value: unknown): GameState | null {
     },
     longQuestStartedAt: finite(source.longQuestStartedAt, Date.now(), 0),
     claimedLongQuestIds: Array.isArray(source.claimedLongQuestIds) ? source.claimedLongQuestIds.filter((id): id is string => typeof id === "string").slice(0, 500) : [],
-    profileAvatarId: ["brand", "Warrior", "Mage", "Assassin", "Archer"].includes(String(source.profileAvatarId)) ? source.profileAvatarId as ClassId | "brand" : "brand",
+    profileAvatarId: ["brand", "Warrior", "Mage", "Assassin", "Archer", "golem"].includes(String(source.profileAvatarId)) ? source.profileAvatarId as ProfileAvatarId : "brand",
     gold: finite(source.gold, fresh.gold, 0, 1_000_000_000),
     gems: finite(source.gems, fresh.gems, 0, 1_000_000_000),
     inventory,
