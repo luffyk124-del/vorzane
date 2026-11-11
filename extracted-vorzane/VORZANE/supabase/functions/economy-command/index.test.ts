@@ -219,29 +219,32 @@ Deno.test("equipItem and unequipItem use canonical equipment ownership", async (
 
 Deno.test("buyPet uses canonical price, ownership, and activation rules", async () => {
   const state = createHeroState("Test", "Warrior");
-  state.gold = 500;
+  state.hero!.level = 40;
+  state.gold = 60_000;
   const { handler, calls } = fixture({ state });
   const response = await handler(commandRequest({ type: "buyPet", petId: "wolf" }));
-  assert(response.status === 200, "expected 200");
+  assert(response.status === 200, "eligible shop companion should be purchasable");
   const saved = (calls.args as Record<string, unknown>).p_game_state as ReturnType<typeof createHeroState>;
-  assert(saved.gold === 200, "wolf price must be deducted from canonical catalog");
+  assert(saved.gold === 0, "wolf canonical shop price must be deducted");
   assert(saved.pets.includes("wolf"), "purchased pet must be owned");
   assert(saved.activePet === "wolf", "eligible first pet should become active");
 });
 
 Deno.test("setPet requires ownership and canonical level eligibility", async () => {
   const state = createHeroState("Test", "Warrior");
+  state.hero!.level = 40;
   state.pets = ["wolf", "golem"];
   const { handler, calls } = fixture({ state });
   const response = await handler(commandRequest({ type: "setPet", petId: "wolf" }));
-  assert(response.status === 200, "owned eligible pet should activate");
+  assert(response.status === 200, "owned level-40 companion should activate");
   const saved = (calls.args as Record<string, unknown>).p_game_state as ReturnType<typeof createHeroState>;
   assert(saved.activePet === "wolf", "selected pet should become active");
 
   const lockedState = createHeroState("Test", "Warrior");
+  lockedState.hero!.level = 44;
   lockedState.pets = ["golem"];
   const locked = await fixture({ state: lockedState }).handler(commandRequest({ type: "setPet", petId: "golem" }));
-  assert(locked.status === 400, "pet above hero level must not activate");
+  assert(locked.status === 400, "level-45 companion must not activate at level 44");
 });
 
 
