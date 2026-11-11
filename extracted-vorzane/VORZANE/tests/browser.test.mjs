@@ -384,11 +384,11 @@ test("primary game navigation stays visible and switches between core screens", 
   const journeys = navigation.getByRole("button", { name: "التجوال" });
   await journeys.click();
   await page.waitForURL((url) => url.pathname.endsWith("/expeditions"), { timeout: 10_000 });
-  await navigation.locator('[aria-label="التجوال"][aria-selected="true"]').waitFor({ state: "visible", timeout: 10_000 });
+  await navigation.locator('[aria-label="التجوال"][aria-current="page"]').waitFor({ state: "visible", timeout: 10_000 });
   assert.match(page.url(), /expeditions/);
   await navigation.getByRole("button", { name: "المخيم" }).click();
   await page.waitForURL((url) => url.pathname.endsWith("/home"), { timeout: 10_000 });
-  await navigation.locator('[aria-label="المخيم"][aria-selected="true"]').waitFor({ state: "visible", timeout: 10_000 });
+  await navigation.locator('[aria-label="المخيم"][aria-current="page"]').waitFor({ state: "visible", timeout: 10_000 });
   assert.match(page.url(), /home/);
 
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
