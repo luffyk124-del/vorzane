@@ -133,11 +133,7 @@ export default function CampScreen() {
     <Card style={styles.battleCard}>
       <Txt muted style={styles.battleIntro}>اختر ساحة القتال المناسبة لقوتك. كل ميدان له خصومه وإيقاعه ومكافآته الخاصة.</Txt>
       <AppButton label={`ساحة الحراس • المرحلة ${state.dungeonFloor}`} icon="shield" onPress={() => enterBattle("dungeon")} variant="jade" />
-      <View style={styles.battleButtons}>
-        <AppButton label="كهف الرماد" icon="bonfire" onPress={() => enterBattle("cave")} small style={{ flex: 1 }} />
-        <AppButton label="برج الحراس" icon="business" variant="secondary" onPress={() => enterBattle("tower")} small style={{ flex: 1 }} />
-      </View>
-      <AppButton label="تحدي الكسوف" icon="moon" variant="ghost" onPress={() => enterBattle("hard")} small />
+      <Txt muted style={styles.battleIntro}>أزيلت الميادين المتكررة من المخيم. ركّز على ساحة الحراس والديماس، ولكل منهما تقدم ومكافآت مستقلة.</Txt>
     </Card>
 
     <Card style={styles.dimasEntry}>
@@ -155,17 +151,6 @@ export default function CampScreen() {
       <Meter value={expeditionProgress} max={100} color={palette.jade} height={7} />
       <View style={styles.rewardRow}><Txt muted style={styles.rewardCaption}>الغنائم المتوقعة</Txt><Txt style={styles.rewardText}>+{activePlan.rewardGold} ذهب • +{activePlan.rewardXP} XP</Txt></View>
     </Card> : <Card style={styles.noExpedition}><View style={styles.noExpIcon}><Icon name="compass-outline" color={palette.jade} size={21} /></View><View style={{ flex: 1, alignItems: "flex-end" }}><Txt style={styles.noExpTitle}>لا توجد رحلة نشطة</Txt><Txt muted style={styles.noExpCopy}>أرسل بطلك لمهمة؛ سيعود بغنائم حتى أثناء غيابك.</Txt></View><AppButton label="اختر" icon="arrow-back" small variant="jade" onPress={() => router.push("/expeditions")} /></Card>}
-
-    <SectionTitle title="ملخص المغامرة" icon="analytics" />
-    <Card style={styles.summaryCard}>
-      <View style={styles.summaryItem}><Txt style={styles.summaryValue}>{state.battles}</Txt><Txt muted style={styles.summaryLabel}>معركة</Txt></View>
-      <View style={styles.summaryDivider} />
-      <View style={styles.summaryItem}><Txt style={styles.summaryValue}>{Math.max(0, state.dungeonFloor - 1)}</Txt><Txt muted style={styles.summaryLabel}>انتصار زنزانة</Txt></View>
-      <View style={styles.summaryDivider} />
-      <View style={styles.summaryItem}><Txt style={styles.summaryValue}>{state.tower}</Txt><Txt muted style={styles.summaryLabel}>طابق برج</Txt></View>
-      <View style={styles.summaryDivider} />
-      <View style={styles.summaryItem}><Txt style={styles.summaryValue}>{state.inventory.length}</Txt><Txt muted style={styles.summaryLabel}>قطعة عتاد</Txt></View>
-    </Card>
 
     <BattleArena sequence={battleSequence} onBattleSettled={settleBattle} onClose={() => setBattleSequence(null)} />
   </AppScreen>;
