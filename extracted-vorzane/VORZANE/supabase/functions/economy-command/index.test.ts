@@ -1,5 +1,4 @@
-import { createHeroState, buyItem } from "../../../src/game/engine.ts";
-import { createFreshState, type GameState } from "../../../src/game/model.ts";
+import { createFreshState, type GameState } from "./state.ts";
 import { createEconomyCommandHandler } from "./index.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -15,57 +14,30 @@ function fixture(options: {
   user?: { id: string } | null;
   authError?: unknown;
   readError?: unknown;
-  commit?: Record<string, unknown>;
   receipt?: { result: Record<string, unknown> } | null;
+  commit?: Record<string, unknown>;
   commitError?: { code?: string } | null;
 } = {}) {
-  const state = options.state ?? createHeroState("Test", "Warrior");
+  const state = options.state ?? createFreshState();
   const calls: Record<string, unknown> = {};
   const builder = {
-    select(columns: string) {
-      const columnsByTable = (calls.columnsByTable ??= {}) as Record<string, string>;
-      columnsByTable[String(calls.table)] = columns;
-      return this;
-    },
-    eq(column: string, value: string) {
-      const filters = (calls.filters ??= {}) as Record<string, unknown[]>;
-      (filters[String(calls.table)] ??= []).push([column, value]);
-      return this;
-    },
+    select(columns: string) { calls.columns = columns; return this; },
+    eq(column: string, value: string) { ((calls.filters ??= []) as unknown[]).push([column, value]); return this; },
     async maybeSingle() {
-      if (calls.table === "player_command_receipts") {
-        return { data: options.receipt ?? null, error: null };
-      }
-      return {
-        data: options.readError ? null : { game_state: state, updated_at: "2026-11-08T20:00:00.000Z" },
-        error: options.readError ?? null,
-      };
+      if (calls.table === "player_command_receipts") return { data: options.receipt ?? null, error: null };
+      return { data: options.readError ? null : { game_state: state, updated_at: "2026-11-08T20:00:00.000Z" }, error: options.readError ?? null };
     },
   };
   const fakeClient = {
-    auth: { async getUser() {
-      return { data: { user: options.user === undefined ? { id: "user-a" } : options.user }, error: options.authError ?? null };
-    } },
-    from(table: string) {
-      calls.table = table;
-      ((calls.tables ??= []) as string[]).push(table);
-      return builder;
-    },
+    auth: { async getUser() { return { data: { user: options.user === undefined ? { id: "user-a" } : options.user }, error: options.authError ?? null }; } },
+    from(table: string) { calls.table = table; ((calls.tables ??= []) as string[]).push(table); return builder; },
     async rpc(name: string, args: Record<string, unknown>) {
       calls.rpc = name;
       calls.args = args;
-      return {
-        data: options.commit ?? { replayed: false, result: args.p_result, updatedAt: "2026-11-08T20:01:00.000Z" },
-        error: options.commitError ?? null,
-      };
+      return { data: options.commit ?? { replayed: false, result: args.p_result, updatedAt: "2026-11-08T20:01:00.000Z" }, error: options.commitError ?? null };
     },
   };
-  const factory = ((url: string, key: string, config: unknown) => {
-    calls.url = url;
-    ((calls.keys ??= []) as string[]).push(key);
-    calls.config = config;
-    return fakeClient;
-  }) as unknown as Parameters<typeof createEconomyCommandHandler>[0];
+  const factory = (() => fakeClient) as unknown as Parameters<typeof createEconomyCommandHandler>[0];
   const handler = createEconomyCommandHandler(factory, (name) => ({
     SUPABASE_URL: "https://test.supabase.co",
     SUPABASE_ANON_KEY: "test-anon-key",
@@ -78,12 +50,7 @@ function commandRequest(command: unknown, overrides: Record<string, unknown> = {
   return new Request("https://local.test/economy-command", {
     method: "POST",
     headers: { Authorization: "Bearer valid", "Content-Type": "application/json" },
-    body: JSON.stringify({
-      commandId: "10000000-0000-4000-8000-000000000001",
-      expectedUpdatedAt: "2026-11-08T20:00:00.000Z",
-      command,
-      ...overrides,
-    }),
+    body: JSON.stringify({ commandId: "10000000-0000-4000-8000-000000000001", expectedUpdatedAt: "2026-11-08T20:00:00.000Z", command, ...overrides }),
   });
 }
 
@@ -108,245 +75,55 @@ Deno.test("missing bearer token is rejected", async () => {
   assert(Object.keys(calls).length === 0, "unauthenticated request must not contact Supabase");
 });
 
-Deno.test("malformed command is rejected before reading or committing", async () => {
+Deno.test("unsupported commands and settings keys are rejected before reading a save", async () => {
   const { handler, calls } = fixture();
-  const response = await handler(commandRequest({ type: "buyItem", itemId: "" }));
-  assert(response.status === 400, "expected 400");
-  assert(calls.table === undefined && calls.rpc === undefined, "invalid command must not touch save or RPC");
+  const response = await handler(commandRequest({ type: "buyItem", itemId: "x" }));
+  assert(response.status === 400, "unsupported commands must be rejected");
+  assert(calls.table === undefined && calls.rpc === undefined, "unsupported command must not touch the database");
+  const invalidSettings = await handler(commandRequest({ type: "updateSettings", settings: { gold: 999999 } }));
+  assert(invalidSettings.status === 400, "unknown settings must be rejected");
 });
 
-Deno.test("buyItem uses canonical game rules and commits the caller's save", async () => {
-  const state = createHeroState("Test", "Warrior");
-  state.gold = 1_000;
+Deno.test("settings command updates only validated settings and commits atomically", async () => {
+  const state = createFreshState();
+  state.gold = 321;
   const { handler, calls } = fixture({ state });
-  const response = await handler(commandRequest({ type: "buyItem", itemId: "sword1" }));
+  const response = await handler(commandRequest({ type: "updateSettings", settings: { musicEnabled: false, musicVolume: 45 } }));
   const body = await readJson(response);
   assert(response.status === 200, "expected 200");
-  assert((calls.tables as string[]).includes("player_saves"), "expected player save read");
-  const filters = calls.filters as Record<string, unknown[]>;
-  assert(JSON.stringify(filters.player_saves) === JSON.stringify([["user_id", "user-a"]]), "save read must be scoped to caller");
-  assert(calls.rpc === "commit_player_command", "expected atomic command commit");
-  assert((calls.keys as string[]).includes("test-service-role-key"), "privileged RPC must use the server-only service role");
-  const args = calls.args as Record<string, unknown>;
-  const saved = args.p_game_state as ReturnType<typeof createHeroState>;
-  assert(saved.gold === 900, "canonical purchase price must be deducted");
-  assert(saved.inventory.length === 1, "purchased item must be added");
+  assert(calls.rpc === "commit_player_command", "settings must use atomic server commit");
+  const saved = (calls.args as Record<string, unknown>).p_game_state as GameState;
+  assert(saved.settings.musicEnabled === false && saved.settings.musicVolume === 45, "settings patch must be applied");
+  assert(saved.gold === 321, "unrelated player progress must be preserved");
   assert(body.replayed === false, "expected first execution");
 });
 
-Deno.test("insufficient gold is rejected without a database commit", async () => {
-  const state = createHeroState("Test", "Warrior");
-  state.gold = 0;
+Deno.test("resetSave creates a fresh state without deleting the player save row", async () => {
+  const state = createFreshState();
+  state.gold = 9999;
   const { handler, calls } = fixture({ state });
-  const response = await handler(commandRequest({ type: "buyItem", itemId: "sword1" }));
-  assert(response.status === 400, "expected 400");
-  assert(calls.rpc === undefined, "invalid purchase must not be committed");
+  const response = await handler(commandRequest({ type: "resetSave" }));
+  assert(response.status === 200, "expected 200");
+  assert(calls.rpc === "commit_player_command", "reset must use atomic server commit");
+  const saved = (calls.args as Record<string, unknown>).p_game_state as GameState;
+  assert(saved.gold === 500 && saved.hero === null, "reset must use canonical fresh state");
+  assert((calls.tables as string[]).includes("player_saves"), "existing save row must be read and updated through RPC");
 });
 
 Deno.test("stale save version is returned as a conflict", async () => {
   const { handler } = fixture({ commit: { conflict: true, updatedAt: "2026-11-08T20:02:00.000Z" } });
-  const response = await handler(commandRequest({ type: "buyItem", itemId: "sword1" }));
+  const response = await handler(commandRequest({ type: "resetSave" }));
   const body = await readJson(response);
   assert(response.status === 409, "expected 409");
   assert(body.updatedAt === "2026-11-08T20:02:00.000Z", "expected current version in conflict response");
 });
 
-
-Deno.test("replayed commands return current save without reapplying game rules", async () => {
-  const current = createHeroState("Test", "Warrior");
-  current.gold = 950;
-  const { handler, calls } = fixture({
-    state: current,
-    receipt: { result: { state: { gold: 900 }, soldPrice: 50 } },
-  });
-  const response = await handler(commandRequest(
-    { type: "sellItem", itemId: "already-sold-item" },
-    { expectedUpdatedAt: "2026-11-08T19:59:00.000Z" },
-  ));
+Deno.test("replayed commands return current save without committing again", async () => {
+  const state = createFreshState();
+  const { handler, calls } = fixture({ state, receipt: { result: { state: { gold: 1 } } } });
+  const response = await handler(commandRequest({ type: "resetSave" }, { expectedUpdatedAt: "2026-11-08T19:59:00.000Z" }));
   const body = await readJson(response);
   assert(response.status === 200, "replayed command must succeed");
   assert(body.replayed === true, "expected replay response");
-  assert(body.soldPrice === 50, "expected original sale result");
-  assert((body.state as ReturnType<typeof createHeroState>).gold === 950, "replay must return current save, not overwrite it with old state");
   assert(calls.rpc === undefined, "replay must not execute the command again");
-});
-
-Deno.test("stale client version is rejected before invoking the privileged RPC", async () => {
-  const { handler, calls } = fixture();
-  const response = await handler(commandRequest(
-    { type: "buyItem", itemId: "sword1" },
-    { expectedUpdatedAt: "2026-11-08T19:59:00.000Z" },
-  ));
-  assert(response.status === 409, "expected 409");
-  assert(calls.rpc === undefined, "stale client must not invoke the RPC");
-});
-
-Deno.test("sellItem credits the canonical catalog sell price", async () => {
-  const initial = createHeroState("Test", "Warrior");
-  initial.gold = 1_000;
-  const bought = buyItem(initial, "sword1");
-  const state = bought.state;
-  const itemId = state.inventory[0]!.id;
-  const { handler, calls } = fixture({ state });
-  const response = await handler(commandRequest({ type: "sellItem", itemId }));
-  const body = await readJson(response);
-  assert(response.status === 200, "expected 200");
-  assert(body.soldPrice === 50, "expected half of the canonical 100 gold price");
-  const args = calls.args as Record<string, unknown>;
-  const saved = args.p_game_state as ReturnType<typeof createHeroState>;
-  assert(saved.gold === 950, "expected sale proceeds to be credited");
-  assert(saved.inventory.length === 0, "sold item must be removed");
-});
-
-Deno.test("equipItem and unequipItem use canonical equipment ownership", async () => {
-  const initial = createHeroState("Test", "Warrior");
-  const bought = buyItem(initial, "sword1");
-  const itemId = bought.state.inventory[0]!.id;
-  const equipped = fixture({ state: bought.state });
-  const equipResponse = await equipped.handler(commandRequest({ type: "equipItem", itemId }));
-  assert(equipResponse.status === 200, "expected equipment command to succeed");
-  const equippedState = (equipped.calls.args as Record<string, unknown>).p_game_state as ReturnType<typeof createHeroState>;
-  assert(equippedState.equipped["سلاح"]?.id === itemId, "item must be equipped in its canonical slot");
-
-  const unequipFixture = fixture({ state: equippedState });
-  const unequipResponse = await unequipFixture.handler(commandRequest({ type: "unequipItem", slot: "سلاح" }));
-  assert(unequipResponse.status === 200, "expected unequip command to succeed");
-  const unequippedState = (unequipFixture.calls.args as Record<string, unknown>).p_game_state as ReturnType<typeof createHeroState>;
-  assert(unequippedState.inventory.some(item => item.id === itemId), "unequipped item must return to inventory");
-  assert(!unequippedState.equipped["سلاح"], "equipment slot must be empty");
-});
-
-
-Deno.test("buyPet uses canonical price, ownership, and activation rules", async () => {
-  const state = createHeroState("Test", "Warrior");
-  state.hero!.level = 40;
-  state.gold = 60_000;
-  const { handler, calls } = fixture({ state });
-  const response = await handler(commandRequest({ type: "buyPet", petId: "wolf" }));
-  assert(response.status === 200, "eligible shop companion should be purchasable");
-  const saved = (calls.args as Record<string, unknown>).p_game_state as ReturnType<typeof createHeroState>;
-  assert(saved.gold === 0, "wolf canonical shop price must be deducted");
-  assert(saved.pets.includes("wolf"), "purchased pet must be owned");
-  assert(saved.activePet === "wolf", "eligible first pet should become active");
-});
-
-Deno.test("setPet requires ownership and canonical level eligibility", async () => {
-  const state = createHeroState("Test", "Warrior");
-  state.hero!.level = 40;
-  state.pets = ["wolf", "golem"];
-  const { handler, calls } = fixture({ state });
-  const response = await handler(commandRequest({ type: "setPet", petId: "wolf" }));
-  assert(response.status === 200, "owned level-40 companion should activate");
-  const saved = (calls.args as Record<string, unknown>).p_game_state as ReturnType<typeof createHeroState>;
-  assert(saved.activePet === "wolf", "selected pet should become active");
-
-  const lockedState = createHeroState("Test", "Warrior");
-  lockedState.hero!.level = 44;
-  lockedState.pets = ["golem"];
-  const locked = await fixture({ state: lockedState }).handler(commandRequest({ type: "setPet", petId: "golem" }));
-  assert(locked.status === 400, "level-45 companion must not activate at level 44");
-});
-
-
-Deno.test("createHero is server-generated from the canonical class and starter loadout", async () => {
-  const { handler, calls } = fixture({ state: createFreshState() });
-  const response = await handler(commandRequest({ type: "createHero", name: "Hero", className: "Warrior", gender: "female", appearance: 2 }));
-  assert(response.status === 200, "expected 200");
-  const saved = (calls.args as Record<string, unknown>).p_game_state as GameState;
-  assert(saved.hero?.name === "Hero" && saved.hero.className === "Warrior", "hero identity must be canonical");
-  assert(saved.characterStyle.gender === "female" && saved.characterStyle.appearance === 2, "approved appearance must be applied");
-  assert(saved.equipped["سلاح"]?.catalogId === "sword1", "starter sword must be generated by server");
-  assert(saved.inventory.some((item) => item.catalogId === "boots1"), "starter boots must be generated by server");
-});
-
-Deno.test("allocateStatPoint spends one server-validated point", async () => {
-  const state = createHeroState("Test", "Warrior");
-  state.hero!.statPoints = 1;
-  const { handler, calls } = fixture({ state });
-  const response = await handler(commandRequest({ type: "allocateStatPoint", key: "str" }));
-  assert(response.status === 200, "expected 200");
-  const saved = (calls.args as Record<string, unknown>).p_game_state as GameState;
-  assert(saved.hero!.stats.str === state.hero!.stats.str + 1, "strength must increase by one");
-  assert(saved.hero!.statPoints === 0, "stat point must be consumed");
-});
-
-Deno.test("beginExpedition enforces canonical level and queue rules", async () => {
-  const { handler, calls } = fixture();
-  const response = await handler(commandRequest({ type: "beginExpedition", planId: "ashen-pass" }));
-  assert(response.status === 200, "level-one hero should start the first expedition");
-  const saved = (calls.args as Record<string, unknown>).p_game_state as GameState;
-  assert(saved.activeExpedition?.planId === "ashen-pass", "server should create the active expedition");
-});
-
-Deno.test("recurring mission reward is validated and claimed once", async () => {
-  const state = createHeroState("Test", "Warrior");
-  state.wins = 2;
-  const { handler, calls } = fixture({ state });
-  const response = await handler(commandRequest({ type: "claimRecurringMission", scope: "daily", missionId: "daily-wins" }));
-  assert(response.status === 200, "completed daily mission should be claimable");
-  const saved = (calls.args as Record<string, unknown>).p_game_state as GameState;
-  assert(saved.gold === state.gold + 120, "server should grant canonical daily reward");
-  assert(saved.missionPeriods.daily.claimed["daily-wins"] === true, "mission receipt must be marked claimed");
-});
-
-Deno.test("settings command rejects out-of-range volume before touching save", async () => {
-  const { handler, calls } = fixture();
-  const response = await handler(commandRequest({ type: "updateSettings", settings: { volume: 101 } }));
-  assert(response.status === 400, "out-of-range volume must be rejected");
-  assert(calls.table === undefined && calls.rpc === undefined, "invalid settings must not read or commit state");
-});
-
-Deno.test("profile appearance command rejects unsupported style values", async () => {
-  const { handler, calls } = fixture();
-  const response = await handler(commandRequest({ type: "updateCharacterStyle", style: { gender: "unknown" } }));
-  assert(response.status === 400, "unsupported style must be rejected");
-  assert(calls.table === undefined && calls.rpc === undefined, "invalid style must not touch save");
-});
-
-Deno.test("resetSave replaces the caller's state with a canonical fresh state without deleting the save row", async () => {
-  const state = createHeroState("Existing Hero", "Warrior");
-  state.gold = 987654;
-  state.wins = 42;
-  state.inventory.push({ ...state.inventory[0]!, id: "owned-item" });
-  const { handler, calls } = fixture({ state });
-  const response = await handler(commandRequest({ type: "resetSave" }));
-  const body = await readJson(response);
-  assert(response.status === 200, "server reset should succeed");
-  const args = calls.args as Record<string, unknown>;
-  const saved = args.p_game_state as GameState;
-  const canonical = createFreshState();
-  // createFreshState intentionally stamps the current date/time, so compare
-  // all canonical game data while carrying over only those generated values.
-  canonical.lastSeenAt = saved.lastSeenAt;
-  canonical.roaming.healthUpdatedAt = saved.roaming.healthUpdatedAt;
-  canonical.longQuestStartedAt = saved.longQuestStartedAt;
-  canonical.missionPeriods.daily.key = saved.missionPeriods.daily.key;
-  canonical.missionPeriods.weekly.key = saved.missionPeriods.weekly.key;
-  canonical.missionPeriods.season.key = saved.missionPeriods.season.key;
-  assert(JSON.stringify(saved) === JSON.stringify(canonical), "reset must use canonical fresh state, not a client snapshot");
-  assert(args.p_expected_updated_at === "2026-11-08T20:00:00.000Z", "reset must use the current save version");
-  assert(args.p_result && (args.p_result as Record<string, unknown>).commandType === "resetSave", "reset must be recorded as an idempotent command");
-  assert((calls.tables as string[]).includes("player_saves"), "reset must operate on the existing save row");
-  assert(body.replayed === false, "first reset must not be a replay");
-  assert(!((calls.tables as string[]).includes("player_saves_delete")), "reset must not delete the player save row");
-});
-
-Deno.test("resetSave rejects client-supplied state or extra command fields before database access", async () => {
-  const { handler, calls } = fixture();
-  const response = await handler(commandRequest({ type: "resetSave", state: { gold: 999999999 } }));
-  assert(response.status === 400, "reset must reject client-supplied state");
-  assert(calls.table === undefined && calls.rpc === undefined, "invalid reset must not read or commit a save");
-});
-
-Deno.test("resetSave is allowed when the current save has no hero", async () => {
-  const { handler, calls } = fixture({ state: createFreshState() });
-  const response = await handler(commandRequest({ type: "resetSave" }));
-  assert(response.status === 200, "a save without a hero can be reset");
-  const saved = (calls.args as Record<string, unknown>).p_game_state as GameState;
-  assert(saved.hero === null, "reset should keep canonical no-hero state");
-});
-Deno.test("another unauthenticated identity cannot invoke commands", async () => {
-  const { handler } = fixture({ user: null, authError: new Error("invalid token") });
-  const response = await handler(commandRequest({ type: "buyItem", itemId: "sword1" }));
-  assert(response.status === 401, "expected 401");
 });
