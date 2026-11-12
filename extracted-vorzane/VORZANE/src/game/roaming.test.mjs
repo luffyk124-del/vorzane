@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHeroState, getQuestProgress, getStoryChapterProgress } from "./engine.ts";
-import { buyRoamingHealthRefill, refreshRoamingHealth, getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, ROAMING_EVENT_PREVIEW } from "./roaming.ts";
+import { normalizeGameState } from "./model.ts";
+import { getLongQuestProgress, LONG_QUESTS } from "./longQuests.ts";
+import { buyRoamingHealthRefill, refreshRoamingHealth, getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, ROAMING_EVENT_PREVIEW, ROAMING_ARCHIVE_ENTRIES, ROAMING_ARCHIVE_COLLECTIONS, unlockRoamingArchiveEntry } from "./roaming.ts";
 
 test("roaming health regenerates one point per minute and respects its maximum", () => {
   const now = Date.UTC(2026, 10, 11, 12, 0, 0);
@@ -73,12 +75,102 @@ test("roaming choices return story and rewards separately", () => {
   assert.doesNotMatch(result.message, /ذهب|خبرة/);
 });
 
+test("roaming choices award a relic shard every two completed story encounters", () => {
+  const state = createHeroState("جامع الشظايا", "Warrior");
+  const event = {
+    id: "test-relic-drop",
+    title: "علامة قديمة",
+    region: "غابة الرماد",
+    story: "تظهر علامة صغيرة على حجر.",
+    kind: "cache",
+    choices: [{ id: "inspect", label: "افحص العلامة", hint: "تقرأ النقش.", outcome: { gold: 10, xp: 10 } }],
+  };
+
+  const first = resolveRoamingChoice(state, event, "inspect", Date.UTC(2026, 10, 11));
+  assert.equal(first.state.roaming.fragments, 0);
+  assert.equal(first.state.roaming.fragmentsCollected, 0);
+  assert.equal(first.state.roaming.fragmentProgress, 1);
+  assert.doesNotMatch(first.rewards, /شظية أثر/);
+
+  const second = resolveRoamingChoice(first.state, event, "inspect", Date.UTC(2026, 10, 11) + 1);
+  assert.equal(second.state.roaming.fragments, 1);
+  assert.equal(second.state.roaming.fragmentsCollected, 1);
+  assert.equal(second.state.roaming.fragmentProgress, 0);
+  assert.match(second.rewards, /\+1 شظية أثر/);
+});
+
+test("normalized saves preserve relic balance and lifetime collection", () => {
+  const state = createHeroState("حافظ الآثار", "Warrior");
+  state.roaming.fragments = 7;
+  state.roaming.fragmentsCollected = 19;
+  state.roaming.fragmentProgress = 1;
+  const normalized = normalizeGameState(state);
+  assert.equal(normalized?.roaming.fragments, 7);
+  assert.equal(normalized?.roaming.fragmentsCollected, 19);
+  assert.equal(normalized?.roaming.fragmentProgress, 1);
+
+  const legacy = { ...state, roaming: { ...state.roaming } };
+  delete legacy.roaming.fragmentsCollected;
+  delete legacy.roaming.fragmentProgress;
+  const migrated = normalizeGameState(legacy);
+  assert.equal(migrated?.roaming.fragmentsCollected, 7, "older balances should seed the lifetime counter");
+  assert.equal(migrated?.roaming.fragmentProgress, 0);
+});
+
+test("the lore archive spends shards once and keeps collection progress cumulative", () => {
+  const state = createHeroState("قارئ الأرشيف", "Warrior");
+  const entry = ROAMING_ARCHIVE_ENTRIES[0];
+  assert.ok(entry);
+  state.roaming.fragments = entry.cost - 1;
+  assert.equal(unlockRoamingArchiveEntry(state, entry.id).error, "لا تملك شظايا أثر كافية.");
+
+  state.roaming.fragments = entry.cost;
+  const opened = unlockRoamingArchiveEntry(state, entry.id);
+  assert.equal(opened.error, undefined);
+  assert.equal(opened.state.roaming.fragments, 0);
+  assert.ok(opened.state.roaming.storyFlags.includes(`archive:${entry.id}`));
+  assert.equal(unlockRoamingArchiveEntry(opened.state, entry.id).error, "فتحت هذه الصفحة من قبل.");
+
+  const collectionQuest = LONG_QUESTS.find((quest) => quest.metric === "fragments");
+  assert.ok(collectionQuest);
+  opened.state.roaming.fragmentsCollected = collectionQuest.target;
+  assert.equal(getLongQuestProgress(opened.state, collectionQuest), collectionQuest.target);
+  assert.equal(ROAMING_ARCHIVE_ENTRIES.length, 6);
+  assert.equal(new Set(ROAMING_ARCHIVE_ENTRIES.map((item) => item.id)).size, 6);
+});
+
+test("archive collections reveal a finale and grant one-time rewards", () => {
+  let state = createHeroState("جامع المجموعات", "Warrior");
+  state.roaming.fragments = 200;
+  const collection = ROAMING_ARCHIVE_COLLECTIONS[0];
+  assert.ok(collection);
+
+  for (const entryId of collection.entryIds.slice(0, -1)) {
+    const result = unlockRoamingArchiveEntry(state, entryId);
+    assert.equal(result.error, undefined);
+    assert.equal(result.completedCollections?.length ?? 0, 0);
+    state = result.state;
+  }
+
+  const finalEntry = collection.entryIds.at(-1);
+  assert.ok(finalEntry);
+  const completed = unlockRoamingArchiveEntry(state, finalEntry);
+  assert.equal(completed.error, undefined);
+  assert.equal(completed.completedCollections?.[0]?.id, collection.id);
+  assert.equal(completed.state.gold, state.gold + collection.rewardGold);
+  assert.ok(completed.state.hero.exp > state.hero.exp || completed.state.hero.level > state.hero.level);
+  assert.ok(completed.state.roaming.storyFlags.includes(`archive-collection:${collection.id}`));
+  assert.equal(unlockRoamingArchiveEntry(completed.state, finalEntry).error, "فتحت هذه الصفحة من قبل.");
+  assert.equal(ROAMING_ARCHIVE_COLLECTIONS.length, 2);
+  assert.ok(ROAMING_ARCHIVE_COLLECTIONS.every((item) => item.entryIds.length === 3));
+});
+
 test("active roaming story chapters wait for random intervening encounters", () => {
   const state = createHeroState("اختبار تسلسل الحكاية", "Warrior");
   state.roaming.activeChain = "lost-cartographer";
   state.roaming.chainStage = 0;
   state.roaming.eventsCompleted = 1;
-  const event = getRoamingEvent(state, Date.UTC(2026, 10, 11) + 13);
+  const event = getRoamingEvent(state, 100_005);
   assert.equal(event.kind, "chain");
   assert.equal(event.chainStage, 0);
 
@@ -88,7 +180,7 @@ test("active roaming story chapters wait for random intervening encounters", () 
   assert.equal(result.state.roaming.chainNextAtEvent >= result.state.roaming.eventsCompleted + 2, true);
   assert.match(result.message, /الدفتر|العلامة/);
   assert.doesNotMatch(result.message, /في حكاية|نفذت|الخطوة التالية:/);
-  const beforeCooldown = getRoamingEvent(result.state, Date.UTC(2026, 10, 11) + 1);
+  const beforeCooldown = getRoamingEvent(result.state, 100_006);
   assert.notEqual(beforeCooldown.kind, "chain");
   const afterCooldown = { ...result.state, roaming: { ...result.state.roaming, eventsCompleted: result.state.roaming.chainNextAtEvent } };
   const randomSeed = Array.from({ length: 20 }, (_, i) => Date.UTC(2026, 10, 11) + i * 13).find((seed) => Math.abs(Math.floor(seed / 13)) % 4 === 0);
@@ -120,11 +212,11 @@ test("story-chain chapters have context-specific actions and no generic route sl
   state.roaming.activeChain = "lost-cartographer";
   state.roaming.chainStage = 0;
   state.roaming.eventsCompleted = 1;
-  const first = getRoamingEvent(state, Date.UTC(2026, 10, 11) + 13);
+  const first = getRoamingEvent(state, 100_005);
   assert.deepEqual(first.choices.map((choice) => choice.label), ["اقرأ دفتر الملاح", "اتبع العلامة على الخريطة"]);
   const firstResult = resolveRoamingChoice(state, first, "press", Date.UTC(2026, 10, 11));
   const delayedState = { ...firstResult.state, roaming: { ...firstResult.state.roaming, eventsCompleted: firstResult.state.roaming.chainNextAtEvent } };
-  const second = getRoamingEvent(delayedState, Date.UTC(2026, 10, 11) + 13);
+  const second = getRoamingEvent(delayedState, 100_005);
   assert.deepEqual(second.choices.map((choice) => choice.label), ["افحص النقش على الجذع", "قارن اتجاه الظلال"]);
   assert.notDeepEqual(first.choices.map((choice) => choice.label), second.choices.map((choice) => choice.label));
   assert.doesNotMatch(second.story, /مسار المواجهة|اختبارات أشد وغنائم أعلى/);
@@ -154,7 +246,7 @@ test("roaming cycles through distinct base scenes before repeating one", () => {
     do {
       seed += 1;
       event = getRoamingEvent(state, seed);
-    } while (!event.id.startsWith("roam-"));
+    } while (!/^roam-\d+-\d+$/.test(event.id));
     const sceneIndex = Number(event.id.split("-")[1]);
     assert.equal(seenScenes.has(sceneIndex), false);
     seenScenes.add(sceneIndex);
@@ -169,9 +261,13 @@ test("Sahir merchant has no dialogue choices and closes as a completed visit", (
   const event = getRoamingEvent(state, 40_000);
   assert.equal(event.kind, "merchant");
   assert.deepEqual(event.choices, []);
+  state.roaming.fragmentProgress = 1;
   const next = completeRoamingMerchantVisit(state, event, 50_000);
   assert.equal(next.roaming.eventsCompleted, state.roaming.eventsCompleted + 1);
   assert.ok(next.roaming.eventsSeen.includes(event.id));
+  assert.equal(next.roaming.fragments, 1);
+  assert.equal(next.roaming.fragmentsCollected, 1);
+  assert.equal(next.roaming.fragmentProgress, 0);
 });
 
 test("Sahir stock is randomized per visit and purchases the exact displayed gear", () => {
