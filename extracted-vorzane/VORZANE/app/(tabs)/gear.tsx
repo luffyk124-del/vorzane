@@ -14,6 +14,7 @@ type InventoryCategory = "all" | "weapons" | "armor" | "accessories";
 type InventorySort = "power" | "rarity" | "level";
 type ShopSort = "level" | "rarity" | "power" | "price-low" | "price-high";
 const RARITY_ORDER = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 } as const;
+const LIST_PAGE_SIZE = 24;
 const BONUS_LABELS = { str: "قوة", def: "دفاع", vit: "حيوية", agi: "رشاقة", luck: "حظ" } as const;
 const itemScore = (item: EquipmentItem) => Object.values(item.bonus).reduce((sum, value) => sum + (value ?? 0), 0);
 const SHOP_CATEGORIES: { id: ShopCategory; label: string }[] = [
@@ -25,6 +26,23 @@ const SHOP_CATEGORIES: { id: ShopCategory; label: string }[] = [
 ];
 const slotIcons: Record<string, string> = { "سلاح": "flash", "درع": "shield", "خوذة": "skull", "قفازات": "hand-left", "حذاء": "footsteps", "قلادة": "diamond", "خاتم أول": "ellipse", "خاتم ثانٍ": "ellipse" };
 
+type ListPaginationProps = {
+  page: number;
+  pageCount: number;
+  total: number;
+  visible: number;
+  onPageChange: (page: number) => void;
+};
+
+function ListPagination({ page, pageCount, total, visible, onPageChange }: ListPaginationProps) {
+  if (total <= LIST_PAGE_SIZE) return null;
+  return <View style={styles.pagination}>
+    <AppButton label="التالي" onPress={() => onPageChange(Math.min(pageCount - 1, page + 1))} variant="ghost" small disabled={page >= pageCount - 1} />
+    <Txt style={styles.paginationText}>صفحة {page + 1} من {pageCount} • عرض {visible} من {total}</Txt>
+    <AppButton label="السابق" onPress={() => onPageChange(Math.max(0, page - 1))} variant="ghost" small disabled={page <= 0} />
+  </View>;
+}
+
 export default function GearScreen() {
   const { state, update } = useGame();
   const [tab, setTab] = useState<Tab>("equipment");
@@ -32,6 +50,9 @@ export default function GearScreen() {
   const [inventoryCategory, setInventoryCategory] = useState<InventoryCategory>("all");
   const [inventorySort, setInventorySort] = useState<InventorySort>("power");
   const [shopSort, setShopSort] = useState<ShopSort>("power");
+  const [inventoryPage, setInventoryPage] = useState(0);
+  const [shopPage, setShopPage] = useState(0);
+  const [marketPage, setMarketPage] = useState(0);
   const [notice, setNotice] = useState("");
   const stats = combatStats(state);
   const heroLevel = state.hero?.level ?? 0;
@@ -75,6 +96,15 @@ export default function GearScreen() {
       return itemScore(b) - itemScore(a);
     });
   }, [state.inventory, inventoryCategory, inventorySort]);
+  const inventoryPageCount = Math.max(1, Math.ceil(visibleInventory.length / LIST_PAGE_SIZE));
+  const shopPageCount = Math.max(1, Math.ceil(visibleShopItems.length / LIST_PAGE_SIZE));
+  const marketPageCount = Math.max(1, Math.ceil(marketItems.length / LIST_PAGE_SIZE));
+  const currentInventoryPage = Math.min(inventoryPage, inventoryPageCount - 1);
+  const currentShopPage = Math.min(shopPage, shopPageCount - 1);
+  const currentMarketPage = Math.min(marketPage, marketPageCount - 1);
+  const pagedInventory = useMemo(() => visibleInventory.slice(currentInventoryPage * LIST_PAGE_SIZE, (currentInventoryPage + 1) * LIST_PAGE_SIZE), [visibleInventory, currentInventoryPage]);
+  const pagedShopItems = useMemo(() => visibleShopItems.slice(currentShopPage * LIST_PAGE_SIZE, (currentShopPage + 1) * LIST_PAGE_SIZE), [visibleShopItems, currentShopPage]);
+  const pagedMarketItems = useMemo(() => marketItems.slice(currentMarketPage * LIST_PAGE_SIZE, (currentMarketPage + 1) * LIST_PAGE_SIZE), [marketItems, currentMarketPage]);
   const message = (text: string) => { setNotice(text); setTimeout(() => setNotice(""), 2400); };
 
   const purchaseItem = (id: string) => {
@@ -136,16 +166,17 @@ export default function GearScreen() {
       </View>
       <SectionTitle title={`الحقيبة (${state.inventory.length})`} icon="file-tray-full-outline" action={<Pill label={`${visibleInventory.length} معروضة`} tone="jade" />} />
       <View style={styles.shopFilters}>
-        {([{ id: "all", label: "الكل" }, { id: "weapons", label: "الأسلحة" }, { id: "armor", label: "الدروع" }, { id: "accessories", label: "الإكسسوارات" }] as const).map((filter) => <Pressable key={filter.id} onPress={() => setInventoryCategory(filter.id)} style={[styles.shopFilter, inventoryCategory === filter.id && styles.shopFilterActive]}>
+        {([{ id: "all", label: "الكل" }, { id: "weapons", label: "الأسلحة" }, { id: "armor", label: "الدروع" }, { id: "accessories", label: "الإكسسوارات" }] as const).map((filter) => <Pressable key={filter.id} onPress={() => { setInventoryCategory(filter.id); setInventoryPage(0); }} style={[styles.shopFilter, inventoryCategory === filter.id && styles.shopFilterActive]}>
           <Txt style={[styles.shopFilterText, inventoryCategory === filter.id && styles.shopFilterTextActive]}>{filter.label}</Txt>
         </Pressable>)}
       </View>
       <View style={styles.shopFilters}>
-        {([{ id: "power", label: "الأقوى أولاً" }, { id: "rarity", label: "الندرة" }, { id: "level", label: "المستوى" }] as const).map((sort) => <Pressable key={sort.id} onPress={() => setInventorySort(sort.id)} style={[styles.sortChip, inventorySort === sort.id && styles.sortChipActive]}>
+        {([{ id: "power", label: "الأقوى أولاً" }, { id: "rarity", label: "الندرة" }, { id: "level", label: "المستوى" }] as const).map((sort) => <Pressable key={sort.id} onPress={() => { setInventorySort(sort.id); setInventoryPage(0); }} style={[styles.sortChip, inventorySort === sort.id && styles.sortChipActive]}>
           <Txt style={[styles.sortChipText, inventorySort === sort.id && styles.sortChipTextActive]}>{sort.label}</Txt>
         </Pressable>)}
       </View>
-      {visibleInventory.length ? visibleInventory.map((item) => {
+      <ListPagination page={currentInventoryPage} pageCount={inventoryPageCount} total={visibleInventory.length} visible={pagedInventory.length} onPageChange={setInventoryPage} />
+      {visibleInventory.length ? pagedInventory.map((item) => {
         const template = findEquipmentTemplate(item);
         const shown = template ?? item;
         const locked = !template || !state.hero || heroLevel < (shown.requiredLevel ?? 1);
@@ -169,16 +200,17 @@ export default function GearScreen() {
       <SectionTitle title="متجر العالم" icon="storefront-outline" action={<Pill label={`${state.gold.toLocaleString("en-US")} ذهب`} icon="cash-outline" tone="gold" />} />
       <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>كتالوج العتاد</Txt><Txt muted style={styles.shopCopy}>الأسلحة والدروع والخوذ والقفازات والأحذية والإكسسوارات والرفقاء متاحة بأسعار متدرجة. لا توجد قيود طوابق على العتاد؛ بعض القطع تتطلب مستوى مناسبًا للتجهيز فقط.</Txt><Txt style={styles.poolNote}>{shopItems.length.toLocaleString("en-US")} قطعة عتاد • {PETS.filter((pet) => pet.shopAvailable).length} رفقاء للشراء • {PETS.filter((pet) => !pet.shopAvailable).length} رفقاء حصريون</Txt></Card>
       <View style={styles.shopFilters}>
-        {SHOP_CATEGORIES.map((category) => <Pressable key={category.id} onPress={() => setShopCategory(category.id)} style={[styles.shopFilter, shopCategory === category.id && styles.shopFilterActive]}>
+        {SHOP_CATEGORIES.map((category) => <Pressable key={category.id} onPress={() => { setShopCategory(category.id); setShopPage(0); }} style={[styles.shopFilter, shopCategory === category.id && styles.shopFilterActive]}>
           <Txt style={[styles.shopFilterText, shopCategory === category.id && styles.shopFilterTextActive]}>{category.label}</Txt>
         </Pressable>)}
       </View>
       <View style={styles.shopFilters}>
-         {([{ id: "level", label: "المستوى" }, { id: "rarity", label: "الندرة" }, { id: "power", label: "القوة" }, { id: "price-low", label: "أقل سعر" }, { id: "price-high", label: "أعلى سعر" }] as const).map((sort) => <Pressable key={sort.id} onPress={() => setShopSort(sort.id)} style={[styles.sortChip, shopSort === sort.id && styles.sortChipActive]}>
+         {([{ id: "level", label: "المستوى" }, { id: "rarity", label: "الندرة" }, { id: "power", label: "القوة" }, { id: "price-low", label: "أقل سعر" }, { id: "price-high", label: "أعلى سعر" }] as const).map((sort) => <Pressable key={sort.id} onPress={() => { setShopSort(sort.id); setShopPage(0); }} style={[styles.sortChip, shopSort === sort.id && styles.sortChipActive]}>
            <Txt style={[styles.sortChipText, shopSort === sort.id && styles.sortChipTextActive]}>{sort.label}</Txt>
          </Pressable>)}
        </View>
-       {visibleShopItems.map((item) => {
+       <ListPagination page={currentShopPage} pageCount={shopPageCount} total={visibleShopItems.length} visible={pagedShopItems.length} onPageChange={setShopPage} />
+       {pagedShopItems.map((item) => {
         const owned = state.inventory.some((ownedItem) => findEquipmentTemplate(ownedItem)?.id === item.id)
           || Object.values(state.equipped).some((ownedItem) => ownedItem ? findEquipmentTemplate(ownedItem)?.id === item.id : false);
         const canPurchase = !!state.hero && !owned;
@@ -207,7 +239,8 @@ export default function GearScreen() {
     {tab === "market" ? <>
       <SectionTitle title={`سوق اللاعب (${marketItems.length})`} icon="cash-outline" action={<Pill label="50% من السعر المرجعي" tone="gold" />} />
       <Card style={styles.shopIntro}><Txt style={styles.shopTitle}>أسعار مرجعية واضحة</Txt><Txt muted style={styles.shopCopy}>يعرض السوق القطع الموجودة في حقيبتك أو المجهزة فقط. تُحسب قيمة البيع كنصف سعر الكتالوج، وتبقى غنائم الزنزانة خارج متجر الشراء.</Txt><Txt style={styles.poolNote}>كتالوج الزنزانة: {DUNGEON_ITEM_POOL_SIZE} قطعة • متاحة للشراء.</Txt></Card>
-      {marketItems.length ? marketItems.map(({ item, equipped }) => {
+      <ListPagination page={currentMarketPage} pageCount={marketPageCount} total={marketItems.length} visible={pagedMarketItems.length} onPageChange={setMarketPage} />
+      {marketItems.length ? pagedMarketItems.map(({ item, equipped }) => {
         const shown = findEquipmentTemplate(item) ?? item;
         const sellPrice = getEquipmentSellPrice(item);
         return <Card key={`sale-${item.id}`} style={styles.itemRow}>
@@ -235,6 +268,8 @@ const styles = StyleSheet.create({
   sortChipText: { color: palette.muted, fontSize: 10, fontWeight: "800" },
   sortChipTextActive: { color: palette.jade },
   comparisonText: { color: palette.jade, fontSize: 9, lineHeight: 15, textAlign: "right", marginTop: 3 },
+  pagination: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6, paddingVertical: 4 },
+  paginationText: { flex: 1, textAlign: "center", color: palette.muted, fontSize: 10, fontWeight: "800" },
   tab: { flex: 1, minHeight: 43, borderRadius: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 4 },
   tabActive: { backgroundColor: palette.gold },
   tabText: { fontSize: 10, fontWeight: "800", color: palette.muted },
