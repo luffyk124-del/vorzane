@@ -111,7 +111,18 @@ export function createEconomyCommandHandler(
     if (!isRecord(commit)) return json({ error: "Invalid command response" }, 500);
     if (commit.conflict === true) return json({ error: "Save changed; reload and retry", updatedAt: commit.updatedAt }, 409);
     if (!isRecord(commit.result) || !("state" in commit.result)) return json({ error: "Invalid command receipt" }, 500);
-    return json({ state: commit.result.state, updatedAt: commit.updatedAt, replayed: commit.replayed === true });
+    if (commit.replayed === true) {
+      // A concurrent request may have committed the same command after our first receipt check.
+      // Re-read the caller's save so a replay never returns an older snapshot.
+      const { data: latestSave, error: latestSaveError } = await client.from("player_saves")
+        .select("game_state, updated_at").eq("user_id", userData.user.id).maybeSingle();
+      if (latestSaveError) return json({ error: "Could not reload save after replay" }, 500);
+      if (!latestSave || !isRecord(latestSave.game_state) || !("hero" in latestSave.game_state)) {
+        return json({ error: "Player state is invalid after replay" }, 409);
+      }
+      return json({ state: latestSave.game_state, updatedAt: latestSave.updated_at, replayed: true });
+    }
+    return json({ state: commit.result.state, updatedAt: commit.updatedAt, replayed: false });
   };
 }
 
