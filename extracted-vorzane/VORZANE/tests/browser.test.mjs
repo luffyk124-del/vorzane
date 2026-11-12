@@ -415,6 +415,29 @@ test("primary game navigation stays visible and switches between core screens", 
   await browserContext.close();
 });
 
+test("auto-equip fills an empty armor slot and chooses the item with the highest displayed power", async () => {
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  const store = { state: saveFixture(), writes: [] };
+  store.state.hero.level = 100;
+  store.state.inventory = [
+    { id: "dun-2-mythic-5-e2e", catalogId: "dun-2-mythic-5", name: "درع الأزلي المدّ", slot: "درع", rarity: "mythic", bonus: { vit: 645, agi: 206 }, price: 1_000, requiredLevel: 73 },
+    { id: "dun-2-mythic-3-e2e", catalogId: "dun-2-mythic-3", name: "درع الأزلي الشق", slot: "درع", rarity: "mythic", bonus: { vit: 574, def: 184 }, price: 1_000, requiredLevel: 73 },
+  ];
+  const { unexpectedRequests } = await installSupabaseMock(page, { store });
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await signInWithMock(page);
+  await page.goto(`${appUrl}/gear`);
+  await page.getByRole("button", { name: "تجهيز أقوى الدروع" }).click();
+  await page.getByText("درع الأزلي المدّ", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByText(/زادت قوتك 1,057 نقطة/).waitFor({ timeout: 10_000 });
+  assert.deepEqual(unexpectedRequests, []);
+  assert.deepEqual(pageErrors, []);
+  await browserContext.close();
+});
+
 test("game-state read falls back to the RLS-scoped table query when the Edge Function is unavailable", async () => {
   const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await browserContext.newPage();

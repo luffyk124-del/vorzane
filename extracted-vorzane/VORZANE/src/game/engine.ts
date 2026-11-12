@@ -1,7 +1,7 @@
 import { CLASS_STATS, createFreshState, type ActiveExpedition, type ClassId, type EquipmentItem, type GameState, type OfflineReport, type StatKey, type MissionPeriod, type MissionPeriods } from "./model.ts";
 import { EXPEDITIONS, findExpedition, PETS, QUESTS, STARTER_ITEMS, STORY_CHAPTERS } from "./catalog.ts";
 import { DUNGEON_ITEMS, createItemInstance, findEquipmentTemplate, getEquipmentSellPrice } from "./dungeonItems.ts";
-import { addExperience } from "./stats.ts";
+import { addExperience, combatStats } from "./stats.ts";
 
 export { addExperience, combatStats, totalStats } from "./stats.ts";
 export { createBattleSequence, resolveBattle } from "./battle.ts";
@@ -177,20 +177,35 @@ export function equipItem(state: GameState, itemId: string): GameState {
 export function autoEquipArmor(state: GameState): GameState {
   if (!state.hero) return state;
   const slots = ["درع", "خوذة", "قفازات", "حذاء"];
+  const heroLevel = state.hero.level;
   let next = state;
-  const score = (item: EquipmentItem | null | undefined) => {
-    if (!item) return -1;
-    const template = findEquipmentTemplate(item) ?? item;
-    return (template.bonus.def ?? 0) * 4 + (template.bonus.vit ?? 0) * 2 + (template.bonus.agi ?? 0) * 0.5 + (template.bonus.str ?? 0) * 0.25 + (template.bonus.luck ?? 0) * 0.1;
-  };
+
+  // Compare complete character power using the same formula shown in the gear screen.
+  // Starting from the current state also means an empty slot is correctly treated as
+  // having zero contribution, so any eligible owned item that raises power can fill it.
   for (const slot of slots) {
-    const current = next.equipped[slot];
-    const best = next.inventory.filter((item) => {
+    let bestState = next;
+    let bestPower = combatStats(next).power;
+
+    for (const item of next.inventory) {
       const template = findEquipmentTemplate(item);
-      return template?.slot === slot && next.hero!.level >= (template.requiredLevel ?? item.requiredLevel ?? 1) && next.dungeonFloor >= (template.requiredDungeonFloor ?? item.requiredDungeonFloor ?? 1);
-    }).map((item) => ({ item, value: score(item) })).sort((a, b) => b.value - a.value)[0];
-    if (best && best.value > score(current)) next = equipItem(next, best.item.id);
+      if (!template || template.slot !== slot) continue;
+      const requiredLevel = template.requiredLevel ?? item.requiredLevel ?? 1;
+      const requiredFloor = template.requiredDungeonFloor ?? item.requiredDungeonFloor ?? 1;
+      if (heroLevel < requiredLevel || next.dungeonFloor < requiredFloor) continue;
+
+      const candidateState = equipItem(next, item.id);
+      if (candidateState === next) continue;
+      const candidatePower = combatStats(candidateState).power;
+      if (candidatePower > bestPower) {
+        bestState = candidateState;
+        bestPower = candidatePower;
+      }
+    }
+
+    next = bestState;
   }
+
   return next;
 }
 

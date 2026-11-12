@@ -118,7 +118,7 @@ export default function GearScreen() {
     {notice ? <Card style={styles.notice}><Icon name="checkmark-circle" color={palette.jade} size={17} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
 
     {tab === "equipment" ? <>
-      <SectionTitle title={`أماكن التجهيز (${equippedCount}/8)`} icon="grid-outline" action={<AppButton label="تجهيز أقوى الدروع" icon="shield-checkmark" onPress={() => { update((current) => autoEquipArmor(current)); message("تم تجهيز أقوى الدروع المتاحة لمستواك."); }} variant="jade" small />} />
+      <SectionTitle title={`أماكن التجهيز (${equippedCount}/8)`} icon="grid-outline" action={<AppButton label="تجهيز أقوى الدروع" icon="shield-checkmark" onPress={() => { const next = autoEquipArmor(state); const increase = combatStats(next).power - stats.power; update(() => next); message(increase > 0 ? `تم تجهيز أفضل الدروع؛ زادت قوتك ${increase.toLocaleString("en-US")} نقطة.` : "لا توجد قطع ترفع القوة؛ عتادك الحالي هو الأفضل."); }} variant="jade" small />} />
       <View style={styles.slots}>
         {SLOT_NAMES.map((slot) => {
           const item = state.equipped[slot];
