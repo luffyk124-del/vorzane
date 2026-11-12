@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { createFreshState, normalizeGameState, type GameState } from "./state.ts";
+import { createFreshState, type GameState } from "./state.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
