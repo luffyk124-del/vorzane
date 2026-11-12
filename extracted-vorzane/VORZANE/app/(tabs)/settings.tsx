@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Platform, Share, StyleSheet, Switch, View } from "react-native";
 import Slider from "@react-native-community/slider";
 import * as DocumentPicker from "expo-document-picker";
@@ -15,16 +15,22 @@ export default function SettingsScreen() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [volumeDraft, setVolumeDraft] = useState(game.state.settings.musicVolume);
   const [confirmReset, setConfirmReset] = useState(false);
   const [pendingImport, setPendingImport] = useState<ReturnType<typeof normalizeGameState>>(null);
   const [confirmImport, setConfirmImport] = useState(false);
   const isGuest = !!auth.user?.is_anonymous;
   const identity = auth.user?.email ?? (isGuest ? "حساب ضيف" : "غير مسجّل");
 
+  useEffect(() => {
+    setVolumeDraft(game.state.settings.musicVolume);
+  }, [game.state.settings.musicVolume]);
+
   const setMusic = async (patch: Partial<typeof game.state.settings>) => {
     setMessage("");
     const success = await game.executeEconomyCommand({ type: "updateSettings", settings: patch });
     if (!success) setMessage("تعذر حفظ الإعداد الآن؛ تحقق من الاتصال ثم أعد المحاولة.");
+    return success;
   };
   const linkEmail = async () => {
     setMessage("");
@@ -107,17 +113,23 @@ export default function SettingsScreen() {
     <Card style={styles.musicCard}>
       <View style={styles.settingRow}>
         <View style={styles.settingCopy}><Txt style={styles.settingTitle}>موسيقى الرحلة</Txt><Txt muted style={styles.settingSub}>موسيقى أصلية مستمرة أثناء اللعب</Txt></View>
-        <Switch value={game.state.settings.musicEnabled} onValueChange={(value) => setMusic({ musicEnabled: value })} trackColor={{ false: "#293744", true: palette.jadeDark }} thumbColor={game.state.settings.musicEnabled ? palette.jade : "#A9B7BE"} />
+        <Switch value={game.state.settings.musicEnabled} onValueChange={(value) => { void setMusic({ musicEnabled: value }); }} trackColor={{ false: "#293744", true: palette.jadeDark }} thumbColor={game.state.settings.musicEnabled ? palette.jade : "#A9B7BE"} />
       </View>
-      <View style={[styles.volumeHeader, !game.state.settings.musicEnabled && { opacity: 0.45 }]}><Txt style={styles.volumeValue}>{game.state.settings.musicVolume}%</Txt><Txt muted style={styles.settingSub}>مستوى الصوت</Txt></View>
+      <View style={[styles.volumeHeader, !game.state.settings.musicEnabled && { opacity: 0.45 }]}><Txt style={styles.volumeValue}>{volumeDraft}%</Txt><Txt muted style={styles.settingSub}>مستوى الصوت</Txt></View>
       <Slider
         style={[styles.slider, !game.state.settings.musicEnabled && { opacity: 0.4 }]}
         minimumValue={0}
         maximumValue={100}
         step={1}
-        value={game.state.settings.musicVolume}
-        onValueChange={(value) => game.update((current) => ({ ...current, settings: { ...current.settings, musicVolume: Math.round(value) } }))}
-        onSlidingComplete={(value) => { void setMusic({ musicVolume: Math.round(value) }); }}
+        value={volumeDraft}
+        onValueChange={setVolumeDraft}
+        onSlidingComplete={(value) => {
+          const nextVolume = Math.round(value);
+          setVolumeDraft(nextVolume);
+          void setMusic({ musicVolume: nextVolume }).then((success) => {
+            if (!success) setVolumeDraft(game.state.settings.musicVolume);
+          });
+        }}
         minimumTrackTintColor={palette.jade}
         maximumTrackTintColor="#344550"
         thumbTintColor={palette.gold}
@@ -127,7 +139,7 @@ export default function SettingsScreen() {
       <View style={styles.divider} />
       <View style={styles.settingRow}>
         <View style={styles.settingCopy}><Txt style={styles.settingTitle}>المؤثرات</Txt><Txt muted style={styles.settingSub}>نقرات ومكافآت اللعب</Txt></View>
-        <Switch value={game.state.settings.sfx} onValueChange={(value) => setMusic({ sfx: value })} trackColor={{ false: "#293744", true: palette.jadeDark }} thumbColor={game.state.settings.sfx ? palette.jade : "#A9B7BE"} />
+        <Switch value={game.state.settings.sfx} onValueChange={(value) => { void setMusic({ sfx: value }); }} trackColor={{ false: "#293744", true: palette.jadeDark }} thumbColor={game.state.settings.sfx ? palette.jade : "#A9B7BE"} />
       </View>
     </Card>
 
