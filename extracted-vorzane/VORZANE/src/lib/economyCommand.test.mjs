@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   createCommandId,
+  invokeEconomyCommand,
   invokeProfileAvatarUpdate,
   invokeResetSave,
   invokeSettingsUpdate,
@@ -13,6 +14,22 @@ const COMMAND_ID = "10000000-0000-4000-8000-000000000001";
 
 test("command IDs are valid UUIDs", () => {
   assert.match(createCommandId(), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+});
+
+test("generic command transport preserves the typed command and validates its response", async () => {
+  let received;
+  const result = await invokeEconomyCommand(async (body) => {
+    received = body;
+    return { data: { state: { settings: { musicEnabled: false } }, updatedAt: SERVER_VERSION, replayed: false }, error: null };
+  }, SAVE_VERSION, { type: "updateSettings", settings: { musicEnabled: false } }, COMMAND_ID);
+
+  assert.deepEqual(received, {
+    commandId: COMMAND_ID,
+    expectedUpdatedAt: SAVE_VERSION,
+    command: { type: "updateSettings", settings: { musicEnabled: false } },
+  });
+  assert.equal(result.error, null);
+  assert.equal(result.data?.updatedAt, SERVER_VERSION);
 });
 
 test("reset sends a typed command with the expected save version", async () => {

@@ -21,7 +21,11 @@ export default function SettingsScreen() {
   const isGuest = !!auth.user?.is_anonymous;
   const identity = auth.user?.email ?? (isGuest ? "حساب ضيف" : "غير مسجّل");
 
-  const setMusic = (patch: Partial<typeof game.state.settings>) => game.update((current) => ({ ...current, settings: { ...current.settings, ...patch } }));
+  const setMusic = async (patch: Partial<typeof game.state.settings>) => {
+    setMessage("");
+    const success = await game.executeEconomyCommand({ type: "updateSettings", settings: patch });
+    if (!success) setMessage("تعذر حفظ الإعداد الآن؛ تحقق من الاتصال ثم أعد المحاولة.");
+  };
   const linkEmail = async () => {
     setMessage("");
     if (!email.trim() || password.length < 8) { setMessage("أدخل بريدًا صالحًا وكلمة مرور من 8 أحرف على الأقل."); return; }
@@ -92,7 +96,7 @@ export default function SettingsScreen() {
     try {
       const success = await game.resetPlayerSave();
       setConfirmReset(false);
-      setMessage(success ? "حُذف حفظ هذا الحساب فقط؛ لم يُمسّ حفظ أي لاعب آخر." : "تعذر حذف الحفظ السحابي؛ لم تُجرَ إزالة جزئية.");
+      setMessage(success ? "أُعيد تقدم هذا الحساب إلى البداية من الخادم؛ لم يُمسّ حفظ أي لاعب آخر." : "تعذر إعادة ضبط الحفظ؛ لم نغيّر تقدمك.");
     } finally { setBusy(false); }
   };
 
@@ -112,7 +116,8 @@ export default function SettingsScreen() {
         maximumValue={100}
         step={1}
         value={game.state.settings.musicVolume}
-        onValueChange={(value) => setMusic({ musicVolume: Math.round(value) })}
+        onValueChange={(value) => game.update((current) => ({ ...current, settings: { ...current.settings, musicVolume: Math.round(value) } }))}
+        onSlidingComplete={(value) => { void setMusic({ musicVolume: Math.round(value) }); }}
         minimumTrackTintColor={palette.jade}
         maximumTrackTintColor="#344550"
         thumbTintColor={palette.gold}
@@ -146,14 +151,14 @@ export default function SettingsScreen() {
     <SectionTitle title="إدارة الحفظ" icon="cloud-done-outline" />
     <Card style={styles.cloudCard}>
       <View style={styles.cloudTop}><Pill label={game.status === "ready" ? "مرتبط بالسحابة" : game.status === "offline" ? "محلي مؤقت" : "جارٍ الفحص"} tone={game.status === "ready" ? "jade" : game.status === "offline" ? "red" : "muted"} icon={game.status === "ready" ? "cloud-done-outline" : "cloud-outline"} /><Txt style={styles.settingTitle}>حفظ خاص بهذا اللاعب</Txt></View>
-      <Txt muted style={styles.accountNote}>تقدمك مرتبط بحسابك وحدك، ولا يستطيع لاعب آخر الوصول إليه. الحذف أدناه يطال تقدمك فقط.</Txt>
-      <AppButton label="حذف حفظ حسابي والبدء من جديد" icon="trash-outline" variant="danger" onPress={() => setConfirmReset(true)} disabled={busy || game.status !== "ready"} />
+      <Txt muted style={styles.accountNote}>تقدمك مرتبط بحسابك وحدك، ولا يستطيع لاعب آخر الوصول إليه. إعادة الضبط أدناه تخص تقدمك فقط.</Txt>
+      <AppButton label="إعادة ضبط حسابي والبدء من جديد" icon="refresh-outline" variant="danger" onPress={() => setConfirmReset(true)} disabled={busy || game.status !== "ready"} />
     </Card>
 
     {game.status === "offline" && game.cloudError ? <Card style={styles.errorCard}><Txt style={styles.errorText}>{game.cloudError}</Txt></Card> : null}
 
     <Modal transparent visible={confirmReset} animationType="fade" onRequestClose={() => setConfirmReset(false)}>
-      <View style={styles.modalBackdrop}><Card style={styles.confirmCard}><View style={styles.modalIcon}><Icon name="trash-outline" color={palette.red} size={24} /></View><Txt style={styles.modalTitle}>حذف حفظ هذا الحساب؟</Txt><Txt muted style={styles.modalCopy}>سيُحذف صف تقدمك السحابي فقط. لا يمكن التراجع عن الحذف، ولن يُمسّ تقدم أي لاعب آخر أو ملف الحفظ القديم على الجهاز.</Txt><AppButton label="نعم، احذف حفظي" icon="trash-outline" variant="danger" onPress={resetSave} loading={busy} /><AppButton label="إلغاء" variant="secondary" onPress={() => setConfirmReset(false)} disabled={busy} /></Card></View>
+      <View style={styles.modalBackdrop}><Card style={styles.confirmCard}><View style={styles.modalIcon}><Icon name="refresh-outline" color={palette.red} size={24} /></View><Txt style={styles.modalTitle}>إعادة ضبط تقدم هذا الحساب؟</Txt><Txt muted style={styles.modalCopy}>سيُنشئ الخادم حفظاً جديداً من البداية داخل حسابك بدلاً من حذف سجل الحفظ. لن يُمسّ تقدم أي لاعب آخر.</Txt><AppButton label="نعم، ابدأ من جديد" icon="refresh-outline" variant="danger" onPress={resetSave} loading={busy} /><AppButton label="إلغاء" variant="secondary" onPress={() => setConfirmReset(false)} disabled={busy} /></Card></View>
     </Modal>
 
     <Modal transparent visible={confirmImport} animationType="fade" onRequestClose={() => setConfirmImport(false)}>

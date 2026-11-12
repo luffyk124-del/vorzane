@@ -83,6 +83,21 @@ async function invokeValidatedCommand(
   return { data: response, error: null };
 }
 
+export function invokeEconomyCommand(
+  invoke: InvokeEconomyCommand,
+  expectedUpdatedAt: string,
+  command: EconomyCommand,
+  commandId = createCommandId(),
+): Promise<{ data: EconomyCommandResponse | null; error: Error | null }> {
+  return invokeValidatedCommand(
+    invoke,
+    expectedUpdatedAt,
+    command,
+    "The server returned an invalid economy-command response.",
+    commandId,
+  );
+}
+
 export function invokeResetSave(
   invoke: InvokeEconomyCommand,
   expectedUpdatedAt: string,
