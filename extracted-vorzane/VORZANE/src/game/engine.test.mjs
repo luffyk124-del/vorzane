@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addExperience, advanceExpeditions, allocateStatPoint, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter } from "./engine.ts";
+import { addExperience, advanceExpeditions, allocateStatPoint, autoEquipArmor, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter } from "./engine.ts";
 import { createFreshState, normalizeGameState } from "./model.ts";
+import { combatStats } from "./stats.ts";
+
+const combatPower = (state) => combatStats(state).power;
 
 test("quest rewards are one-time and require completed progress", () => {
   const state = createHeroState("اختبار", "Warrior");
@@ -90,6 +93,41 @@ test("equipment can be purchased early and only its player-level requirement gat
 
   const levelReady = { ...purchased.state, hero: { ...purchased.state.hero, level: 70 } };
   assert.equal(equipItem(levelReady, owned.id).equipped["درع"]?.catalogId, "dun-2-mythic-1", "dungeon floor must not gate equipment");
+});
+
+test("auto-equip fills every empty armor slot with eligible owned gear", () => {
+  let state = createHeroState("تجهيز تلقائي", "Warrior");
+  state.gold = 100_000;
+  for (const id of ["armor1", "helm1", "gloves1", "boots1"]) {
+    const purchase = buyItem(state, id);
+    assert.equal(purchase.error, undefined);
+    state = purchase.state;
+  }
+
+  const equipped = autoEquipArmor(state);
+  for (const slot of ["درع", "خوذة", "قفازات", "حذاء"]) {
+    assert.ok(equipped.equipped[slot], `empty ${slot} slot should be filled when matching gear is owned`);
+  }
+  assert.equal(equipped.inventory.length, 0);
+});
+
+test("auto-equip chooses armor by the displayed total power formula, not a defense-biased score", () => {
+  let state = createHeroState("قوة العتاد", "Warrior");
+  state.hero.level = 100;
+  state.gold = 100_000_000;
+
+  // The tide variant has greater displayed power (vitality + agility), while the
+  // rift variant has more defense. The previous defense-heavy score chose the rift.
+  for (const id of ["dun-2-mythic-5", "dun-2-mythic-3"]) {
+    const purchase = buyItem(state, id);
+    assert.equal(purchase.error, undefined);
+    state = purchase.state;
+  }
+
+  const equipped = autoEquipArmor(state);
+  assert.equal(equipped.equipped["درع"]?.catalogId, "dun-2-mythic-5");
+  assert.equal(equipped.inventory.length, 1);
+  assert.ok(combatPower(equipped) > combatPower(state));
 });
 
 test("unequipping is blocked when the bag is full to prevent item overflow", () => {
