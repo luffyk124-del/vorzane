@@ -480,6 +480,57 @@ test("auto-equip fills all eight gear slots and chooses the item with the highes
   await browserContext.close();
 });
 
+test("gear inventory, shop, and market paginate long mobile lists", async () => {
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  const store = { state: saveFixture(), writes: [] };
+  store.state.hero.level = 100;
+  const armorTemplates = [
+    { catalogId: "helm1", name: "خوذة الحديد", slot: "خوذة", bonus: { def: 3 }, price: 150 },
+    { catalogId: "gloves1", name: "قفازات الحارس", slot: "قفازات", bonus: { str: 2, def: 1 }, price: 210 },
+    { catalogId: "boots1", name: "حذاء المسافر", slot: "حذاء", bonus: { agi: 2 }, price: 90 },
+  ];
+  store.state.inventory = Array.from({ length: 30 }, (_, index) => {
+    const template = armorTemplates[index % armorTemplates.length];
+    return {
+      id: `gear-pagination-${index + 1}`,
+      ...template,
+      rarity: "common",
+      requiredLevel: 1,
+    };
+  });
+  const { writes, unexpectedRequests } = await installSupabaseMock(page, { store });
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await signInWithMock(page);
+  await page.goto(`${appUrl}/gear`);
+  await page.getByText("صفحة 1 من 2 • عرض 24 من 30", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByRole("button", { name: "التالي" }).click();
+  await page.getByText("صفحة 2 من 2 • عرض 6 من 30", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByText("الدروع", { exact: true }).click();
+  await page.getByText("صفحة 1 من 2 • عرض 24 من 30", { exact: true }).waitFor({ timeout: 10_000 });
+
+  await page.getByText("المتجر", { exact: true }).click();
+  await page.getByText(/صفحة 1 من \d+ • عرض 24 من \d+/).waitFor({ timeout: 10_000 });
+  await page.getByRole("button", { name: "التالي" }).click();
+  await page.getByText(/صفحة 2 من \d+ • عرض 24 من \d+/).waitFor({ timeout: 10_000 });
+  await page.getByText("الأسلحة", { exact: true }).click();
+  await page.getByText(/صفحة 1 من \d+ • عرض 24 من \d+/).waitFor({ timeout: 10_000 });
+
+  await page.getByText("السوق", { exact: true }).click();
+  await page.getByText("صفحة 1 من 2 • عرض 24 من 30", { exact: true }).waitFor({ timeout: 10_000 });
+  await page.getByRole("button", { name: "التالي" }).click();
+  await page.getByText("صفحة 2 من 2 • عرض 6 من 30", { exact: true }).waitFor({ timeout: 10_000 });
+
+  const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+  assert.equal(hasHorizontalOverflow, false, "gear lists and pagination must fit a narrow mobile viewport");
+  assert.equal(writes.length, 0, "changing list pages and filters must not mutate the player save");
+  assert.deepEqual(unexpectedRequests, []);
+  assert.deepEqual(pageErrors, []);
+  await browserContext.close();
+});
+
 test("game-state read falls back to the RLS-scoped table query when the Edge Function is unavailable", async () => {
   const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await browserContext.newPage();
