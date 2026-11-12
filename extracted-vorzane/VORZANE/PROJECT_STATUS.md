@@ -211,3 +211,11 @@ After every meaningful development batch, update the relevant sections above wit
 - No Supabase production migration, Edge Function deployment, Auth/RLS change, feature-flag change, or player-save mutation was performed in this update.
 - Existing player saves were not modified or deleted. Manus remains unchanged.
 - Keep PR #16 unmerged; it is stale and must not be merged wholesale. Do not reintroduce FPS.ms or Google sign-in.
+
+## 2026-11-12 — Mobile gear-list pagination
+
+- Added 24-item pagination to the equipment bag, world shop, and player market so large catalogs and inventories do not render hundreds of item cards at once on a mobile screen.
+- Category and sort changes reset the relevant list to its first page. Derived page bounds keep the visible page valid when selling or equipping items reduces a list.
+- Added a mobile browser regression covering page navigation and filter reset across all three lists, narrow-screen overflow, and the guarantee that browsing/pagination does not write to the player save.
+- Verification on this branch: `pnpm test` — 71 passed; `pnpm typecheck` — passed; `pnpm build` — passed and exported 26 static routes; focused gear pagination browser test — passed.
+- No Supabase schema, migration, Edge Function, player save, feature flag, or Manus deployment was changed. No merge or deployment was performed.
