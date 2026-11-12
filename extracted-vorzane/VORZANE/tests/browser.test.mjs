@@ -187,7 +187,12 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       const saved = request.postDataJSON();
       writes.push(saved);
       store.state = saved.game_state;
-      await route.fulfill({ status: 204, body: "" });
+      // persistSnapshot requests the committed updated_at version after upsert.
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ updated_at: new Date().toISOString() }),
+      });
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/rest/v1/player_profiles")) {
