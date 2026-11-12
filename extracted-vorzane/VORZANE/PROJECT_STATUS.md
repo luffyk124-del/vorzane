@@ -211,3 +211,12 @@ After every meaningful development batch, update the relevant sections above wit
 - No Supabase production migration, Edge Function deployment, Auth/RLS change, feature-flag change, or player-save mutation was performed in this update.
 - Existing player saves were not modified or deleted. Manus remains unchanged.
 - Keep PR #16 unmerged; it is stale and must not be merged wholesale. Do not reintroduce FPS.ms or Google sign-in.
+
+## 2026-11-12 — Settings volume preview and server-owned persistence
+
+- On branch `feat/vorzane-next-development`, changed the music-volume slider to keep its drag value in screen-local state. It no longer calls the generic `GameContext.update` for every slider movement; the final value is submitted through the existing typed `updateSettings` command after release.
+- The slider now returns to the last confirmed saved value when the server command fails. Server-confirmed settings continue to synchronize back into the control.
+- Added a mobile browser regression test proving the generic snapshot upsert retains the previous volume and the final volume is applied by the mocked server command.
+- Verification on this branch: `pnpm test` — 71 passed; `pnpm typecheck` — passed; `pnpm build` — passed and exported 26 static routes; focused browser regression — passed.
+- A full local browser-suite attempt passed the first six cases, then the local Expo dev server stopped responding (`ERR_EMPTY_RESPONSE` / `ERR_CONNECTION_REFUSED`) and the remaining eight cases could not run. This is an environment/server-runner failure, not a confirmed application assertion failure; exact-head GitHub CI is required for full-suite confirmation.
+- No Supabase schema, migration, Edge Function, production save, feature flag, or Manus deployment was changed. No merge or deployment was performed.
