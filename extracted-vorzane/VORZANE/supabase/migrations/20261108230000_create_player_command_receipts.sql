@@ -1,5 +1,5 @@
 -- Atomic, per-player command commits with replay protection.
--- Additive only. This migration is tested in isolated CI and is NOT applied to production.
+-- Additive only. Tested in isolated CI before production rollout.
 
 create table public.player_command_receipts (
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -31,7 +31,7 @@ declare
   v_next_updated_at timestamptz;
   v_previous_result jsonb;
 begin
-  if v_user_id is null or auth.role() is distinct from 'service_role' then
+  if v_user_id is null or nullif(current_setting('request.jwt.claim.role', true), '') is distinct from 'service_role' then
     raise exception 'unauthorized' using errcode = '42501';
   end if;
 
