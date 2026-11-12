@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, StatCard, Txt } from "../../src/components/ui";
 import { DUNGEON_ITEM_POOL_SIZE, PETS, RARITY_LABELS, STARTER_ITEMS } from "../../src/game/catalog";
-import { autoEquipArmor, buyItem, buyPet, combatStats, equipItem, sellItem, setPet, unequipItem } from "../../src/game/engine";
+import { autoEquipBestGear, buyItem, buyPet, combatStats, equipItem, sellItem, setPet, unequipItem } from "../../src/game/engine";
 import { DUNGEON_ITEMS, findEquipmentTemplate, getEquipmentSellPrice } from "../../src/game/dungeonItems";
 import { SLOT_NAMES, type EquipmentItem } from "../../src/game/model";
 import { rarityColor, palette } from "../../src/theme";
@@ -118,7 +118,7 @@ export default function GearScreen() {
     {notice ? <Card style={styles.notice}><Icon name="checkmark-circle" color={palette.jade} size={17} /><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
 
     {tab === "equipment" ? <>
-      <SectionTitle title={`أماكن التجهيز (${equippedCount}/8)`} icon="grid-outline" action={<AppButton label="تجهيز أقوى الدروع" icon="shield-checkmark" onPress={() => { const next = autoEquipArmor(state); const increase = combatStats(next).power - stats.power; update(() => next); message(increase > 0 ? `تم تجهيز أفضل الدروع؛ زادت قوتك ${increase.toLocaleString("en-US")} نقطة.` : "لا توجد قطع ترفع القوة؛ عتادك الحالي هو الأفضل."); }} variant="jade" small />} />
+      <SectionTitle title={`أماكن التجهيز (${equippedCount}/8)`} icon="grid-outline" action={<AppButton label="تجهيز أقوى العتاد" icon="shield-checkmark" onPress={() => { const next = autoEquipBestGear(state); const increase = combatStats(next).power - stats.power; update(() => next); message(increase > 0 ? `تم تجهيز أقوى العتاد؛ زادت قوة قتالك ${increase.toLocaleString("en-US")} نقطة.` : "لا توجد قطع مملوكة ومسموح بتجهيزها ترفع قوة القتال؛ تجهيزك الحالي هو الأفضل."); }} variant="jade" small />} />
       <View style={styles.slots}>
         {SLOT_NAMES.map((slot) => {
           const item = state.equipped[slot];

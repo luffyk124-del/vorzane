@@ -443,14 +443,21 @@ test("roaming lore archive unlocks a story page with relic shards", async () => 
   await browserContext.close();
 });
 
-test("auto-equip fills an empty armor slot and chooses the item with the highest displayed power", async () => {
+test("auto-equip fills all eight gear slots and chooses the item with the highest displayed power", async () => {
   const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await browserContext.newPage();
   const store = { state: saveFixture(), writes: [] };
   store.state.hero.level = 100;
   store.state.inventory = [
+    { id: "sword1-e2e", catalogId: "sword1", name: "سيف المبتدئ", slot: "سلاح", rarity: "common", bonus: { str: 3 }, price: 100, requiredLevel: 1 },
     { id: "dun-2-mythic-5-e2e", catalogId: "dun-2-mythic-5", name: "درع الأزلي المدّ", slot: "درع", rarity: "mythic", bonus: { vit: 645, agi: 206 }, price: 1_000, requiredLevel: 73 },
     { id: "dun-2-mythic-3-e2e", catalogId: "dun-2-mythic-3", name: "درع الأزلي الشق", slot: "درع", rarity: "mythic", bonus: { vit: 574, def: 184 }, price: 1_000, requiredLevel: 73 },
+    { id: "helm1-e2e", catalogId: "helm1", name: "خوذة الحديد", slot: "خوذة", rarity: "common", bonus: { def: 3 }, price: 150, requiredLevel: 1 },
+    { id: "gloves1-e2e", catalogId: "gloves1", name: "قفازات الحارس", slot: "قفازات", rarity: "common", bonus: { str: 2, def: 1 }, price: 210, requiredLevel: 1 },
+    { id: "boots1-e2e", catalogId: "boots1", name: "حذاء المسافر", slot: "حذاء", rarity: "common", bonus: { agi: 2 }, price: 90, requiredLevel: 1 },
+    { id: "amulet1-e2e", catalogId: "amulet1", name: "قلادة الفجر", slot: "قلادة", rarity: "common", bonus: { vit: 3, luck: 1 }, price: 330, requiredLevel: 1 },
+    { id: "ring1-e2e", catalogId: "ring1", name: "خاتم الحظ", slot: "خاتم أول", rarity: "common", bonus: { luck: 4 }, price: 250, requiredLevel: 1 },
+    { id: "ring2-25-e2e", catalogId: "ring2-25", name: "خاتم العهد", slot: "خاتم ثانٍ", rarity: "epic", bonus: { def: 24, vit: 28 }, price: 68_000, requiredLevel: 25 },
   ];
   const { unexpectedRequests } = await installSupabaseMock(page, { store });
   const pageErrors = [];
@@ -458,9 +465,11 @@ test("auto-equip fills an empty armor slot and chooses the item with the highest
 
   await signInWithMock(page);
   await page.goto(`${appUrl}/gear`);
-  await page.getByRole("button", { name: "تجهيز أقوى الدروع" }).click();
-  await page.getByText("درع الأزلي المدّ", { exact: true }).waitFor({ timeout: 10_000 });
-  await page.getByText(/زادت قوتك 1,057 نقطة/).waitFor({ timeout: 10_000 });
+  await page.getByRole("button", { name: "تجهيز أقوى العتاد" }).click();
+  for (const name of ["سيف المبتدئ", "درع الأزلي المدّ", "خوذة الحديد", "قفازات الحارس", "حذاء المسافر", "قلادة الفجر", "خاتم الحظ", "خاتم العهد"]) {
+    await page.getByText(name, { exact: true }).waitFor({ timeout: 10_000 });
+  }
+  await page.getByText(/زادت قوة قتالك/).waitFor({ timeout: 10_000 });
   assert.deepEqual(unexpectedRequests, []);
   assert.deepEqual(pageErrors, []);
   await browserContext.close();

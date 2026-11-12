@@ -1,4 +1,4 @@
-import { CLASS_STATS, createFreshState, type ActiveExpedition, type ClassId, type EquipmentItem, type GameState, type OfflineReport, type StatKey, type MissionPeriod, type MissionPeriods } from "./model.ts";
+import { CLASS_STATS, createFreshState, type ActiveExpedition, type ClassId, type EquipmentItem, type GameState, type OfflineReport, type StatKey, type MissionPeriod, type MissionPeriods, SLOT_NAMES } from "./model.ts";
 import { EXPEDITIONS, findExpedition, PETS, QUESTS, STARTER_ITEMS, STORY_CHAPTERS } from "./catalog.ts";
 import { DUNGEON_ITEMS, createItemInstance, findEquipmentTemplate, getEquipmentSellPrice } from "./dungeonItems.ts";
 import { addExperience, combatStats } from "./stats.ts";
@@ -174,16 +174,15 @@ export function equipItem(state: GameState, itemId: string): GameState {
   return { ...state, inventory: nextInventory, equipped: { ...state.equipped, [canonicalItem.slot]: canonicalItem } };
 }
 
-export function autoEquipArmor(state: GameState): GameState {
+export function autoEquipBestGear(state: GameState): GameState {
   if (!state.hero) return state;
-  const slots = ["درع", "خوذة", "قفازات", "حذاء"];
   const heroLevel = state.hero.level;
   let next = state;
 
   // Compare complete character power using the same formula shown in the gear screen.
   // Starting from the current state also means an empty slot is correctly treated as
   // having zero contribution, so any eligible owned item that raises power can fill it.
-  for (const slot of slots) {
+  for (const slot of SLOT_NAMES) {
     let bestState = next;
     let bestPower = combatStats(next).power;
 
@@ -191,8 +190,7 @@ export function autoEquipArmor(state: GameState): GameState {
       const template = findEquipmentTemplate(item);
       if (!template || template.slot !== slot) continue;
       const requiredLevel = template.requiredLevel ?? item.requiredLevel ?? 1;
-      const requiredFloor = template.requiredDungeonFloor ?? item.requiredDungeonFloor ?? 1;
-      if (heroLevel < requiredLevel || next.dungeonFloor < requiredFloor) continue;
+      if (heroLevel < requiredLevel) continue;
 
       const candidateState = equipItem(next, item.id);
       if (candidateState === next) continue;
@@ -208,6 +206,9 @@ export function autoEquipArmor(state: GameState): GameState {
 
   return next;
 }
+
+// Backward-compatible export for older callers; this now optimizes every gear slot.
+export const autoEquipArmor = autoEquipBestGear;
 
 export function unequipItem(state: GameState, slot: string): GameState {
   const item = state.equipped[slot];
