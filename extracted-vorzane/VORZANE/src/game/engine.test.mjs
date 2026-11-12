@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addExperience, advanceExpeditions, allocateStatPoint, autoEquipArmor, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter } from "./engine.ts";
+import { addExperience, advanceExpeditions, allocateStatPoint, autoEquipBestGear, buyItem, buyPet, equipItem, unequipItem, setPet, canClaimQuest, claimQuest, createBattleSequence, createHeroState, canClaimExplorationAchievement, claimExplorationAchievement, getExplorationAchievementProgress, canClaimExpeditionTask, claimExpeditionTask, ensureMissionPeriods, getRecurringMissions, claimRecurringMission, getStoryChapterProgress, canClaimStoryChapter, claimStoryChapter } from "./engine.ts";
 import { createFreshState, normalizeGameState } from "./model.ts";
 import { combatStats } from "./stats.ts";
 
@@ -95,23 +95,25 @@ test("equipment can be purchased early and only its player-level requirement gat
   assert.equal(equipItem(levelReady, owned.id).equipped["درع"]?.catalogId, "dun-2-mythic-1", "dungeon floor must not gate equipment");
 });
 
-test("auto-equip fills every empty armor slot with eligible owned gear", () => {
+test("auto-equip fills all eight empty gear slots with the strongest eligible owned gear", () => {
   let state = createHeroState("تجهيز تلقائي", "Warrior");
-  state.gold = 100_000;
-  for (const id of ["armor1", "helm1", "gloves1", "boots1"]) {
+  state.hero.level = 100;
+  state.gold = 100_000_000;
+  for (const id of ["sword1", "armor1", "helm1", "gloves1", "boots1", "amulet1", "ring1", "ring2-25"]) {
     const purchase = buyItem(state, id);
     assert.equal(purchase.error, undefined);
     state = purchase.state;
   }
 
-  const equipped = autoEquipArmor(state);
-  for (const slot of ["درع", "خوذة", "قفازات", "حذاء"]) {
+  const equipped = autoEquipBestGear(state);
+  for (const slot of ["سلاح", "درع", "خوذة", "قفازات", "حذاء", "قلادة", "خاتم أول", "خاتم ثانٍ"]) {
     assert.ok(equipped.equipped[slot], `empty ${slot} slot should be filled when matching gear is owned`);
   }
   assert.equal(equipped.inventory.length, 0);
+  assert.ok(combatPower(equipped) > combatPower(state));
 });
 
-test("auto-equip chooses armor by the displayed total power formula, not a defense-biased score", () => {
+test("auto-equip chooses gear by the displayed total power formula, not a defense-biased score", () => {
   let state = createHeroState("قوة العتاد", "Warrior");
   state.hero.level = 100;
   state.gold = 100_000_000;
@@ -124,7 +126,7 @@ test("auto-equip chooses armor by the displayed total power formula, not a defen
     state = purchase.state;
   }
 
-  const equipped = autoEquipArmor(state);
+  const equipped = autoEquipBestGear(state);
   assert.equal(equipped.equipped["درع"]?.catalogId, "dun-2-mythic-5");
   assert.equal(equipped.inventory.length, 1);
   assert.ok(combatPower(equipped) > combatPower(state));
