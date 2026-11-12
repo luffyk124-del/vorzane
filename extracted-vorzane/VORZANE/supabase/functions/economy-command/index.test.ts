@@ -127,3 +127,18 @@ Deno.test("replayed commands return current save without committing again", asyn
   assert(body.replayed === true, "expected replay response");
   assert(calls.rpc === undefined, "replay must not execute the command again");
 });
+
+Deno.test("concurrent replay reloads the latest save instead of returning an older receipt snapshot", async () => {
+  const state = createFreshState();
+  state.gold = 900;
+  const { handler, calls } = fixture({
+    state,
+    commit: { replayed: true, result: { state: { gold: 500 } }, updatedAt: "2026-11-08T20:02:00.000Z" },
+  });
+  const response = await handler(commandRequest({ type: "resetSave" }));
+  const body = await readJson(response);
+  assert(response.status === 200, "concurrent replay must succeed");
+  assert(body.replayed === true, "expected replay response");
+  assert((body.state as GameState).gold === 900, "replay must return the latest saved state");
+  assert((calls.tables as string[]).filter((table) => table === "player_saves").length === 2, "replay must reload the save after commit receipt check");
+});
