@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, Meter, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
-import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, buyRoamingHealthRefill, refreshRoamingHealth, unlockRoamingArchiveEntry, ROAMING_ARCHIVE_ENTRIES, ROAMING_EVENT_COUNT, type RoamingEvent, type RoamingMerchantItem } from "../../src/game/roaming";
+import { getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, buyRoamingHealthRefill, refreshRoamingHealth, unlockRoamingArchiveEntry, ROAMING_ARCHIVE_ENTRIES, ROAMING_ARCHIVE_COLLECTIONS, ROAMING_EVENT_COUNT, type RoamingEvent, type RoamingMerchantItem } from "../../src/game/roaming";
 import { useGame } from "../../src/contexts/GameContext";
 import { BattleArena } from "../../src/components/BattleArena";
 import { createBattleSequence, type BattleSequence, type BattleResult } from "../../src/game/engine";
@@ -156,9 +156,29 @@ export default function RoamingScreen() {
             const result = unlockRoamingArchiveEntry(state, entry.id);
             if (result.error) { setNotice(result.error); return; }
             update(() => result.state);
-            setNotice(`فُتحت وثيقة «${entry.title}» وأضيفت إلى أرشيفك.`);
+            const completed = result.completedCollections ?? [];
+            setNotice(completed.length
+              ? `فُتحت «${entry.title}» واكتملت مجموعة «${completed.map((item) => item.title).join("، ")}». حصلت على ${completed.reduce((sum, item) => sum + item.rewardGold, 0).toLocaleString("en-US")} ذهب و${completed.reduce((sum, item) => sum + item.rewardXp, 0).toLocaleString("en-US")} خبرة، وكُشفت الحكاية الختامية.`
+              : `فُتحت وثيقة «${entry.title}» وأضيفت إلى أرشيفك.`);
           }}
         />}
+      </Card>;
+    })}
+
+    <SectionTitle title="مجموعات الأرشيف" icon="albums-outline" />
+    {ROAMING_ARCHIVE_COLLECTIONS.map((collection) => {
+      const opened = collection.entryIds.filter((id) => state.roaming.storyFlags.includes(`archive:${id}`)).length;
+      const completed = state.roaming.storyFlags.includes(`archive-collection:${collection.id}`);
+      return <Card key={collection.id} style={styles.archiveEntry}>
+        <View style={styles.archiveEntryTop}>
+          <View style={styles.archiveEntryText}>
+            <Txt style={styles.archiveEntryTitle}>{collection.title}</Txt>
+            <Txt muted style={styles.small}>{collection.summary}</Txt>
+            <Txt style={styles.price}>{opened}/{collection.entryIds.length} وثائق • {collection.rewardGold.toLocaleString("en-US")} ذهب • {collection.rewardXp.toLocaleString("en-US")} خبرة</Txt>
+          </View>
+          <Icon name={completed ? "checkmark-circle" : "albums-outline"} color={completed ? palette.jade : palette.muted} size={21} />
+        </View>
+        {completed ? <View style={styles.archiveStory}><Txt style={styles.storyHeading}>الحكاية الختامية</Txt><Txt style={styles.archiveStoryText}>{collection.story}</Txt></View> : <Txt muted style={styles.small}>افتح الوثائق الثلاث المرتبطة بهذه المجموعة لكشف الحكاية الختامية واستلام المكافأة مرة واحدة.</Txt>}
       </Card>;
     })}
 

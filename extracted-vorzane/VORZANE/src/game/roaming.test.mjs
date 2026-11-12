@@ -3,7 +3,7 @@ import test from "node:test";
 import { createHeroState, getQuestProgress, getStoryChapterProgress } from "./engine.ts";
 import { normalizeGameState } from "./model.ts";
 import { getLongQuestProgress, LONG_QUESTS } from "./longQuests.ts";
-import { buyRoamingHealthRefill, refreshRoamingHealth, getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, ROAMING_EVENT_PREVIEW, ROAMING_ARCHIVE_ENTRIES, unlockRoamingArchiveEntry } from "./roaming.ts";
+import { buyRoamingHealthRefill, refreshRoamingHealth, getRoamingEvent, resolveRoamingChoice, getTravellingMerchant, buyMerchantItem, completeRoamingMerchantVisit, ROAMING_EVENT_PREVIEW, ROAMING_ARCHIVE_ENTRIES, ROAMING_ARCHIVE_COLLECTIONS, unlockRoamingArchiveEntry } from "./roaming.ts";
 
 test("roaming health regenerates one point per minute and respects its maximum", () => {
   const now = Date.UTC(2026, 10, 11, 12, 0, 0);
@@ -137,6 +137,32 @@ test("the lore archive spends shards once and keeps collection progress cumulati
   assert.equal(getLongQuestProgress(opened.state, collectionQuest), collectionQuest.target);
   assert.equal(ROAMING_ARCHIVE_ENTRIES.length, 6);
   assert.equal(new Set(ROAMING_ARCHIVE_ENTRIES.map((item) => item.id)).size, 6);
+});
+
+test("archive collections reveal a finale and grant one-time rewards", () => {
+  let state = createHeroState("جامع المجموعات", "Warrior");
+  state.roaming.fragments = 200;
+  const collection = ROAMING_ARCHIVE_COLLECTIONS[0];
+  assert.ok(collection);
+
+  for (const entryId of collection.entryIds.slice(0, -1)) {
+    const result = unlockRoamingArchiveEntry(state, entryId);
+    assert.equal(result.error, undefined);
+    assert.equal(result.completedCollections?.length ?? 0, 0);
+    state = result.state;
+  }
+
+  const finalEntry = collection.entryIds.at(-1);
+  assert.ok(finalEntry);
+  const completed = unlockRoamingArchiveEntry(state, finalEntry);
+  assert.equal(completed.error, undefined);
+  assert.equal(completed.completedCollections?.[0]?.id, collection.id);
+  assert.equal(completed.state.gold, state.gold + collection.rewardGold);
+  assert.ok(completed.state.hero.exp > state.hero.exp || completed.state.hero.level > state.hero.level);
+  assert.ok(completed.state.roaming.storyFlags.includes(`archive-collection:${collection.id}`));
+  assert.equal(unlockRoamingArchiveEntry(completed.state, finalEntry).error, "فتحت هذه الصفحة من قبل.");
+  assert.equal(ROAMING_ARCHIVE_COLLECTIONS.length, 2);
+  assert.ok(ROAMING_ARCHIVE_COLLECTIONS.every((item) => item.entryIds.length === 3));
 });
 
 test("active roaming story chapters wait for random intervening encounters", () => {

@@ -10,6 +10,11 @@ export type RoamingEvent = { id: string; title: string; region: string; story: s
 export type RoamingMerchantItem = { id: string; name: string; description: string; price: number; currency: "gold"; stock: number; gearTemplate?: EquipmentItem; heal?: number; gems?: number; gold?: number; xp?: number };
 
 export type RoamingArchiveEntry = { id: string; title: string; region: string; cost: number; summary: string; story: string };
+export type RoamingArchiveCollection = { id: string; title: string; summary: string; story: string; entryIds: string[]; rewardGold: number; rewardXp: number };
+export const ROAMING_ARCHIVE_COLLECTIONS: RoamingArchiveCollection[] = [
+  { id: "wayfarers-memory", title: "ذاكرة المسافرين", summary: "ثلاث شهادات عن الطرق والروابط التي جمعت المسافرين.", story: "عندما وُضعت الوثائق الثلاث جنبًا إلى جنب، ظهر أن الملاح والبحّارة وصانع الجرس كانوا جزءًا من شبكة واحدة. لم تكن الطرق تُرسم بالحبر وحده؛ كان كل مسافر يترك علامة لمن يأتي بعده. وفي الصفحة الأخيرة كُتبت عبارة: «لا يضيع الطريق ما دام هناك من يتذكره».", entryIds: ["first-map", "black-sail", "silent-bell"], rewardGold: 700, rewardXp: 450 },
+  { id: "shard-mirror", title: "مرآة الذاكرة", summary: "ثلاث وثائق تكشف كيف حفظت الشظايا ذاكرة العالم.", story: "تكشف الرسائل أن المرصد والبستان وميثاق الشظايا تصف أجزاء من المرآة نفسها. كانت تحفظ مواسم السماء ومجاري الماء ووجوه الأماكن قبل تغيرها. لم تكن مهمتها إعادة الماضي، بل تذكير الناس بما يستحق الحماية. وعندما اكتملت القراءة، أضاءت خريطة جديدة في الأرشيف تحمل اسم «ذاكرة العالم». ", entryIds: ["moon-observatory", "red-orchard", "shard-covenant"], rewardGold: 900, rewardXp: 600 },
+];
 export const ROAMING_ARCHIVE_ENTRIES: RoamingArchiveEntry[] = [
   { id: "first-map", title: "سجل الملاح الأول", region: "طريق الملوك", cost: 3, summary: "كيف رُسمت أول خريطة للممرات القديمة.", story: "لم تكن خريطة الملاح الأول ترسم الطرق كما تبدو للعين، بل كما تتذكرها الأرض. كتب في هامشها: «إذا اختفى الطريق، ابحث عن العلامة التي تركها المسافرون لبعضهم». ولهذا بقيت خرائطه نافعة حتى بعد تغيّر المعالم." },
   { id: "moon-observatory", title: "رسالة مرصد القمر", region: "أطلال القمر", cost: 5, summary: "رسالة فلكي ترك نافذة مفتوحة للسماء.", story: "يشرح الفلكي أن النجوم لا تشير إلى كنز، بل إلى مواسم عودة الطيور ومواعيد امتلاء الينابيع. وفي آخر الرسالة يعتذر لأنه أمضى عمره يراقب السماء ونسي أن يرفع عينيه إلى من ينتظرونه عند الباب." },
@@ -19,7 +24,7 @@ export const ROAMING_ARCHIVE_ENTRIES: RoamingArchiveEntry[] = [
   { id: "shard-covenant", title: "ميثاق الشظايا", region: "وادي الشهب", cost: 22, summary: "الحكاية التي تفسّر أصل شظايا الأثر.", story: "تقول الحكاية إن الشظايا بقايا مرآة قديمة كانت تحفظ صور الأماكن قبل أن تتغير. جمعها الرحالة الأوائل لا ليعيدوا المرآة، بل ليحفظوا حكايات الناس والأماكن. وكل شظية تُفتح اليوم تعيد جزءاً من تلك الذاكرة إلى النور." },
 ];
 
-export function unlockRoamingArchiveEntry(state: GameState, entryId: string): { state: GameState; error?: string; entry?: RoamingArchiveEntry } {
+export function unlockRoamingArchiveEntry(state: GameState, entryId: string): { state: GameState; error?: string; entry?: RoamingArchiveEntry; completedCollections?: RoamingArchiveCollection[] } {
   const entry = ROAMING_ARCHIVE_ENTRIES.find((item) => item.id === entryId);
   if (!entry) return { state, error: "صفحة الأرشيف غير موجودة." };
   if (!state.hero) return { state, error: "أنشئ شخصيتك أولاً." };
@@ -28,8 +33,20 @@ export function unlockRoamingArchiveEntry(state: GameState, entryId: string): { 
   if (state.roaming.fragments < entry.cost) return { state, error: "لا تملك شظايا أثر كافية." };
   const next = JSON.parse(JSON.stringify(state)) as GameState;
   next.roaming.fragments -= entry.cost;
-  next.roaming.storyFlags = [...new Set([...next.roaming.storyFlags, flag])].slice(-100);
-  return { state: next, entry };
+  next.roaming.storyFlags = [...new Set([...next.roaming.storyFlags, flag])];
+  const completedCollections = ROAMING_ARCHIVE_COLLECTIONS.filter((collection) =>
+    collection.entryIds.includes(entry.id)
+    && collection.entryIds.every((id) => next.roaming.storyFlags.includes(`archive:${id}`))
+    && !next.roaming.storyFlags.includes(`archive-collection:${collection.id}`)
+  );
+  for (const collection of completedCollections) {
+    next.roaming.storyFlags.push(`archive-collection:${collection.id}`);
+    next.gold += collection.rewardGold;
+    const trained = addExperience(next, collection.rewardXp);
+    Object.assign(next, trained.state);
+  }
+  next.roaming.storyFlags = [...new Set(next.roaming.storyFlags)].slice(-100);
+  return { state: next, entry, completedCollections };
 }
 
 
