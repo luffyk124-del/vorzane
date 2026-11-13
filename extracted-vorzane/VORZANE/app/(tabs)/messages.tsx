@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { listMyConversations, type PlayerConversation } from "../../src/lib/social";
 import { palette } from "../../src/theme";
@@ -17,14 +17,14 @@ export default function MessagesScreen() {
     setError("");
   }, []);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let active = true;
     setLoading(true);
     void refresh().catch((caught) => {
       if (active) setError(caught instanceof Error ? caught.message : "تعذر تحميل الرسائل.");
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [refresh]);
+  }, [refresh]));
 
   return <AppScreen>
     <View style={styles.content}>
