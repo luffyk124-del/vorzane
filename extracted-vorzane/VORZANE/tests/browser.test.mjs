@@ -283,7 +283,7 @@ async function signInWithMock(page, expectedScreen = "ساحة الحراس") {
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
   page.on("response", (response) => { if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`); });
-  await page.goto(`${appUrl}/login`);
+  await page.goto(`${appUrl}/login`, { waitUntil: "commit" });
   const emailField = page.getByPlaceholder("name@example.com");
   try {
     await emailField.waitFor({ state: "visible", timeout: 12_000 });
