@@ -126,10 +126,13 @@ export default function FriendsScreen() {
 
       <SectionTitle title={`أصدقائي (${friends.length})`} icon="people-outline" />
       {friends.length ? friends.map((friend) => <Card key={friend.user_id} style={styles.playerRow}>
-        <AppButton label="إزالة" onPress={() => Alert.alert("إزالة صديق", `هل تريد إزالة ${friend.display_name} من قائمة أصدقائك؟`, [
-          { text: "إلغاء", style: "cancel" },
-          { text: "إزالة", style: "destructive", onPress: () => run(() => removeFriend(friend.user_id), "تمت إزالة الصديق من قائمتك.") },
-        ])} variant="secondary" small disabled={busy} />
+        <View style={styles.playerActions}>
+          <AppButton label="مراسلة" icon="chatbubble-ellipses-outline" onPress={() => router.push({ pathname: "/chat", params: { id: friend.user_id } } as never)} small />
+          <AppButton label="إزالة" onPress={() => Alert.alert("إزالة صديق", `هل تريد إزالة ${friend.display_name} من قائمة أصدقائك؟`, [
+            { text: "إلغاء", style: "cancel" },
+            { text: "إزالة", style: "destructive", onPress: () => run(() => removeFriend(friend.user_id), "تمت إزالة الصديق من قائمتك.") },
+          ])} variant="secondary" small disabled={busy} />
+        </View>
         <Pressable style={styles.playerInfo} onPress={() => openPlayer(friend.user_id)}><Txt style={styles.playerName}>{friend.display_name}</Txt><Txt muted style={styles.playerMeta}>منذ {new Date(friend.friends_since).toLocaleDateString("en-US")} • فتح الملف</Txt></Pressable>
         <Icon name="person-circle-outline" color={palette.jade} size={22} />
       </Card>) : <Card style={styles.empty}><Txt muted>قائمة الأصدقاء فارغة. ابحث عن لاعبين لإرسال طلبات صداقة.</Txt></Card>}
@@ -140,7 +143,10 @@ export default function FriendsScreen() {
         <AppButton label="بحث" onPress={doSearch} loading={busy} disabled={busy || !profile || (typeof query === "string" ? query.trim().length : 0) < 3} icon="search-outline" />
       </Card>
       {results.map((player) => <Card key={player.user_id} style={styles.playerRow}>
-        {player.friend_state === "none" ? <AppButton label="إضافة" onPress={() => sendRequest(player.user_id)} small disabled={busy} /> : <Pill label={player.friend_state === "friends" ? "صديق" : player.friend_state === "incoming" ? "طلب وارد" : "تم الإرسال"} tone={player.friend_state === "friends" ? "jade" : "muted"} />}
+        <View style={styles.playerActions}>
+          <AppButton label="مراسلة" icon="chatbubble-ellipses-outline" onPress={() => router.push({ pathname: "/chat", params: { id: player.user_id } } as never)} small disabled={busy} />
+          {player.friend_state === "none" ? <AppButton label="إضافة" onPress={() => sendRequest(player.user_id)} small disabled={busy} /> : <Pill label={player.friend_state === "friends" ? "صديق" : player.friend_state === "incoming" ? "طلب وارد" : "تم الإرسال"} tone={player.friend_state === "friends" ? "jade" : "muted"} />}
+        </View>
         <Pressable style={styles.playerInfo} onPress={() => openPlayer(player.user_id)}><Txt style={styles.playerName}>{player.display_name}</Txt><Txt muted style={styles.playerMeta}>فتح الملف العام</Txt></Pressable>
         <Icon name="person-outline" color={palette.jade} size={22} />
       </Card>)}
