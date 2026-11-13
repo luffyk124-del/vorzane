@@ -242,6 +242,10 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
         set_my_profile_searchable: null,
         list_my_friends: [],
         list_incoming_friend_requests: [],
+        list_player_messages: [],
+        mark_player_messages_read: 0,
+        send_player_message: "e2e-message-0001",
+        list_my_conversations: [],
         search_players: [{ user_id: "e2e-player-0002", display_name: "صديق تجريبي", avatar_id: "brand", friend_state: "none" }],
         get_public_player_profile: {
           user_id: "e2e-player-0002",
@@ -616,6 +620,14 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   await page.getByText("تم إرسال طلب الصداقة.", { exact: true }).waitFor({ timeout: 10_000 });
   await page.getByText("تم الإرسال", { exact: true }).waitFor({ timeout: 10_000 });
   assert.equal(await page.getByRole("button", { name: "إضافة" }).count(), 0, "sent request must not remain actionable as a new request");
+
+  // A searched player can be messaged directly even before becoming a friend.
+  await page.getByRole("button", { name: "مراسلة" }).click();
+  await page.getByPlaceholder("اكتب رسالتك...").waitFor({ timeout: 10_000 });
+  await page.getByPlaceholder("اكتب رسالتك...").fill("مرحبًا، هذه رسالة اختبار.");
+  await page.getByRole("button", { name: "إرسال الرسالة" }).click();
+  await page.getByPlaceholder("اكتب رسالتك...").waitFor({ timeout: 10_000 });
+  assert.equal(await page.getByPlaceholder("اكتب رسالتك...").inputValue(), "", "sent message should clear the composer");
 
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   assert.equal(hasHorizontalOverflow, false, "friends screen must not overflow horizontally on a 360px viewport");
