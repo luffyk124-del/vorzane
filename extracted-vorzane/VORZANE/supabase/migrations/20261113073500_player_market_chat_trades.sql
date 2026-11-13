@@ -70,16 +70,27 @@ end;
 $$;
 
 create or replace function public.mark_player_messages_read(p_other_user_id uuid)
-returns integer language plpgsql security definer set search_path = public, pg_temp as $$
+returns integer language plpgsql security definer set search_path = public, pg_temp as $
 declare v_user_id uuid := auth.uid(); v_count integer;
 begin
   if v_user_id is null then raise exception 'Authentication required'; end if;
+  if p_other_user_id is null or p_other_user_id = v_user_id then
+    raise exception 'Invalid conversation';
+  end if;
+  if not exists (
+    select 1 from public.friend_requests f
+    where f.status = 'accepted'
+      and least(f.requester_id, f.recipient_id) = least(v_user_id, p_other_user_id)
+      and greatest(f.requester_id, f.recipient_id) = greatest(v_user_id, p_other_user_id)
+  ) then
+    raise exception 'Conversation not available';
+  end if;
   update public.player_messages set read_at = now()
   where sender_id = p_other_user_id and recipient_id = v_user_id and read_at is null;
   get diagnostics v_count = row_count;
   return v_count;
 end;
-$$;
+$;
 
 create table public.player_market_listings (
   id uuid primary key default gen_random_uuid(),
