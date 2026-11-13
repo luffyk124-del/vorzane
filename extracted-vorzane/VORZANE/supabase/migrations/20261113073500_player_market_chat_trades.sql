@@ -196,9 +196,13 @@ returns void language plpgsql security definer set search_path = public, pg_temp
 declare v_user_id uuid := auth.uid();
 begin
   if v_user_id is null then raise exception 'Authentication required'; end if;
+  if p_player_id is null or p_player_id = v_user_id then raise exception 'Invalid player'; end if;
+  perform pg_advisory_xact_lock(hashtextextended(
+    least(v_user_id::text, p_player_id::text) || ':' || greatest(v_user_id::text, p_player_id::text), 0
+  ));
   delete from public.player_blocks where blocker_id = v_user_id and blocked_id = p_player_id;
 end;
-$$;
+$;
 
 create or replace function public.report_player(p_player_id uuid, p_reason text, p_details text default '')
 returns uuid language plpgsql security definer set search_path = public, pg_temp as $$
