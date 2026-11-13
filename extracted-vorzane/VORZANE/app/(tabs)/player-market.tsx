@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../../src/components/ui";
 import { useAuth } from "../../src/contexts/AuthContext";
@@ -133,7 +133,7 @@ export default function PlayerMarketScreen() {
     })(); } },
   ]);
 
-  const renderItem = (item: EquipmentItem, listingPrice?: number, seller?: string, action?: React.ReactNode) => (
+  const renderItem = (item: EquipmentItem, listingPrice?: number, seller?: string, action?: ReactNode) => (
     <Card key={item.id + (seller ?? "")} style={styles.itemCard}>
       <View style={styles.itemAction}>{action}</View>
       <View style={styles.itemInfo}>
