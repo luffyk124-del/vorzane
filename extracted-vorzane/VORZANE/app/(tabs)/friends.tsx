@@ -135,6 +135,14 @@ export default function FriendsScreen() {
       </Card>) : <Card style={styles.empty}><Txt muted>قائمة الأصدقاء فارغة. ابحث عن لاعبين لإرسال طلبات صداقة.</Txt></Card>}
 
       <SectionTitle title="البحث عن لاعبين" icon="search-outline" />
+      {!profile ? <Card style={styles.notice}>
+        <Icon name="information-circle-outline" color={palette.gold} size={18} />
+        <View style={styles.profileSetup}>
+          <Txt style={styles.noticeText}>أنشئ ملفك العام أولًا لتتمكن من البحث عن اللاعبين وإرسال طلبات الصداقة.</Txt>
+          <Txt muted style={styles.setupHint}>احفظ اسم اللاعب من وضع التعديل في صفحة الملف الشخصي.</Txt>
+          <AppButton label="إعداد الملف الشخصي" onPress={() => router.push("/profile" as never)} variant="secondary" />
+        </View>
+      </Card> : null}
       <Card style={styles.panel}>
         <TextInput value={typeof query === "string" ? query : ""} onChangeText={setQuery} maxLength={24} placeholder="اسم اللاعب..." placeholderTextColor={palette.muted} style={styles.input} returnKeyType="search" onSubmitEditing={doSearch} />
         <AppButton label="بحث" onPress={doSearch} loading={busy} disabled={busy || !profile || (typeof query === "string" ? query.trim().length : 0) < 3} icon="search-outline" />
@@ -162,4 +170,6 @@ const styles = StyleSheet.create({
   empty: { padding: 16, alignItems: "center" },
   notice: { padding: 11, flexDirection: "row", alignItems: "center", gap: 8 },
   noticeText: { flex: 1, fontSize: 11 },
+  profileSetup: { flex: 1, gap: 8 },
+  setupHint: { fontSize: 10, lineHeight: 16 },
 });
