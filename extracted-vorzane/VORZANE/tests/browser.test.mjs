@@ -85,7 +85,7 @@ function mockSession() {
   };
 }
 
-async function installSupabaseMock(page, { failAuth = false, failSave = () => false, failGameState = false, social = false, store = { state: saveFixture(), writes: [] } } = {}) {
+async function installSupabaseMock(page, { failAuth = false, failUser = false, failSave = () => false, failGameState = false, social = false, store = { state: saveFixture(), writes: [] } } = {}) {
   const writes = store.writes;
   const reads = store.reads ?? (store.reads = []);
   const tableReads = store.tableReads ?? (store.tableReads = []);
@@ -116,6 +116,10 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/auth/v1/user")) {
+      if (failUser) {
+        await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ message: "User not found" }) });
+        return;
+      }
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(session.user) });
       return;
     }
@@ -356,6 +360,19 @@ after(async () => {
       });
     }
   }
+});
+
+test("deleted accounts are signed out locally when a cached session is revalidated", async () => {
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  await installSupabaseMock(page, { failUser: true });
+
+  await signInWithMock(page);
+  await page.reload();
+  await page.getByPlaceholder("name@example.com").waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByRole("button", { name: "متابعة بالبريد" }).count(), 1,
+    "a cached session whose account was deleted must be cleared so the player can create a new account");
+  await browserContext.close();
 });
 
 test("mocked account save and stat allocation work on desktop and mobile", async (context) => {
