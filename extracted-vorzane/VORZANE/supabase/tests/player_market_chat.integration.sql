@@ -1,4 +1,4 @@
--- Integration coverage for open player messaging, safety controls, and atomic market transfers.
+-- Integration coverage for open player messaging, inbox, safety controls, and disabled trading permissions.
 \set ON_ERROR_STOP on
 begin;
 
@@ -73,6 +73,11 @@ begin
   end if;
   if has_function_privilege('authenticated','public.buy_market_listing(uuid)','EXECUTE') then
     raise exception 'Authenticated clients must not buy listings before server-authoritative inventory exists';
+  end if;
+  if has_table_privilege('authenticated','public.player_market_listings','INSERT')
+     or has_table_privilege('authenticated','public.player_market_listings','UPDATE')
+     or has_table_privilege('authenticated','public.player_market_listings','DELETE') then
+    raise exception 'Authenticated clients must not mutate player market listings directly';
   end if;
 end $test$;
 
