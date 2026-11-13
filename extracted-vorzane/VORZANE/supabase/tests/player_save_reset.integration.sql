@@ -1,20 +1,42 @@
 \set ON_ERROR_STOP on
 do $test$
+declare
+  has_rows boolean := false;
 begin
-  -- Every player account and all player-owned records must be gone.
+  -- Every account, session, and player-owned record must be gone.
   if exists (select 1 from auth.users)
-     or exists (select 1 from auth.identities)
-     or exists (select 1 from auth.sessions)
-     or exists (select 1 from auth.refresh_tokens)
      or exists (select 1 from public.player_saves)
      or exists (select 1 from public.player_profiles)
      or exists (select 1 from public.friend_requests)
      or exists (select 1 from public.player_notifications)
      or exists (select 1 from public.player_command_receipts) then
-    raise exception 'Full reset left account, session, social, or player data behind';
+    raise exception 'Full reset left account, social, or player data behind';
   end if;
 
-  -- Snapshots must retain representative pre-reset data for the recovery window.
+  -- Optional managed Auth tables are present in production but not the small CI fixture.
+  if to_regclass('auth.identities') is not null then
+    execute 'select exists (select 1 from auth.identities)' into has_rows;
+    if has_rows then raise exception 'Auth identities remain after full reset'; end if;
+  end if;
+  if to_regclass('auth.sessions') is not null then
+    execute 'select exists (select 1 from auth.sessions)' into has_rows;
+    if has_rows then raise exception 'Auth sessions remain after full reset'; end if;
+  end if;
+  if to_regclass('auth.refresh_tokens') is not null then
+    execute 'select exists (select 1 from auth.refresh_tokens)' into has_rows;
+    if has_rows then raise exception 'Auth refresh tokens remain after full reset'; end if;
+  end if;
+
+  if to_regclass('public.player_save_recovery') is not null then
+    execute 'select exists (select 1 from public.player_save_recovery)' into has_rows;
+    if has_rows then raise exception 'Player recovery snapshots remain after full reset'; end if;
+  end if;
+  if to_regclass('vorzane_internal.player_save_recovery_quotas') is not null then
+    execute 'select exists (select 1 from vorzane_internal.player_save_recovery_quotas)' into has_rows;
+    if has_rows then raise exception 'Player recovery quota records remain after full reset'; end if;
+  end if;
+
+  -- Snapshots retain representative pre-reset records during the recovery window.
   if not exists (
     select 1 from private.auth_users_pre_reset_20261113
     where id='00000000-0000-4000-8000-000000000211'
@@ -59,7 +81,7 @@ begin
     raise exception 'The command-receipt snapshot did not preserve the original receipt';
   end if;
 
-  -- Backups are private; project schema and authentication service remain.
+  -- Backups are private; project schema and authentication entry point remain.
   if has_table_privilege('anon','private.auth_users_pre_reset_20261113','SELECT')
      or has_table_privilege('authenticated','private.auth_users_pre_reset_20261113','SELECT')
      or has_table_privilege('anon','private.player_saves_pre_reset_20261113','SELECT')
@@ -72,8 +94,8 @@ begin
      or to_regclass('public.player_profiles') is null
      or to_regclass('public.friend_requests') is null
      or to_regclass('public.player_notifications') is null
-     or to_regclass('storage.buckets') is null then
-    raise exception 'The reset must preserve required schema objects';
+     or to_regprocedure('auth.uid()') is null then
+    raise exception 'The reset must preserve required database/auth schema objects';
   end if;
 end
 $test$;
