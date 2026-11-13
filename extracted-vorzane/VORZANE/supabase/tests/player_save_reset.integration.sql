@@ -21,6 +21,22 @@ begin
     raise exception 'One or more player saves were not reset to the canonical fresh state';
   end if;
 
+
+  if (select count(*) from private.player_saves_pre_reset_20261113) <> 2
+     or not exists (
+       select 1 from private.player_saves_pre_reset_20261113
+       where user_id='00000000-0000-4000-8000-000000000211'
+         and game_state ->> 'gold' = '98765'
+         and game_state ->> 'serverResetEpoch' = 'old-epoch'
+     ) then
+    raise exception 'The pre-reset player save snapshot must preserve the original test data';
+  end if;
+
+  if has_table_privilege('anon','private.player_saves_pre_reset_20261113','SELECT')
+     or has_table_privilege('authenticated','private.player_saves_pre_reset_20261113','SELECT') then
+    raise exception 'The pre-reset backup must not be readable by client roles';
+  end if;
+
   if exists (select 1 from public.player_command_receipts) then
     raise exception 'Player command receipts must be cleared by the reset';
   end if;
