@@ -73,7 +73,7 @@ export default function RoamingScreen() {
         <Pill label={`${state.gems.toLocaleString("en-US")} جوهرة`} icon="diamond" tone="jade" />
         <Pill label={`${state.roaming.fragments.toLocaleString("en-US")} شظية أثر`} icon="sparkles" tone="gold" />
       </View>
-      <AppButton label={event ? "أكمل الحدث الحالي" : eventResult ? "تابع التجوال" : "ابدأ التجوال"} icon="compass" onPress={event ? () => {} : eventResult ? () => { if (state.roaming.health < 20) { setNotice("انخفضت صحتك عن 20؛ لا يمكنك مواصلة السير الآن."); return; } setEventResult(""); setEventRewards(""); setNotice(""); explore(); } : explore} disabled={!!event || busy || !state.hero || (!event && !eventResult && state.roaming.health < 20)} />
+      {!event ? <AppButton label={eventResult ? "تابع التجوال" : "ابدأ التجوال"} icon="compass" onPress={eventResult ? () => { if (state.roaming.health < 20) { setNotice("انخفضت صحتك عن 20؛ لا يمكنك مواصلة السير الآن."); return; } setEventResult(""); setEventRewards(""); setNotice(""); explore(); } : explore} disabled={busy || !state.hero || (!eventResult && state.roaming.health < 20)} /> : <Txt muted style={styles.small}>الحدث الحالي مفتوح أدناه؛ اختر ما ستفعله لمتابعة الرحلة.</Txt>}
     </Card>
 
     {event ? <Card style={styles.eventCard}>

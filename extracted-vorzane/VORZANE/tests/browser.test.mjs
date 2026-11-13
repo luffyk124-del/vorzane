@@ -444,6 +444,26 @@ test("primary game navigation stays visible and switches between core screens", 
   await browserContext.close();
 });
 
+test("roaming hides the travel action while an active event is awaiting a choice", async () => {
+  const store = { state: saveFixture(), writes: [] };
+  store.state.roaming = { health: 100, maxHealth: 100, healthUpdatedAt: Date.now(), eventsCompleted: 0, fragments: 0, storyFlags: [] };
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  const { unexpectedRequests } = await installSupabaseMock(page, { store });
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await signInWithMock(page);
+  await page.goto(`${appUrl}/expeditions`);
+  await page.getByRole("button", { name: "ابدأ التجوال" }).click();
+  await page.getByText("الحكاية", { exact: true }).waitFor({ timeout: 10_000 });
+  assert.equal(await page.getByRole("button", { name: "أكمل الحدث الحالي" }).count(), 0, "an active event must not show an inert continue button");
+  await page.getByText("الحدث الحالي مفتوح أدناه؛ اختر ما ستفعله لمتابعة الرحلة.", { exact: true }).waitFor();
+  assert.deepEqual(unexpectedRequests, []);
+  assert.deepEqual(pageErrors, []);
+  await browserContext.close();
+});
+
 test("roaming lore archive unlocks a story page with relic shards", async () => {
   const store = { state: saveFixture(), writes: [] };
   store.state.roaming = { fragments: 31 };
@@ -684,7 +704,7 @@ test("public player profiles use a static web route with a query id", async () =
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await signInWithMock(page);
-  await page.goto(`${appUrl}/player?id=e2e-player-0002`);
+  await page.goto(`${appUrl}/player?id=e2e-player-0002`, { waitUntil: "domcontentloaded" });
   await page.getByText("ملف لاعب عام", { exact: true }).waitFor({ timeout: 10_000 });
   await page.getByText("صديق تجريبي", { exact: true }).waitFor({ timeout: 10_000 });
   await page.getByText("بطل الاختبار", { exact: true }).waitFor({ timeout: 10_000 });
