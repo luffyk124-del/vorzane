@@ -70,7 +70,7 @@ end;
 $$;
 
 create or replace function public.mark_player_messages_read(p_other_user_id uuid)
-returns integer language plpgsql security definer set search_path = public, pg_temp as $
+returns integer language plpgsql security definer set search_path = public, pg_temp as $$
 declare v_user_id uuid := auth.uid(); v_count integer;
 begin
   if v_user_id is null then raise exception 'Authentication required'; end if;
