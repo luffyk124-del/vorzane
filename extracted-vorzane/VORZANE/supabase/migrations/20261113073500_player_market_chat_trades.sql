@@ -41,6 +41,12 @@ begin
   ) then
     raise exception 'Messaging is unavailable for this player';
   end if;
+  -- Serialize concurrent sends from this account before applying the per-minute limit.
+  perform pg_advisory_xact_lock(hashtextextended(v_user_id::text, 0));
+  -- Coordinate sends with blocks so a message cannot slip through a concurrent block.
+  perform pg_advisory_xact_lock(hashtextextended(
+    least(v_user_id::text, p_recipient_id::text) || ':' || greatest(v_user_id::text, p_recipient_id::text), 0
+  ));
   if (select count(*) from public.player_messages m
       where m.sender_id = v_user_id and m.created_at > now() - interval '1 minute') >= 10
   then raise exception 'Message rate limit reached'; end if;
@@ -272,6 +278,9 @@ begin
   if v_user_id is null then raise exception 'Authentication required'; end if;
   if p_player_id is null or p_player_id = v_user_id then raise exception 'Invalid player'; end if;
   if not exists (select 1 from auth.users u where u.id = p_player_id) then raise exception 'Player not found'; end if;
+  perform pg_advisory_xact_lock(hashtextextended(
+    least(v_user_id::text, p_player_id::text) || ':' || greatest(v_user_id::text, p_player_id::text), 0
+  ));
   insert into public.player_blocks(blocker_id, blocked_id) values (v_user_id, p_player_id)
   on conflict (blocker_id, blocked_id) do nothing;
 end;
@@ -298,6 +307,8 @@ begin
   if p_reason not in ('spam','harassment','inappropriate','other') then raise exception 'Invalid report reason'; end if;
   if char_length(v_details) > 300 then raise exception 'Report details are too long'; end if;
   if not exists (select 1 from auth.users u where u.id = p_player_id) then raise exception 'Player not found'; end if;
+  -- Prevent concurrent submissions from bypassing the per-hour report limit.
+  perform pg_advisory_xact_lock(hashtextextended('report:' || v_user_id::text, 0));
   if (select count(*) from public.player_reports r where r.reporter_id = v_user_id and r.created_at > now() - interval '1 hour') >= 5 then
     raise exception 'Report rate limit reached';
   end if;
