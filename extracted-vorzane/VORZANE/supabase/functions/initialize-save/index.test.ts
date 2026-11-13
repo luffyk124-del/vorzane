@@ -138,8 +138,9 @@ Deno.test("missing save is initialized from canonical server state and verified 
   const body = await readJson(response);
   assert(response.status === 200, "new save should be initialized");
   assert(body.created === true, "new save must be reported as created");
-  const saved = body.state as { gold: number; serverResetEpoch?: string };
-  assert(saved.gold === 0, "server must use canonical fresh state");
+  const saved = body.state as { gold: number; hero: unknown; serverResetEpoch?: string };
+  assert(saved.gold === createFreshState().gold && saved.hero === null,
+    "server must use the canonical fresh state without overwriting an existing character");
   assert(typeof saved.serverResetEpoch === "string" && /^[0-9a-f-]{36}$/i.test(saved.serverResetEpoch),
     "new saves must receive a server-generated reset epoch");
   const insertedState = (calls.insertedRow as { game_state: { serverResetEpoch?: string } }).game_state;
