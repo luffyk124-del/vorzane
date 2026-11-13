@@ -209,6 +209,34 @@ export function GameProvider({ children }: PropsWithChildren) {
         return;
       }
 
+      // Initialize a genuinely new account on the server before considering
+      // device-wide legacy data. The server-issued reset epoch retires saves
+      // left behind by accounts removed during a full relaunch.
+      const initialized = await supabase.functions.invoke<{
+        state: unknown;
+        updatedAt: string | null;
+        created: boolean;
+      }>("initialize-save", { method: "POST", body: {} });
+      if (!initialized.error && initialized.data && Object.hasOwn(initialized.data, "state")) {
+        const serverState = normalizeGameState(initialized.data.state);
+        if (!serverState) throw new Error("تعذر التحقق من الحفظ الجديد؛ لم نغيّر أي بيانات.");
+        if (serverState.serverResetEpoch) {
+          await clearOfflineSavePending(userId, offlineMarkerStorage());
+          localSet(LEGACY_CLAIM_KEY, "__reset_invalidated__");
+          localSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
+        }
+        syncReadyRef.current = userId;
+        skipNextEffectRef.current = true;
+        stateRef.current = serverState;
+        saveVersionRef.current = initialized.data.updatedAt;
+        setState(serverState);
+        await storeUserCache(userId, serverState);
+        setStatus("ready");
+        setSaveStatus(initialized.data.created ? "أُنشئ حفظك السحابي بأمان" : "تم استعادة تقدمك");
+        return;
+      }
+
+      // Compatibility fallback only when server initialization is unavailable.
       const legacy = await readLegacyState();
       if (generation !== generationRef.current) return;
       const claimedBy = localGet(LEGACY_CLAIM_KEY);
@@ -229,27 +257,6 @@ export function GameProvider({ children }: PropsWithChildren) {
         setMigration({ kind: "legacy", state: legacy });
         setStatus("migration");
         setSaveStatus("وجدنا حفظًا محليًا؛ اختر إن كان يخصك قبل نقله");
-        return;
-      }
-
-      // Prefer server-generated initialization for a genuinely new account.
-      // If the function is not deployed yet, preserve the existing compatibility path.
-      const initialized = await supabase.functions.invoke<{
-        state: unknown;
-        updatedAt: string | null;
-        created: boolean;
-      }>("initialize-save", { method: "POST", body: {} });
-      if (!initialized.error && initialized.data && Object.hasOwn(initialized.data, "state")) {
-        const serverState = normalizeGameState(initialized.data.state);
-        if (!serverState) throw new Error("تعذر التحقق من الحفظ الجديد؛ لم نغيّر أي بيانات.");
-        syncReadyRef.current = userId;
-        skipNextEffectRef.current = true;
-        stateRef.current = serverState;
-        saveVersionRef.current = initialized.data.updatedAt;
-        setState(serverState);
-        await storeUserCache(userId, serverState);
-        setStatus("ready");
-        setSaveStatus(initialized.data.created ? "أُنشئ حفظك السحابي بأمان" : "تم استعادة تقدمك");
         return;
       }
 
