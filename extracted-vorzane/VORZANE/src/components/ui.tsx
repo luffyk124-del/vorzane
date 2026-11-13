@@ -35,6 +35,7 @@ const primaryNavigation = [
 const secondaryNavigation = [
   { label: "الملف الشخصي", href: "/(tabs)/profile" as const, icon: "person-outline" as const },
   { label: "الأصدقاء", href: "/(tabs)/friends" as const, icon: "people-outline" as const },
+  { label: "سوق اللاعبين", href: "/(tabs)/player-market" as const, icon: "storefront-outline" as const },
   { label: "الإشعارات", href: "/(tabs)/notifications" as const, icon: "notifications-outline" as const },
   { label: "الإعدادات", href: "/(tabs)/settings" as const, icon: "settings-outline" as const },
 ];
