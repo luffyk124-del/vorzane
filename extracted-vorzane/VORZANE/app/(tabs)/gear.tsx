@@ -128,6 +128,7 @@ export default function GearScreen() {
             {item && shown ? <>
               <Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt>
               <Txt muted style={styles.itemBonus}>{Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt>
+              <Txt style={styles.shopPrice}>سعر المتجر: {shown.price.toLocaleString("en-US")} ذهب</Txt>
               <Txt style={styles.requirement}>يتطلب مستوى {shown.requiredLevel ?? 1}{shown.requiredDungeonFloor && shown.requiredDungeonFloor > 1 ? ` • طابق ${shown.requiredDungeonFloor}` : ""}</Txt>
               <AppButton label={state.inventory.length >= 500 ? "الحقيبة ممتلئة" : "فكّ التجهيز"} onPress={() => update((current) => unequipItem(current, slot))} variant="ghost" small disabled={state.inventory.length >= 500} />
             </> : <Txt muted style={styles.emptySlot}>فارغ</Txt>}
@@ -157,6 +158,7 @@ export default function GearScreen() {
           <View style={{ flex: 1, alignItems: "flex-end" }}>
             <Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt>
             <Txt muted style={styles.itemBonus}>{shown.slot} • {Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt>
+            <Txt style={styles.shopPrice}>سعر المتجر: {shown.price.toLocaleString("en-US")} ذهب</Txt>
             <Txt style={styles.requirement}>يتطلب {required}</Txt>
             <Txt style={styles.comparisonText}>{!equipped ? "فتحة التجهيز فارغة" : comparison.length ? `مقارنة مع ${equipped.name}: ${comparison.map(({ key, delta }) => `${BONUS_LABELS[key]} ${delta > 0 ? "+" : ""}${delta}`).join(" • ")}` : `مطابق لمكافآت ${equipped.name}`}</Txt>
           </View>
@@ -185,7 +187,7 @@ export default function GearScreen() {
         const levelLocked = heroLevel < (item.requiredLevel ?? 1);
         return <Card key={item.id} style={styles.itemRow}>
           <AppButton label={owned ? "مملوك" : "شراء"} onPress={() => purchaseItem(item.id)} variant={owned ? "secondary" : "jade"} small icon={owned ? "checkmark-circle-outline" : "cart-outline"} disabled={!canPurchase} />
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, levelLocked && { color: palette.red }]}>المستوى المطلوب للتجهيز: {item.requiredLevel ?? 1}</Txt><Txt style={styles.shopPrice}>{item.price.toLocaleString("en-US")} ذهب</Txt></View>
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={RARITY_LABELS[item.rarity]} tone={item.rarity === "legendary" || item.rarity === "mythic" ? "gold" : item.rarity === "epic" || item.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[item.rarity] }]}>{item.name}</Txt></View><Txt muted style={styles.itemBonus}>{item.slot} • {Object.entries(item.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, levelLocked && { color: palette.red }]}>المستوى المطلوب للتجهيز: {item.requiredLevel ?? 1}</Txt><Txt style={styles.shopPrice}>سعر المتجر: {item.price.toLocaleString("en-US")} ذهب</Txt></View>
           <Icon name={(item.icon ?? "ellipse") as never} color={rarityColor[item.rarity]} size={20} />
         </Card>;
       })}
@@ -197,7 +199,7 @@ export default function GearScreen() {
         const active = state.activePet === pet.id && !locked;
         return <Card key={pet.id} style={styles.petCard}>
           <View style={styles.petBadge}><Icon name={pet.icon as never} color={active ? palette.gold : palette.jade} size={23} /></View>
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : <Pill label={pet.rarity === "mythic" ? "خرافي" : pet.rarity === "legendary" ? "أسطوري" : pet.rarity === "epic" ? "ملحمي" : "نادر"} tone="gold" />}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, locked && { color: palette.red }]}>المستوى المطلوب: {pet.requiredLevel}</Txt><Txt style={styles.shopPrice}>{pet.price.toLocaleString("en-US")} ذهب</Txt><Txt muted style={styles.petDescription}>مصدر الحصول: {pet.source}</Txt></View>
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.petNameRow}>{active ? <Pill label="معك الآن" tone="gold" /> : <Pill label={pet.rarity === "mythic" ? "خرافي" : pet.rarity === "legendary" ? "أسطوري" : pet.rarity === "epic" ? "ملحمي" : "نادر"} tone="gold" />}<Txt style={styles.itemName}>{pet.name}</Txt></View><Txt muted style={styles.petDescription}>{pet.description}</Txt><Txt style={styles.petBonus}>{Object.entries(pet.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={[styles.requirement, locked && { color: palette.red }]}>المستوى المطلوب: {pet.requiredLevel}</Txt><Txt style={styles.shopPrice}>سعر المتجر: {pet.price.toLocaleString("en-US")} ذهب</Txt><Txt muted style={styles.petDescription}>مصدر الحصول: {pet.source}</Txt></View>
            {owned ? <AppButton label={active ? "النشط" : locked ? "المستوى غير كافٍ" : "تفعيل"} onPress={() => update((current) => setPet(current, pet.id))} variant={active ? "secondary" : "jade"} small disabled={active || locked} /> : pet.shopAvailable ? <AppButton label="شراء" onPress={() => purchasePet(pet.id)} variant="jade" small icon="cart-outline" /> : <Pill label="حصري • حدث / ديماس" tone="muted" />}
         </Card>;
       })}
@@ -212,7 +214,7 @@ export default function GearScreen() {
         const sellPrice = getEquipmentSellPrice(item);
         return <Card key={`sale-${item.id}`} style={styles.itemRow}>
           <AppButton label={sellPrice === null ? "غير معتمد" : `بيع ${sellPrice}`} icon="cash-outline" onPress={() => sellOwnedItem(item.id)} variant={sellPrice === null ? "secondary" : "jade"} small disabled={sellPrice === null} />
-          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={equipped ? "مجهّز" : RARITY_LABELS[shown.rarity]} tone={equipped ? "muted" : shown.rarity === "legendary" || shown.rarity === "mythic" ? "gold" : shown.rarity === "epic" || shown.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt></View><Txt muted style={styles.itemBonus}>{shown.slot} • {Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.requirement}>التجهيز: مستوى {shown.requiredLevel ?? 1}</Txt></View>
+          <View style={{ flex: 1, alignItems: "flex-end" }}><View style={styles.itemTitleLine}><Pill label={equipped ? "مجهّز" : RARITY_LABELS[shown.rarity]} tone={equipped ? "muted" : shown.rarity === "legendary" || shown.rarity === "mythic" ? "gold" : shown.rarity === "epic" || shown.rarity === "rare" ? "jade" : "muted"} /><Txt style={[styles.itemName, { color: rarityColor[shown.rarity] }]}>{shown.name}</Txt></View><Txt muted style={styles.itemBonus}>{shown.slot} • {Object.entries(shown.bonus).map(([key, value]) => `${key.toUpperCase()} +${value}`).join(" • ")}</Txt><Txt style={styles.shopPrice}>سعر المتجر: {shown.price.toLocaleString("en-US")} ذهب</Txt><Txt style={styles.requirement}>التجهيز: مستوى {shown.requiredLevel ?? 1}</Txt></View>
           <Icon name={(shown.icon ?? "ellipse") as never} color={rarityColor[shown.rarity]} size={20} />
         </Card>;
       }) : <Card style={styles.empty}><Icon name="pricetag-outline" color={palette.dim} size={22} /><Txt muted>لا توجد قطع للبيع الآن. انتصر في الزنزانة لتحصل على غنائم جديدة.</Txt></Card>}
