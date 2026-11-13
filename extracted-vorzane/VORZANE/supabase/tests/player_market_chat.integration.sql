@@ -1,4 +1,4 @@
--- Integration coverage for friend-only messages and atomic market transfers.
+-- Integration coverage for open player messaging, safety controls, and atomic market transfers.
 \set ON_ERROR_STOP on
 begin;
 
@@ -23,32 +23,35 @@ insert into public.player_saves(user_id,game_state) values
 
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000101',true);
 select public.send_player_message('00000000-0000-4000-8000-000000000102','مرحبًا، هل تريد التبادل؟');
-do $$
+select public.send_player_message('00000000-0000-4000-8000-000000000103','مرحبًا، هذه رسالة للاعب غير صديق.');
+do $
 begin
-  if (select count(*) from public.list_player_messages('00000000-0000-4000-8000-000000000102',null)) <> 1 then
-    raise exception 'Expected one private message in the friend conversation';
+  if (select count(*) from public.list_player_messages('00000000-0000-4000-8000-000000000103',null)) <> 1 then
+    raise exception 'Expected direct messaging with a non-friend player';
   end if;
-end $$;
+end $;
 
--- A non-friend must not be able to mark another player's messages as read.
-insert into public.player_messages(sender_id,recipient_id,body)
-values ('00000000-0000-4000-8000-000000000102','00000000-0000-4000-8000-000000000103','رسالة اختبار غير صديقة');
+-- A recipient can block a stranger and prevent further contact.
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000103',true);
-do $$
+select public.block_player('00000000-0000-4000-8000-000000000101');
+do $
 begin
   begin
-    perform public.mark_player_messages_read('00000000-0000-4000-8000-000000000102');
-    raise exception 'Expected non-friend read receipt to be rejected';
+    perform public.send_player_message('00000000-0000-4000-8000-000000000101','محاولة بعد الحظر');
+    raise exception 'Expected blocked messaging to be rejected';
   exception when others then
-    if sqlerrm = 'Expected non-friend read receipt to be rejected' then raise; end if;
+    if sqlerrm = 'Expected blocked messaging to be rejected' then raise; end if;
   end;
-  if exists (
-    select 1 from public.player_messages
-    where sender_id='00000000-0000-4000-8000-000000000102'
-      and recipient_id='00000000-0000-4000-8000-000000000103'
-      and read_at is not null
-  ) then raise exception 'Non-friend read receipt changed message state'; end if;
-end $$;
+end $;
+select public.report_player('00000000-0000-4000-8000-000000000101','spam','رسائل غير مرغوبة');
+do $
+begin
+  if (select count(*) from public.player_reports
+      where reporter_id='00000000-0000-4000-8000-000000000103'
+        and reported_id='00000000-0000-4000-8000-000000000101') <> 1 then
+    raise exception 'Expected report to be stored for moderation';
+  end if;
+end $;
 
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000101',true);
 select public.create_market_listing('armor-1',200);
