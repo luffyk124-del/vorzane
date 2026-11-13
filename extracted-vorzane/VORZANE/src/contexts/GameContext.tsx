@@ -168,7 +168,9 @@ export function GameProvider({ children }: PropsWithChildren) {
       if (resetInvalidatedCache) {
         try { await AsyncStorage.removeItem(userKey(userId)); } catch { /* Best effort; cloud reset remains authoritative. */ }
         await clearOfflineSavePending(userId, offlineMarkerStorage());
-        if (localGet(LEGACY_CLAIM_KEY) === userId) localRemove(LEGACY_CLAIM_KEY);
+        // Retire the device-wide legacy save so no account can import it after a server reset.
+        localSet(LEGACY_CLAIM_KEY, "__reset_invalidated__");
+        localSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
       }
       const hasOfflineChanges = !resetInvalidatedCache && cached !== null
         && await hasOfflineSavePending(userId, offlineMarkerStorage());
@@ -455,8 +457,10 @@ export function GameProvider({ children }: PropsWithChildren) {
     try { await AsyncStorage.removeItem(userKey(userId)); } catch { /* Canonical state is cached again below. */ }
     await storeUserCache(userId, stateRef.current);
     await clearOfflineSavePending(userId, offlineMarkerStorage());
+    // Keep a tombstone rather than clearing the claim: another account on this device
+    // must not be offered the previous account's legacy save after a reset.
     if (localGet(LEGACY_CLAIM_KEY) === userId) {
-      localRemove(LEGACY_CLAIM_KEY);
+      localSet(LEGACY_CLAIM_KEY, "__reset_invalidated__");
       localSet(LEGACY_DECLINE_PREFIX + userId, "1");
     }
     setMigration(null);
