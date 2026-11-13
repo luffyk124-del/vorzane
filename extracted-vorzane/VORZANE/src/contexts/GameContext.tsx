@@ -55,13 +55,22 @@ function localSet(key: string, value: string) {
   } catch { /* The authenticated cloud copy remains authoritative. */ }
 }
 
-function localRemove(key: string) {
-  try { if (Platform.OS === "web" && typeof window !== "undefined") window.localStorage.removeItem(key); } catch { /* Best effort. */ }
+async function deviceGet(key: string): Promise<string | null> {
+  if (Platform.OS === "web") return localGet(key);
+  try { return await AsyncStorage.getItem(key); } catch { return null; }
+}
+
+async function deviceSet(key: string, value: string): Promise<void> {
+  if (Platform.OS === "web") {
+    localSet(key, value);
+    return;
+  }
+  try { await AsyncStorage.setItem(key, value); } catch { /* Best effort; cloud state remains authoritative. */ }
 }
 
 async function readLegacyState(): Promise<GameState | null> {
   try {
-    const raw = localGet(LEGACY_SAVE_KEY) ?? (Platform.OS !== "web" ? await AsyncStorage.getItem(LEGACY_SAVE_KEY) : null);
+    const raw = await deviceGet(LEGACY_SAVE_KEY);
     return raw ? normalizeGameState(JSON.parse(raw)) : null;
   } catch { return null; }
 }
@@ -169,8 +178,8 @@ export function GameProvider({ children }: PropsWithChildren) {
         try { await AsyncStorage.removeItem(userKey(userId)); } catch { /* Best effort; cloud reset remains authoritative. */ }
         await clearOfflineSavePending(userId, offlineMarkerStorage());
         // Retire the device-wide legacy save so no account can import it after a server reset.
-        localSet(LEGACY_CLAIM_KEY, "__reset_invalidated__");
-        localSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
+        await deviceSet(LEGACY_CLAIM_KEY, "__reset_invalidated__");
+        await deviceSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
       }
       const hasOfflineChanges = !resetInvalidatedCache && cached !== null
         && await hasOfflineSavePending(userId, offlineMarkerStorage());
@@ -239,7 +248,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       // Compatibility fallback only when server initialization is unavailable.
       const legacy = await readLegacyState();
       if (generation !== generationRef.current) return;
-      const claimedBy = localGet(LEGACY_CLAIM_KEY);
+      const claimedBy = await deviceGet(LEGACY_CLAIM_KEY);
       if (legacy && claimedBy === userId) {
         const progressed = advanceExpeditions(legacy, Date.now()).state;
         syncReadyRef.current = userId;
@@ -252,7 +261,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      const declined = localGet(`${LEGACY_DECLINE_PREFIX}${userId}`) === "1";
+      const declined = (await deviceGet(`${LEGACY_DECLINE_PREFIX}${userId}`)) === "1";
       if (legacy && !claimedBy && !declined) {
         setMigration({ kind: "legacy", state: legacy });
         setStatus("migration");
@@ -443,8 +452,8 @@ export function GameProvider({ children }: PropsWithChildren) {
       setSaveStatus("لم يكتمل النقل؛ لم تُحذف النسخة المحلية. حاول مجددًا.");
       return false;
     }
-    if (choice === "import") localSet(LEGACY_CLAIM_KEY, userId);
-    else localSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
+    if (choice === "import") await deviceSet(LEGACY_CLAIM_KEY, userId);
+    else await deviceSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
     syncReadyRef.current = userId;
     skipNextEffectRef.current = true;
     stateRef.current = candidate;
@@ -466,9 +475,9 @@ export function GameProvider({ children }: PropsWithChildren) {
     await clearOfflineSavePending(userId, offlineMarkerStorage());
     // Keep a tombstone rather than clearing the claim: another account on this device
     // must not be offered the previous account's legacy save after a reset.
-    if (localGet(LEGACY_CLAIM_KEY) === userId) {
+    if (await deviceGet(LEGACY_CLAIM_KEY) === userId) {
       localSet(LEGACY_CLAIM_KEY, "__reset_invalidated__");
-      localSet(LEGACY_DECLINE_PREFIX + userId, "1");
+      await deviceSet(LEGACY_DECLINE_PREFIX + userId, "1");
     }
     setMigration(null);
     return true;
