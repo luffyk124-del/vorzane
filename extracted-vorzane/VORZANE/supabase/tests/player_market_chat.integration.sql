@@ -15,12 +15,6 @@ insert into public.player_profiles(user_id,display_name,avatar_id) values
 insert into public.friend_requests(requester_id,recipient_id,status)
 values ('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000102','accepted');
 
-insert into public.player_saves(user_id,game_state) values
-  ('00000000-0000-4000-8000-000000000101',
-   '{"hero":{"name":"SellerOne"},"gold":100,"inventory":[{"id":"armor-1","name":"درع الاختبار","slot":"درع","rarity":"rare","bonus":{"def":3},"price":100}],"equipped":{}}'::jsonb),
-  ('00000000-0000-4000-8000-000000000102',
-   '{"hero":{"name":"BuyerTwo"},"gold":500,"inventory":[],"equipped":{}}'::jsonb);
-
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000101',true);
 select public.send_player_message('00000000-0000-4000-8000-000000000102','مرحبًا، هل تريد التبادل؟');
 select public.send_player_message('00000000-0000-4000-8000-000000000103','مرحبًا، هذه رسالة للاعب غير صديق.');
@@ -28,6 +22,22 @@ do $test$
 begin
   if (select count(*) from public.list_player_messages('00000000-0000-4000-8000-000000000103',null)) <> 1 then
     raise exception 'Expected direct messaging with a non-friend player';
+  end if;
+end $test$;
+
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000101',true);
+do $test$
+begin
+  if (select count(*) from public.list_my_conversations()) <> 2 then
+    raise exception 'Inbox should include conversations with friends and non-friends';
+  end if;
+  if not exists (
+    select 1 from public.list_my_conversations()
+    where other_user_id='00000000-0000-4000-8000-000000000103'
+      and unread_count=0
+      and last_message='مرحبًا، هذه رسالة للاعب غير صديق.'
+  ) then
+    raise exception 'Inbox should expose latest non-friend conversation';
   end if;
 end $test$;
 
@@ -53,23 +63,17 @@ begin
   end if;
 end $test$;
 
-select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000101',true);
-select public.create_market_listing('armor-1',200);
-select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000102',true);
-select public.buy_market_listing((select id from public.player_market_listings where item_id='armor-1' and status='active'));
-
-do $$
-declare v_buyer jsonb; v_seller jsonb;
+do $test$
 begin
-  select game_state into v_buyer from public.player_saves where user_id='00000000-0000-4000-8000-000000000102';
-  select game_state into v_seller from public.player_saves where user_id='00000000-0000-4000-8000-000000000101';
-  if (v_buyer ->> 'gold')::int <> 300 then raise exception 'Buyer gold was not debited'; end if;
-  if jsonb_array_length(v_buyer -> 'inventory') <> 1 then raise exception 'Buyer did not receive listed item'; end if;
-  if (v_seller ->> 'gold')::int <> 300 then raise exception 'Seller did not receive sale proceeds'; end if;
-  if jsonb_array_length(v_seller -> 'inventory') <> 0 then raise exception 'Seller inventory still contains sold item'; end if;
-  if (select status from public.player_market_listings where item_id='armor-1') <> 'sold' then
-    raise exception 'Listing was not marked sold';
+  if has_function_privilege('authenticated','public.create_market_listing(text,bigint)','EXECUTE') then
+    raise exception 'Authenticated clients must not create listings before server-authoritative inventory exists';
   end if;
-end $$;
+  if has_function_privilege('authenticated','public.cancel_market_listing(uuid)','EXECUTE') then
+    raise exception 'Authenticated clients must not cancel listings before server-authoritative inventory exists';
+  end if;
+  if has_function_privilege('authenticated','public.buy_market_listing(uuid)','EXECUTE') then
+    raise exception 'Authenticated clients must not buy listings before server-authoritative inventory exists';
+  end if;
+end $test$;
 
 rollback;
