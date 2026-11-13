@@ -46,10 +46,15 @@ export default function PlayerChatScreen() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    void refresh().catch((error) => {
-      if (active) setNotice(error instanceof Error ? error.message : "تعذر تحميل المحادثة.");
-    }).finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    const load = () => {
+      void refresh().catch((error) => {
+        if (active) setNotice(error instanceof Error ? error.message : "تعذر تحميل المحادثة.");
+      }).finally(() => { if (active) setLoading(false); });
+    };
+    load();
+    // Keep incoming messages and read receipts current while this conversation is open.
+    const interval = setInterval(load, 6000);
+    return () => { active = false; clearInterval(interval); };
   }, [refresh]);
 
   const canSend = useMemo(() => draft.trim().length > 0 && draft.trim().length <= 500 && !sending, [draft, sending]);
