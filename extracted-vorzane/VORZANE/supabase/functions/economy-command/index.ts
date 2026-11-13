@@ -92,7 +92,10 @@ export function createEconomyCommandHandler(
     }
 
     const next = body.command.type === "resetSave"
-      ? createFreshState()
+      ? {
+          ...createFreshState(),
+          ...(typeof state.serverResetEpoch === "string" ? { serverResetEpoch: state.serverResetEpoch } : {}),
+        }
       : { ...state, settings: { ...state.settings, ...body.command.settings } };
     const result = { commandId: body.commandId, commandType: body.command.type, state: next };
     const { data: commit, error: commitError } = await adminClient.rpc("commit_player_command", {
