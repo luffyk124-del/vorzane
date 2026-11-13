@@ -5,6 +5,8 @@ insert into auth.users(id)
 values ('00000000-0000-4000-8000-000000000201');
 
 create temporary table expected_reset_epoch (value text) on commit drop;
+grant select, insert on expected_reset_epoch to authenticated;
+grant select, insert, update on public.player_saves to service_role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000201',true);
