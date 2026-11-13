@@ -561,13 +561,17 @@ test("server reset epoch discards stale offline progress instead of offering rec
   await installSupabaseMock(page, { store });
 
   await page.goto(`${appUrl}/login`);
-  await page.evaluate(({ saveKey, dirtyKey, staleState }) => {
+  await page.evaluate(({ saveKey, dirtyKey, staleState, legacySaveKey, legacyClaimKey }) => {
     localStorage.setItem(saveKey, JSON.stringify(staleState));
     localStorage.setItem(dirtyKey, "stale-offline-token");
+    localStorage.setItem(legacySaveKey, JSON.stringify(staleState));
+    localStorage.setItem(legacyClaimKey, playerId);
   }, {
     saveKey: `vorzane_save_v2_user_${playerId}`,
     dirtyKey: `vorzane_offline_dirty_${playerId}`,
     staleState: saveFixture(),
+    legacySaveKey: "vorzane_save_v2",
+    legacyClaimKey: "vorzane_legacy_save_claimed_by",
   });
 
   await signInWithMock(page, "اختر من يسير في الظل");
@@ -580,6 +584,8 @@ test("server reset epoch discards stale offline progress instead of offering rec
   assert.equal(cached.hero, null, "the old character must not be restored");
   assert.equal(await page.evaluate((key) => localStorage.getItem(key), `vorzane_offline_dirty_${playerId}`), null,
     "the stale offline-pending marker must be cleared");
+  assert.equal(await page.evaluate((key) => localStorage.getItem(key), "vorzane_legacy_save_claimed_by"), "__reset_invalidated__",
+    "the legacy save must be retired so another account cannot import pre-reset progress");
   await browserContext.close();
 });
 
