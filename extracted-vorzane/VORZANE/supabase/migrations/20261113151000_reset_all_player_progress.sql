@@ -1,99 +1,88 @@
--- One-time reset of every account's game progress. Authentication and social data are untouched.
--- Keep a restricted recovery snapshot before replacing any live player progress.
+-- Full VORZANE player/account reset. Preserve the Supabase project, schemas,
+-- auth configuration, database objects, and storage buckets; remove all user data.
+-- Private snapshots are temporary recovery evidence and are not API-accessible.
+
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 
-create table if not exists private.player_saves_pre_reset_20261113 (
-  user_id uuid primary key,
-  game_state jsonb not null,
-  updated_at timestamptz not null,
-  backed_up_at timestamptz not null default now()
-);
+-- Never delete Storage metadata directly: it can orphan binary objects. There
+-- are currently no buckets/objects; stop safely if that changes before launch.
+do $guard$
+begin
+  if exists (select 1 from storage.objects) then
+    raise exception 'Storage objects exist. Remove user-owned files through the Storage API before running the full reset.';
+  end if;
+  if exists (select 1 from auth.scim_users) then
+    raise exception 'SCIM-linked users exist. Review them before deleting auth.users.';
+  end if;
+end
+$guard$;
+
+-- Keep only non-credential account identifiers. Password hashes, refresh
+-- tokens, identities and sessions are deliberately not copied to the backup.
+create table private.auth_users_pre_reset_20261113 as
+select id, created_at, updated_at
+from auth.users;
+revoke all on table private.auth_users_pre_reset_20261113 from public, anon, authenticated;
+
+create table private.player_saves_pre_reset_20261113 as
+select * from public.player_saves;
 revoke all on table private.player_saves_pre_reset_20261113 from public, anon, authenticated;
 
-insert into private.player_saves_pre_reset_20261113 (user_id, game_state, updated_at)
-select user_id, game_state, updated_at
-from public.player_saves
-on conflict (user_id) do nothing;
+create table private.player_profiles_pre_reset_20261113 as
+select * from public.player_profiles;
+revoke all on table private.player_profiles_pre_reset_20261113 from public, anon, authenticated;
 
-create table if not exists private.player_command_receipts_pre_reset_20261113 (
-  user_id uuid not null,
-  command_id uuid not null,
-  result jsonb not null,
-  created_at timestamptz not null
-);
+create table private.friend_requests_pre_reset_20261113 as
+select * from public.friend_requests;
+revoke all on table private.friend_requests_pre_reset_20261113 from public, anon, authenticated;
+
+create table private.player_notifications_pre_reset_20261113 as
+select * from public.player_notifications;
+revoke all on table private.player_notifications_pre_reset_20261113 from public, anon, authenticated;
+
+create table private.player_command_receipts_pre_reset_20261113 as
+select * from public.player_command_receipts;
 revoke all on table private.player_command_receipts_pre_reset_20261113 from public, anon, authenticated;
 
-insert into private.player_command_receipts_pre_reset_20261113 (user_id, command_id, result, created_at)
-select user_id, command_id, result, created_at
-from public.player_command_receipts
-on conflict do nothing;
-
-with clock as (
-  select
-    (extract(epoch from clock_timestamp()) * 1000)::bigint as now_ms,
-    to_char((now() at time zone 'utc')::date, 'YYYY-MM-DD') as today,
-    to_char(now() at time zone 'utc', 'YYYY-MM') as month_key,
-    to_char(date_trunc('week', now() at time zone 'utc')::date, 'YYYY-MM-DD') as week_key
-),
-fresh_states as (
-  select
-    u.id as user_id,
-    jsonb_build_object(
-      'hero', null,
-      'characterStyle', jsonb_build_object(
-        'gender', 'male', 'appearance', 0, 'hairstyle', 'short',
-        'hairColor', 'obsidian', 'face', 'classic', 'outfit', 'adventurer', 'body', 'balanced'
-      ),
-      'missionPeriods', jsonb_build_object(
-        'daily', jsonb_build_object('key', c.today, 'baseline', jsonb_build_object('wins', 0, 'expeditions', 0, 'level', 1), 'claimed', '{}'::jsonb),
-        'weekly', jsonb_build_object('key', c.week_key, 'baseline', jsonb_build_object('wins', 0, 'expeditions', 0, 'level', 1), 'claimed', '{}'::jsonb),
-        'season', jsonb_build_object('key', c.month_key, 'baseline', jsonb_build_object('wins', 0, 'expeditions', 0, 'level', 1), 'claimed', '{}'::jsonb)
-      ),
-      'roaming', jsonb_build_object(
-        'health', 100, 'maxHealth', 100, 'fragments', 0, 'fragmentsCollected', 0,
-        'fragmentProgress', 0, 'eventsCompleted', 0, 'healthUpdatedAt', c.now_ms,
-        'storyFlags', '[]'::jsonb, 'fairyNextAt', 0, 'fairyReunited', false,
-        'echoStarted', false, 'echoStage', 0, 'echoFailures', 0, 'echoNextAt', 0,
-        'echoRoute', null, 'eventsSeen', '[]'::jsonb, 'activeChain', null,
-        'chainStage', 0, 'chainRoute', null, 'chainNextAtEvent', 0,
-        'lastEventAt', 0, 'merchantRefreshAt', 0, 'gemRefillDate', c.today, 'gemRefillsUsed', 0
-      ),
-      'dimas', jsonb_build_object('highestFloor', 0, 'claimedMilestones', '[]'::jsonb, 'lastCompletedAt', 0),
-      'longQuestStartedAt', c.now_ms,
-      'claimedLongQuestIds', '[]'::jsonb,
-      'profileAvatarId', 'brand',
-      'gold', 500,
-      'gems', 50,
-      'inventory', '[]'::jsonb,
-      'equipped', '{}'::jsonb,
-      'pets', '[]'::jsonb,
-      'activePet', null,
-      'tower', 0,
-      'story', 0,
-      'dungeonFloor', 1,
-      'battleWinsByMode', jsonb_build_object('cave', 0, 'dungeon', 0, 'tower', 0, 'hard', 0, 'roaming', 0),
-      'battles', 0,
-      'wins', 0,
-      'expeditionsCompleted', 0,
-      'quests', jsonb_build_object('first', false, 'battles', false, 'level', false),
-      'achievements', jsonb_build_object('first', false, 'level', false, 'wins', false),
-      'claimedQuestRewards', '{}'::jsonb,
-      'activeExpedition', null,
-      'expeditionQueue', '[]'::jsonb,
-      'offlineSummary', '[]'::jsonb,
-      'lastSeenAt', c.now_ms,
-      'settings', jsonb_build_object('sfx', true, 'volume', 20, 'musicEnabled', true, 'musicVolume', 24),
-      'serverResetEpoch', gen_random_uuid()::text
-    ) as game_state
-  from auth.users u
-  cross join clock c
-)
-insert into public.player_saves(user_id, game_state, updated_at)
-select user_id, game_state, now()
-from fresh_states
-on conflict (user_id) do update
-set game_state = excluded.game_state,
-    updated_at = excluded.updated_at;
-
+-- Clear app records and auth audit history. Deleting auth.users also cascades
+-- to identities, sessions, refresh tokens, MFA and other account-owned rows.
+delete from public.player_notifications;
+delete from public.friend_requests;
 delete from public.player_command_receipts;
+delete from public.player_profiles;
+delete from public.player_saves;
+delete from auth.audit_log_entries;
+delete from auth.users;
+
+do $verify$
+begin
+  if exists (select 1 from auth.users)
+     or exists (select 1 from public.player_saves)
+     or exists (select 1 from public.player_profiles)
+     or exists (select 1 from public.friend_requests)
+     or exists (select 1 from public.player_notifications)
+     or exists (select 1 from public.player_command_receipts)
+     or exists (select 1 from auth.sessions)
+     or exists (select 1 from auth.identities)
+     or exists (select 1 from auth.refresh_tokens) then
+    raise exception 'Full reset verification failed: user or account data remains.';
+  end if;
+
+  if to_regclass('auth.users') is null
+     or to_regclass('public.player_saves') is null
+     or to_regclass('public.player_profiles') is null
+     or to_regclass('public.friend_requests') is null
+     or to_regclass('public.player_notifications') is null
+     or to_regclass('storage.buckets') is null then
+    raise exception 'Full reset verification failed: required project schema is missing.';
+  end if;
+
+  if has_table_privilege('anon','private.auth_users_pre_reset_20261113','SELECT')
+     or has_table_privilege('authenticated','private.auth_users_pre_reset_20261113','SELECT')
+     or has_table_privilege('anon','private.player_saves_pre_reset_20261113','SELECT')
+     or has_table_privilege('authenticated','private.player_saves_pre_reset_20261113','SELECT') then
+    raise exception 'Full reset backup must not be readable by client roles.';
+  end if;
+end
+$verify$;
