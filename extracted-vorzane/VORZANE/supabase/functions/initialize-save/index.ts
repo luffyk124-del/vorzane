@@ -65,10 +65,11 @@ export function createInitializeSaveHandler(
     const admin = makeClient(url, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    const initialState = { ...createFreshState(), serverResetEpoch: crypto.randomUUID() };
     const { data: inserted, error: insertError } = await admin
       .from("player_saves")
       .upsert(
-        { user_id: userId, game_state: createFreshState() },
+        { user_id: userId, game_state: initialState },
         { onConflict: "user_id", ignoreDuplicates: true },
       )
       .select("user_id")

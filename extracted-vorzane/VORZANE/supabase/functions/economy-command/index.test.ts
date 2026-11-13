@@ -101,12 +101,16 @@ Deno.test("settings command updates only validated settings and commits atomical
 Deno.test("resetSave creates a fresh state without deleting the player save row", async () => {
   const state = createFreshState();
   state.gold = 9999;
+  state.serverResetEpoch = "reset-epoch-before-reset";
   const { handler, calls } = fixture({ state });
   const response = await handler(commandRequest({ type: "resetSave" }));
   assert(response.status === 200, "expected 200");
   assert(calls.rpc === "commit_player_command", "reset must use atomic server commit");
   const saved = (calls.args as Record<string, unknown>).p_game_state as GameState;
   assert(saved.gold === 500 && saved.hero === null, "reset must use canonical fresh state");
+  assert(typeof saved.serverResetEpoch === "string" && /^[0-9a-f-]{36}$/i.test(saved.serverResetEpoch),
+    "reset must rotate to a fresh server-generated epoch");
+  assert(saved.serverResetEpoch !== state.serverResetEpoch, "reset must invalidate every pre-reset client snapshot");
   assert((calls.tables as string[]).includes("player_saves"), "existing save row must be read and updated through RPC");
 });
 
