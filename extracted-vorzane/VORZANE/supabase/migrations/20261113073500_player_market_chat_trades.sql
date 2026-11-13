@@ -1,5 +1,5 @@
--- Player-to-player messaging, market listings, and two-party trades.
--- All inventory and currency mutations happen atomically in PostgreSQL.
+-- Player-to-player messaging and a read-only player-market preview.
+-- Trading stays disabled until inventory and currency mutations are server-authoritative.
 -- Additive migration; no existing player save is rewritten during migration.
 
 create table public.player_messages (
@@ -34,6 +34,13 @@ begin
   if not exists (select 1 from auth.users u where u.id = p_recipient_id) then
     raise exception 'Player not found';
   end if;
+  -- Serialize concurrent sends from this account before applying the per-minute limit.
+  perform pg_advisory_xact_lock(hashtextextended(v_user_id::text, 0));
+  -- Coordinate sends with blocks. Recheck only after taking this shared pair lock,
+  -- otherwise a block committed between an early check and this lock could be missed.
+  perform pg_advisory_xact_lock(hashtextextended(
+    least(v_user_id::text, p_recipient_id::text) || ':' || greatest(v_user_id::text, p_recipient_id::text), 0
+  ));
   if exists (
     select 1 from public.player_blocks b
     where (b.blocker_id = v_user_id and b.blocked_id = p_recipient_id)
@@ -41,12 +48,6 @@ begin
   ) then
     raise exception 'Messaging is unavailable for this player';
   end if;
-  -- Serialize concurrent sends from this account before applying the per-minute limit.
-  perform pg_advisory_xact_lock(hashtextextended(v_user_id::text, 0));
-  -- Coordinate sends with blocks so a message cannot slip through a concurrent block.
-  perform pg_advisory_xact_lock(hashtextextended(
-    least(v_user_id::text, p_recipient_id::text) || ':' || greatest(v_user_id::text, p_recipient_id::text), 0
-  ));
   if (select count(*) from public.player_messages m
       where m.sender_id = v_user_id and m.created_at > now() - interval '1 minute') >= 10
   then raise exception 'Message rate limit reached'; end if;
@@ -92,7 +93,15 @@ begin
   get diagnostics v_count = row_count;
   return v_count;
 end;
-$$;
+$;
+
+-- SECURITY DEFINER RPCs are callable by PUBLIC unless explicitly revoked.
+revoke all on function public.send_player_message(uuid,text) from public, anon;
+revoke all on function public.list_player_messages(uuid,timestamptz) from public, anon;
+revoke all on function public.mark_player_messages_read(uuid) from public, anon;
+grant execute on function public.send_player_message(uuid,text) to authenticated;
+grant execute on function public.list_player_messages(uuid,timestamptz) to authenticated;
+grant execute on function public.mark_player_messages_read(uuid) to authenticated;
 
 create table public.player_market_listings (
   id uuid primary key default gen_random_uuid(),
