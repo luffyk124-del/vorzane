@@ -189,3 +189,17 @@ export async function reportPlayer(playerId: string, reason: "spam" | "harassmen
   });
   return requireData(data as string | null, error);
 }
+
+export type PlayerConversation = {
+  other_user_id: string;
+  display_name: string;
+  avatar_id: string;
+  last_message: string;
+  last_message_at: string;
+  unread_count: number;
+};
+
+export async function listMyConversations(): Promise<PlayerConversation[]> {
+  const { data, error } = await supabase.rpc("list_my_conversations");
+  return requireData((data ?? []) as PlayerConversation[], error);
+}
