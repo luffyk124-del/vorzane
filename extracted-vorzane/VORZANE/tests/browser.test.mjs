@@ -137,7 +137,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
         await route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "Initialization accepts an empty payload only" }) });
         return;
       }
-      if (!store.state) store.state = newPlayerFixture();
+      if (!store.state) store.state = { ...newPlayerFixture(), serverResetEpoch: "server-generated-test-epoch" };
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -529,6 +529,10 @@ test("new hero creator renders character controls only once", async () => {
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
 
   await page.goto(`${appUrl}/login`);
+  await page.evaluate((staleState) => {
+    localStorage.setItem("vorzane_save_v2", JSON.stringify(staleState));
+    localStorage.removeItem("vorzane_legacy_save_claimed_by");
+  }, saveFixture());
   await page.getByPlaceholder("name@example.com").fill("new-player@example.test");
   await page.getByPlaceholder("8 أحرف على الأقل").fill("local-test-password");
   await page.getByRole("button", { name: "متابعة بالبريد" }).click();
@@ -545,6 +549,11 @@ test("new hero creator renders character controls only once", async () => {
   await page.getByPlaceholder("اسمٌ يليق بالأساطير").fill("بطلة الاختبار");
   await page.getByRole("button", { name: "ابدأ الرحلة" }).click();
   await page.getByText("ساحة الحراس", { exact: true }).waitFor({ timeout: 10_000 });
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem("vorzane_legacy_save_claimed_by")),
+    "__reset_invalidated__",
+    "the new account's server-issued epoch must retire a legacy save from before the full account reset",
+  );
   assert.equal(await page.getByText("اختر شخصيتك", { exact: true }).count(), 0, "character selection must disappear after creation");
   assert.equal(await page.getByText("اختر فئتك", { exact: true }).count(), 0, "class selection must disappear after creation");
   assert.ok(await page.getByLabel("صورة البطلة").count() >= 1, "the selected heroine portrait remains available in the hero UI");
