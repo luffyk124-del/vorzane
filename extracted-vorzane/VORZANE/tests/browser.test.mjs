@@ -554,6 +554,36 @@ test("new hero creator renders character controls only once", async () => {
   await browserContext.close();
 });
 
+test("server reset epoch discards stale offline progress instead of offering recovery", async () => {
+  const store = { state: { ...newPlayerFixture(), serverResetEpoch: "reset-epoch-test-001" }, writes: [] };
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  await installSupabaseMock(page, { store });
+
+  await page.goto(`${appUrl}/login`);
+  await page.evaluate(({ saveKey, dirtyKey, staleState }) => {
+    localStorage.setItem(saveKey, JSON.stringify(staleState));
+    localStorage.setItem(dirtyKey, "stale-offline-token");
+  }, {
+    saveKey: `vorzane_save_v2_user_${playerId}`,
+    dirtyKey: `vorzane_offline_dirty_${playerId}`,
+    staleState: saveFixture(),
+  });
+
+  await signInWithMock(page);
+  await page.getByText("ساحة الحراس", { exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByText("توجد نسختان لهذا اللاعب", { exact: true }).count(), 0,
+    "a stale pre-reset cache must not be offered as a recoverable save");
+  const cached = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"),
+    `vorzane_save_v2_user_${playerId}`);
+  assert.equal(cached.serverResetEpoch, "reset-epoch-test-001",
+    "the server-reset state should replace the old local cache");
+  assert.equal(cached.hero, null, "the old character must not be restored");
+  assert.equal(await page.evaluate((key) => localStorage.getItem(key), `vorzane_offline_dirty_${playerId}`), null,
+    "the stale offline-pending marker must be cleared");
+  await browserContext.close();
+});
+
 test("offline progress conflict resolves and restores in a clean second context", async () => {
   const store = { state: saveFixture(), writes: [] };
   let failSaves = true;
