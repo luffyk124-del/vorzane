@@ -231,8 +231,8 @@ export function GameProvider({ children }: PropsWithChildren) {
         if (!serverState) throw new Error("تعذر التحقق من الحفظ الجديد؛ لم نغيّر أي بيانات.");
         if (serverState.serverResetEpoch) {
           await clearOfflineSavePending(userId, offlineMarkerStorage());
-          localSet(LEGACY_CLAIM_KEY, "__reset_invalidated__");
-          localSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
+          await deviceSet(LEGACY_CLAIM_KEY, "__reset_invalidated__");
+          await deviceSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
         }
         syncReadyRef.current = userId;
         skipNextEffectRef.current = true;
@@ -476,7 +476,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     // Keep a tombstone rather than clearing the claim: another account on this device
     // must not be offered the previous account's legacy save after a reset.
     if (await deviceGet(LEGACY_CLAIM_KEY) === userId) {
-      localSet(LEGACY_CLAIM_KEY, "__reset_invalidated__");
+      await deviceSet(LEGACY_CLAIM_KEY, "__reset_invalidated__");
       await deviceSet(LEGACY_DECLINE_PREFIX + userId, "1");
     }
     setMigration(null);
