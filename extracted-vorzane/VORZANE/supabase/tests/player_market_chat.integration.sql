@@ -77,14 +77,10 @@ end $test$;
 
 do $test$
 begin
-  if has_function_privilege('authenticated','public.create_market_listing(text,bigint)','EXECUTE') then
-    raise exception 'Authenticated clients must not create listings before server-authoritative inventory exists';
-  end if;
-  if has_function_privilege('authenticated','public.cancel_market_listing(uuid)','EXECUTE') then
-    raise exception 'Authenticated clients must not cancel listings before server-authoritative inventory exists';
-  end if;
-  if has_function_privilege('authenticated','public.buy_market_listing(uuid)','EXECUTE') then
-    raise exception 'Authenticated clients must not buy listings before server-authoritative inventory exists';
+  if to_regprocedure('public.create_market_listing(text,bigint)') is not null
+     or to_regprocedure('public.cancel_market_listing(uuid)') is not null
+     or to_regprocedure('public.buy_market_listing(uuid)') is not null then
+    raise exception 'No market mutation RPCs may exist before server-authoritative inventory is implemented';
   end if;
   if has_table_privilege('authenticated','public.player_market_listings','INSERT')
      or has_table_privilege('authenticated','public.player_market_listings','UPDATE')
