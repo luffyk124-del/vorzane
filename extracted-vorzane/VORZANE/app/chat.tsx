@@ -94,7 +94,7 @@ export default function PlayerChatScreen() {
     }
   };
 
-  return <AppScreen>
+  return <AppScreen scroll={false}>
     <View style={styles.content}>
       <PageTitle eyebrow="رسائل اللاعبين" title={profile?.display_name ?? "المحادثة"} subtitle="يمكنك مراسلة اللاعبين حتى دون إضافتهم للأصدقاء." />
       <View style={styles.safetyRow}>
