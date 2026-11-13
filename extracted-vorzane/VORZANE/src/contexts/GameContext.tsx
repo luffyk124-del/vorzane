@@ -155,12 +155,23 @@ export function GameProvider({ children }: PropsWithChildren) {
     try {
       const cached = await readUserCache(userId);
       if (generation !== generationRef.current) return;
-      const hasOfflineChanges = cached !== null && await hasOfflineSavePending(userId, offlineMarkerStorage());
       const { data, error } = await readCloudSave(userId);
       if (generation !== generationRef.current) return;
       if (error) throw error;
       const remote = data ? normalizeGameState(data.game_state) : null;
       saveVersionRef.current = data?.updated_at ?? null;
+
+      // A server-issued epoch means the cloud save was intentionally reset.
+      // Never offer a pre-reset offline cache as a recovery option.
+      const cloudResetEpoch = remote?.serverResetEpoch ?? null;
+      const resetInvalidatedCache = !!cloudResetEpoch && cached?.serverResetEpoch !== cloudResetEpoch;
+      if (resetInvalidatedCache) {
+        try { await AsyncStorage.removeItem(userKey(userId)); } catch { /* Best effort; cloud reset remains authoritative. */ }
+        await clearOfflineSavePending(userId, offlineMarkerStorage());
+        if (localGet(LEGACY_CLAIM_KEY) === userId) localRemove(LEGACY_CLAIM_KEY);
+      }
+      const hasOfflineChanges = !resetInvalidatedCache && cached !== null
+        && await hasOfflineSavePending(userId, offlineMarkerStorage());
       if (data && !remote) throw new Error("تعذر قراءة حفظ حسابك؛ لم نغيّر أي شيء.");
 
       if (remote) {
