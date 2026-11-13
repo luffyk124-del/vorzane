@@ -65,6 +65,14 @@ begin
     if sqlerrm = 'Expected blocked messaging to be rejected' then raise; end if;
   end;
 end $test$;
+select public.unblock_player('00000000-0000-4000-8000-000000000101');
+select public.send_player_message('00000000-0000-4000-8000-000000000101','تم فك الحظر ويمكن المراسلة الآن.');
+do $test$
+begin
+  if (select count(*) from public.list_player_messages('00000000-0000-4000-8000-000000000101',null)) <> 2 then
+    raise exception 'Unblocking should restore direct messaging';
+  end if;
+end $test$;
 select public.report_player('00000000-0000-4000-8000-000000000101','spam','رسائل غير مرغوبة');
 do $test$
 begin
