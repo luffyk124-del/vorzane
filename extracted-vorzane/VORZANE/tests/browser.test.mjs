@@ -280,14 +280,14 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
   return { store, writes, reads, tableReads, unexpectedRequests };
 }
 
-async function signInWithMock(page) {
+async function signInWithMock(page, readyText = "ساحة الحراس") {
   const pageErrors = [];
   const consoleErrors = [];
   const failedResponses = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
   page.on("response", (response) => { if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`); });
-  await page.goto(`${appUrl}/login`);
+  await page.goto(`${appUrl}/login`, { waitUntil: "domcontentloaded" });
   const emailField = page.getByPlaceholder("name@example.com");
   try {
     await emailField.waitFor({ state: "visible", timeout: 12_000 });
@@ -299,7 +299,7 @@ async function signInWithMock(page) {
   await emailField.fill("player@example.test");
   await page.getByPlaceholder("8 أحرف على الأقل").fill("local-test-password");
   await page.getByRole("button", { name: "متابعة بالبريد" }).click();
-  await page.getByText("ساحة الحراس", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText(readyText, { exact: true }).waitFor({ timeout: 15_000 });
 }
 
 async function waitForServer() {
@@ -574,8 +574,8 @@ test("server reset epoch discards stale offline progress instead of offering rec
     staleState: saveFixture(),
   });
 
-  await signInWithMock(page);
-  await page.getByText("ساحة الحراس", { exact: true }).waitFor({ timeout: 15_000 });
+  await signInWithMock(page, "اختر من يسير في الظل");
+  await page.getByText("اختر من يسير في الظل", { exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await page.getByText("توجد نسختان لهذا اللاعب", { exact: true }).count(), 0,
     "a stale pre-reset cache must not be offered as a recoverable save");
   const cached = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"),
