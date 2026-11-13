@@ -1,4 +1,34 @@
 -- One-time reset of every account's game progress. Authentication and social data are untouched.
+-- Keep a restricted recovery snapshot before replacing any live player progress.
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+
+create table if not exists private.player_saves_pre_reset_20261113 (
+  user_id uuid primary key,
+  game_state jsonb not null,
+  updated_at timestamptz not null,
+  backed_up_at timestamptz not null default now()
+);
+revoke all on table private.player_saves_pre_reset_20261113 from public, anon, authenticated;
+
+insert into private.player_saves_pre_reset_20261113 (user_id, game_state, updated_at)
+select user_id, game_state, updated_at
+from public.player_saves
+on conflict (user_id) do nothing;
+
+create table if not exists private.player_command_receipts_pre_reset_20261113 (
+  user_id uuid not null,
+  command_id uuid not null,
+  result jsonb not null,
+  created_at timestamptz not null
+);
+revoke all on table private.player_command_receipts_pre_reset_20261113 from public, anon, authenticated;
+
+insert into private.player_command_receipts_pre_reset_20261113 (user_id, command_id, result, created_at)
+select user_id, command_id, result, created_at
+from public.player_command_receipts
+on conflict do nothing;
+
 with clock as (
   select
     (extract(epoch from clock_timestamp()) * 1000)::bigint as now_ms,
