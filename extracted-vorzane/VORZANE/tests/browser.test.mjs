@@ -561,7 +561,7 @@ test("server reset epoch discards stale offline progress instead of offering rec
   await installSupabaseMock(page, { store });
 
   await page.goto(`${appUrl}/login`);
-  await page.evaluate(({ saveKey, dirtyKey, staleState, legacySaveKey, legacyClaimKey }) => {
+  await page.evaluate(({ saveKey, dirtyKey, staleState, legacySaveKey, legacyClaimKey, playerId }) => {
     localStorage.setItem(saveKey, JSON.stringify(staleState));
     localStorage.setItem(dirtyKey, "stale-offline-token");
     localStorage.setItem(legacySaveKey, JSON.stringify(staleState));
@@ -572,6 +572,7 @@ test("server reset epoch discards stale offline progress instead of offering rec
     staleState: saveFixture(),
     legacySaveKey: "vorzane_save_v2",
     legacyClaimKey: "vorzane_legacy_save_claimed_by",
+    playerId,
   });
 
   await signInWithMock(page, "اختر من يسير في الظل");
