@@ -170,6 +170,30 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       });
       return;
     }
+    if (request.method() === "OPTIONS" && url.pathname.endsWith("/functions/v1/economy-command")) {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+        },
+        body: "",
+      });
+      return;
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/functions/v1/economy-command")) {
+      const payload = request.postDataJSON();
+      if (payload?.command?.type === "updateSettings" && store.state) {
+        store.state = { ...store.state, settings: { ...store.state.settings, ...payload.command.settings } };
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ state: store.state, updatedAt: new Date().toISOString(), replayed: false }),
+      });
+      return;
+    }
     if (request.method() === "GET" && url.pathname.endsWith("/rest/v1/player_saves")) {
       tableReads.push(url.pathname);
       await route.fulfill({
@@ -626,6 +650,31 @@ test("character, player profile, and settings have separate responsibilities", a
   await context.close();
 });
 
+
+test("music volume preview stays local until the server settings command commits", async () => {
+  const store = { state: saveFixture(), writes: [] };
+  store.state.settings.musicEnabled = true;
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  const { writes, unexpectedRequests } = await installSupabaseMock(page, { store });
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await signInWithMock(page);
+  await page.goto(`${appUrl}/settings`);
+  await page.getByText("الموسيقى", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  const slider = page.getByRole("slider");
+  await slider.waitFor({ state: "visible", timeout: 10_000 });
+  await slider.click({ position: { x: 220, y: 12 } });
+  await page.getByText("تم تنفيذ الأمر وحفظه سحابياً.", { exact: true }).waitFor({ timeout: 10_000 });
+
+  assert.equal(writes.length, 1, "the settings action should not trigger a second generic autosave");
+  assert.equal(writes[0].game_state.settings.musicVolume, 24, "the preview value must not enter the generic snapshot upsert");
+  assert.notEqual(store.state.settings.musicVolume, 24, "the final value must be applied by the server command");
+  assert.deepEqual(unexpectedRequests, []);
+  assert.deepEqual(pageErrors, []);
+  await context.close();
+});
 
 test("public player profiles use a static web route with a query id", async () => {
   const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
