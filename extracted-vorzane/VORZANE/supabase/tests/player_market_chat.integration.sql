@@ -77,6 +77,20 @@ end $test$;
 
 do $test$
 begin
+  if has_function_privilege('anon', 'public.send_player_message(uuid,text)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.list_player_messages(uuid,timestamptz)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.mark_player_messages_read(uuid)', 'EXECUTE') then
+    raise exception 'Anonymous callers must not execute player messaging RPCs';
+  end if;
+  if not has_function_privilege('authenticated', 'public.send_player_message(uuid,text)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.list_player_messages(uuid,timestamptz)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.mark_player_messages_read(uuid)', 'EXECUTE') then
+    raise exception 'Authenticated callers must retain player messaging RPC access';
+  end if;
+end $test$;
+
+do $test$
+begin
   if to_regprocedure('public.create_market_listing(text,bigint)') is not null
      or to_regprocedure('public.cancel_market_listing(uuid)') is not null
      or to_regprocedure('public.buy_market_listing(uuid)') is not null then
