@@ -41,8 +41,20 @@ begin
   end if;
 end $test$;
 
--- A recipient can block a stranger and prevent further contact.
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000103',true);
+do $test$
+begin
+  if not exists (
+    select 1 from public.list_my_conversations()
+    where other_user_id='00000000-0000-4000-8000-000000000101'
+      and unread_count=1
+      and last_message='مرحبًا، هذه رسالة للاعب غير صديق.'
+  ) then
+    raise exception 'Inbox should count unread messages received from a non-friend';
+  end if;
+end $test$;
+
+-- A recipient can block a stranger and prevent further contact.
 select public.block_player('00000000-0000-4000-8000-000000000101');
 do $test$
 begin
