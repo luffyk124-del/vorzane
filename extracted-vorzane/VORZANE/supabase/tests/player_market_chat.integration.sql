@@ -4,11 +4,13 @@ begin;
 
 insert into auth.users(id) values
   ('00000000-0000-4000-8000-000000000101'),
-  ('00000000-0000-4000-8000-000000000102');
+  ('00000000-0000-4000-8000-000000000102'),
+  ('00000000-0000-4000-8000-000000000103');
 
 insert into public.player_profiles(user_id,display_name,avatar_id) values
   ('00000000-0000-4000-8000-000000000101','SellerOne','brand'),
-  ('00000000-0000-4000-8000-000000000102','BuyerTwo','brand');
+  ('00000000-0000-4000-8000-000000000102','BuyerTwo','brand'),
+  ('00000000-0000-4000-8000-000000000103','OutsiderThree','brand');
 
 insert into public.friend_requests(requester_id,recipient_id,status)
 values ('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000102','accepted');
@@ -28,6 +30,27 @@ begin
   end if;
 end $$;
 
+-- A non-friend must not be able to mark another player's messages as read.
+insert into public.player_messages(sender_id,recipient_id,body)
+values ('00000000-0000-4000-8000-000000000102','00000000-0000-4000-8000-000000000103','رسالة اختبار غير صديقة');
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000103',true);
+do $$
+begin
+  begin
+    perform public.mark_player_messages_read('00000000-0000-4000-8000-000000000102');
+    raise exception 'Expected non-friend read receipt to be rejected';
+  exception when others then
+    if sqlerrm = 'Expected non-friend read receipt to be rejected' then raise; end if;
+  end;
+  if exists (
+    select 1 from public.player_messages
+    where sender_id='00000000-0000-4000-8000-000000000102'
+      and recipient_id='00000000-0000-4000-8000-000000000103'
+      and read_at is not null
+  ) then raise exception 'Non-friend read receipt changed message state'; end if;
+end $$;
+
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000101',true);
 select public.create_market_listing('armor-1',200);
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000102',true);
 select public.buy_market_listing((select id from public.player_market_listings where item_id='armor-1' and status='active'));
