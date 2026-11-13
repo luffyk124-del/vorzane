@@ -77,6 +77,12 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/tests/player_social.integration.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/migrations/20261109090000_create_player_save_recovery.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/tests/player_save_recovery.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/migrations/20261112141314_create_player_command_receipts.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/migrations/20261113150000_guard_player_save_reset_epoch.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/tests/player_save_reset_epoch.integration.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/tests/player_save_reset.seed.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/migrations/20261113151000_reset_all_player_progress.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/tests/player_save_reset.integration.sql
           # Verify the database quota under simultaneous privileged inserts.
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "INSERT INTO auth.users (id) VALUES ('00000000-0000-0000-0000-00000000000d') ON CONFLICT (id) DO NOTHING"
           quota_dir="$(mktemp -d)"
