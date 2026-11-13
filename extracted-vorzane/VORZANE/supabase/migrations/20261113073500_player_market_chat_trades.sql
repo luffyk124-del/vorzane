@@ -208,9 +208,12 @@ revoke all on function public.buy_market_listing(uuid) from public, anon;
 grant execute on function public.send_player_message(uuid,text) to authenticated;
 grant execute on function public.list_player_messages(uuid,timestamptz) to authenticated;
 grant execute on function public.mark_player_messages_read(uuid) to authenticated;
-grant execute on function public.create_market_listing(text,bigint) to authenticated;
-grant execute on function public.cancel_market_listing(uuid) to authenticated;
-grant execute on function public.buy_market_listing(uuid) to authenticated;
+-- Trading mutations remain disabled until all player inventory/economy writes
+-- are server-authoritative. The UI can preview listings, but no authenticated
+-- client can create, cancel, or purchase a listing through these functions.
+revoke all on function public.create_market_listing(text,bigint) from authenticated;
+revoke all on function public.cancel_market_listing(uuid) from authenticated;
+revoke all on function public.buy_market_listing(uuid) from authenticated;
 
 create or replace function public.list_market_listings(p_limit integer default 30, p_before timestamptz default null)
 returns table(listing_id uuid, seller_id uuid, seller_name text, item_data jsonb, price bigint, created_at timestamptz)
@@ -313,3 +316,58 @@ revoke all on function public.report_player(uuid,text,text) from public, anon;
 grant execute on function public.block_player(uuid) to authenticated;
 grant execute on function public.unblock_player(uuid) to authenticated;
 grant execute on function public.report_player(uuid,text,text) to authenticated;
+
+
+-- Inbox index for every direct conversation, regardless of friendship state.
+create or replace function public.list_my_conversations()
+returns table(
+  other_user_id uuid,
+  display_name text,
+  avatar_id text,
+  last_message text,
+  last_message_at timestamptz,
+  unread_count bigint
+)
+language plpgsql stable security definer set search_path = public, pg_temp as $$
+declare v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null then raise exception 'Authentication required'; end if;
+  return query
+  with participant_messages as (
+    select
+      case when m.sender_id = v_user_id then m.recipient_id else m.sender_id end as other_id,
+      m.body,
+      m.created_at,
+      m.id,
+      (m.recipient_id = v_user_id and m.read_at is null) as unread
+    from public.player_messages m
+    where m.sender_id = v_user_id or m.recipient_id = v_user_id
+  ),
+  latest as (
+    select distinct on (pm.other_id)
+      pm.other_id, pm.body, pm.created_at
+    from participant_messages pm
+    order by pm.other_id, pm.created_at desc, pm.id desc
+  ),
+  unread as (
+    select pm.other_id, count(*)::bigint as total
+    from participant_messages pm
+    where pm.unread
+    group by pm.other_id
+  )
+  select
+    l.other_id,
+    coalesce(p.display_name, 'لاعب'),
+    coalesce(p.avatar_id, 'brand'),
+    l.body,
+    l.created_at,
+    coalesce(u.total, 0)
+  from latest l
+  left join public.player_profiles p on p.user_id = l.other_id
+  left join unread u on u.other_id = l.other_id
+  order by l.created_at desc
+  limit 100;
+end;
+$$;
+revoke all on function public.list_my_conversations() from public, anon;
+grant execute on function public.list_my_conversations() to authenticated;
