@@ -90,7 +90,7 @@ begin
   get diagnostics v_count = row_count;
   return v_count;
 end;
-$;
+$$;
 
 create table public.player_market_listings (
   id uuid primary key default gen_random_uuid(),
