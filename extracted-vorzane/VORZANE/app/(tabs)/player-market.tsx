@@ -22,6 +22,7 @@ type OwnListing = {
   price: number;
   created_at: string;
 };
+const TRADING_ENABLED = false; // Re-enable only after all save mutations are server-authoritative.
 const NON_WEAPON_SLOTS = ["درع", "خوذة", "قفازات", "حذاء", "قلادة", "خاتم أول", "خاتم ثانٍ", "armor", "shield", "helmet", "gloves", "boots", "necklace", "ring"];
 
 export default function PlayerMarketScreen() {
@@ -150,10 +151,10 @@ export default function PlayerMarketScreen() {
 
   return <AppScreen>
     <View style={styles.content}>
-      <PageTitle eyebrow="تجارة اللاعبين" title="سوق اللاعبين" subtitle="سوق مستقل لعروض اللاعبين، منفصل عن المتجر والسوق المحلي داخل اللعبة." trailing={<Pill label={`${state.gold.toLocaleString("en-US")} ذهب`} tone="gold" />} />
+      <PageTitle eyebrow="تجارة اللاعبين" title="سوق اللاعبين" subtitle="سوق مستقل عن متجر اللعبة وسوقها المحلي. تصفح العروض متاح، أما التداول فموقوف مؤقتًا لحماية ممتلكات اللاعبين." trailing={<Pill label={`${state.gold.toLocaleString("en-US")} ذهب`} tone="gold" />} />
       <Card style={styles.noticeInfo}>
         <Icon name="shield-checkmark-outline" color={palette.jade} size={18} />
-        <Txt style={styles.noticeInfoText}>العروض هنا تخص اللاعبين فقط. تتم عمليات البيع والشراء داخل الخادم بشكل ذري، وتُعرض القطع غير القتالية المسموح بتداولها فقط.</Txt>
+        <Txt style={styles.noticeInfoText}>هذا السوق منفصل تمامًا عن أسواق اللعبة. التداول متوقف مؤقتًا حتى نكمل حماية ملكية القطع والذهب من جهة الخادم؛ لن نسمح بعمليات قد تعرّض ممتلكات اللاعبين للتلاعب.</Txt>
       </Card>
       <View style={styles.tabs}>
         <Pressable onPress={() => setTab("browse")} style={[styles.tab, tab === "browse" && styles.tabActive]}><Txt style={[styles.tabText, tab === "browse" && styles.tabTextActive]}>تصفح العروض</Txt></Pressable>
@@ -162,21 +163,25 @@ export default function PlayerMarketScreen() {
       {notice ? <Card style={styles.notice}><Txt style={styles.noticeText}>{notice}</Txt></Card> : null}
       {tab === "browse" ? <>
         <SectionTitle title={`العروض المتاحة (${listings.length})`} icon="storefront-outline" action={<AppButton label="تحديث" icon="refresh-outline" variant="ghost" small onPress={() => void refresh().catch((e) => setNotice(e instanceof Error ? e.message : "تعذر التحديث."))} />} />
-        {loading ? <Card style={styles.empty}><Txt muted>جارٍ تحميل العروض...</Txt></Card> : listings.length ? listings.map((listing) => renderItem(listing.item_data, listing.price, listing.seller_name, <AppButton label="شراء" icon="cart-outline" variant="jade" small disabled={busy || !state.hero} onPress={() => buy(listing)} />)) : <Card style={styles.empty}><Icon name="storefront-outline" size={25} color={palette.dim} /><Txt muted>لا توجد عروض متاحة الآن.</Txt></Card>}
+        {loading ? <Card style={styles.empty}><Txt muted>جارٍ تحميل العروض...</Txt></Card> : listings.length ? listings.map((listing) => renderItem(listing.item_data, listing.price, listing.seller_name, <AppButton label="شراء" icon="cart-outline" variant="jade" small disabled={!TRADING_ENABLED || busy || !state.hero} onPress={() => buy(listing)} />)) : <Card style={styles.empty}><Icon name="storefront-outline" size={25} color={palette.dim} /><Txt muted>لا توجد عروض متاحة الآن.</Txt></Card>}
       </> : <>
         <SectionTitle title={`عروضي النشطة (${mine.length})`} icon="pricetag-outline" />
-        {mine.length ? mine.map((listing) => renderItem(listing.item_data, listing.price, "أنت", <AppButton label="إلغاء" icon="close-circle-outline" variant="danger" small disabled={busy} onPress={() => cancel(listing)} />)) : <Card style={styles.empty}><Txt muted>ما عندك عروض نشطة. اختر قطعة من حقيبتك لنشر عرض جديد.</Txt></Card>}
-        <SectionTitle title="إضافة عرض جديد" icon="add-circle-outline" />
+        {mine.length ? mine.map((listing) => renderItem(listing.item_data, listing.price, "أنت", <AppButton label="إلغاء" icon="close-circle-outline" variant="danger" small disabled={!TRADING_ENABLED || busy} onPress={() => cancel(listing)} />)) : <Card style={styles.empty}><Txt muted>ما عندك عروض نشطة. اختر قطعة من حقيبتك لنشر عرض جديد.</Txt></Card>}
+        <SectionTitle title="نشر عرض جديد" icon="add-circle-outline" />
         {selectedItem ? <Card style={styles.listingForm}>
           <Txt style={styles.formTitle}>تسعير: {selectedItem.name}</Txt>
           <Txt muted style={styles.canonicalPrice}>سعر المتجر: {selectedItem.price.toLocaleString("en-US")} ذهب</Txt>
           <TextInput value={price} onChangeText={(value) => setPrice(value.replace(/[^0-9]/g, ""))} keyboardType="number-pad" maxLength={10} placeholder="سعر العرض بالذهب" placeholderTextColor={palette.muted} style={styles.priceInput} />
           <View style={styles.formActions}>
-            <AppButton label="نشر العرض" icon="cloud-upload-outline" onPress={createListing} loading={busy} disabled={busy || !state.hero} />
+            <AppButton label="نشر العرض" icon="cloud-upload-outline" onPress={createListing} loading={busy} disabled={!TRADING_ENABLED || busy || !state.hero} />
             <AppButton label="إلغاء" variant="secondary" onPress={() => { setSelectedItem(null); setPrice(""); }} disabled={busy} />
           </View>
         </Card> : null}
-        {sellableItems.length ? sellableItems.map((item) => renderItem(item, undefined, undefined, <AppButton label={selectedItem?.id === item.id ? "محدد" : "اختيار"} small variant={selectedItem?.id === item.id ? "jade" : "secondary"} onPress={() => { setSelectedItem(item); setPrice(""); }} />)) : <Card style={styles.empty}><Txt muted>لا توجد قطع عتاد مؤهلة في حقيبتك حاليًا.</Txt></Card>}
+        <Card style={styles.empty}>
+          <Icon name="lock-closed-outline" size={24} color={palette.gold} />
+          <Txt style={styles.formTitle}>التداول قيد التجهيز</Txt>
+          <Txt muted style={styles.noticeInfoText}>لن تتمكن من نشر أو شراء أو إلغاء العروض حتى يصبح نظام المخزون والذهب محميًا بالكامل من الخادم.</Txt>
+        </Card>
       </>}
     </View>
   </AppScreen>;
