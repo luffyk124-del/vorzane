@@ -704,7 +704,7 @@ test("public player profiles use a static web route with a query id", async () =
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await signInWithMock(page);
-  await page.goto(`${appUrl}/player?id=e2e-player-0002`);
+  await page.goto(`${appUrl}/player?id=e2e-player-0002`, { waitUntil: "domcontentloaded" });
   await page.getByText("ملف لاعب عام", { exact: true }).waitFor({ timeout: 10_000 });
   await page.getByText("صديق تجريبي", { exact: true }).waitFor({ timeout: 10_000 });
   await page.getByText("بطل الاختبار", { exact: true }).waitFor({ timeout: 10_000 });
