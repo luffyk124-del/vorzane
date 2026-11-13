@@ -24,17 +24,17 @@ insert into public.player_saves(user_id,game_state) values
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000101',true);
 select public.send_player_message('00000000-0000-4000-8000-000000000102','مرحبًا، هل تريد التبادل؟');
 select public.send_player_message('00000000-0000-4000-8000-000000000103','مرحبًا، هذه رسالة للاعب غير صديق.');
-do $
+do $test$
 begin
   if (select count(*) from public.list_player_messages('00000000-0000-4000-8000-000000000103',null)) <> 1 then
     raise exception 'Expected direct messaging with a non-friend player';
   end if;
-end $;
+end $test$;
 
 -- A recipient can block a stranger and prevent further contact.
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000103',true);
 select public.block_player('00000000-0000-4000-8000-000000000101');
-do $
+do $test$
 begin
   begin
     perform public.send_player_message('00000000-0000-4000-8000-000000000101','محاولة بعد الحظر');
@@ -42,16 +42,16 @@ begin
   exception when others then
     if sqlerrm = 'Expected blocked messaging to be rejected' then raise; end if;
   end;
-end $;
+end $test$;
 select public.report_player('00000000-0000-4000-8000-000000000101','spam','رسائل غير مرغوبة');
-do $
+do $test$
 begin
   if (select count(*) from public.player_reports
       where reporter_id='00000000-0000-4000-8000-000000000103'
         and reported_id='00000000-0000-4000-8000-000000000101') <> 1 then
     raise exception 'Expected report to be stored for moderation';
   end if;
-end $;
+end $test$;
 
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000101',true);
 select public.create_market_listing('armor-1',200);
