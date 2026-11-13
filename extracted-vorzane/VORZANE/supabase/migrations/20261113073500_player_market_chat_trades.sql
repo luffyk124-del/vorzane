@@ -55,7 +55,7 @@ begin
   values (v_user_id, p_recipient_id, v_body) returning id into v_id;
   return v_id;
 end;
-$;
+$$;
 
 create or replace function public.list_player_messages(p_other_user_id uuid, p_before timestamptz default null)
 returns table(id uuid, sender_id uuid, recipient_id uuid, body text, created_at timestamptz, read_at timestamptz)
@@ -75,7 +75,7 @@ begin
       and (p_before is null or m.created_at < p_before)
     order by m.created_at desc limit 50;
 end;
-$;
+$$;
 
 create or replace function public.mark_player_messages_read(p_other_user_id uuid)
 returns integer language plpgsql security definer set search_path = public, pg_temp as $$
@@ -143,7 +143,7 @@ begin
     order by l.created_at desc
     limit greatest(1, least(coalesce(p_limit,30),50));
 end;
-$;
+$$;
 revoke all on function public.list_market_listings(integer,timestamptz) from public, anon;
 grant execute on function public.list_market_listings(integer,timestamptz) to authenticated;
 
@@ -189,7 +189,7 @@ begin
   insert into public.player_blocks(blocker_id, blocked_id) values (v_user_id, p_player_id)
   on conflict (blocker_id, blocked_id) do nothing;
 end;
-$;
+$$;
 
 create or replace function public.unblock_player(p_player_id uuid)
 returns void language plpgsql security definer set search_path = public, pg_temp as $$
@@ -228,7 +228,7 @@ begin
   returning id into v_report_id;
   return v_report_id;
 end;
-$;
+$$;
 
 revoke all on function public.block_player(uuid) from public, anon;
 revoke all on function public.unblock_player(uuid) from public, anon;
@@ -288,6 +288,6 @@ begin
   order by l.created_at desc
   limit 100;
 end;
-$;
+$$;
 revoke all on function public.list_my_conversations() from public, anon;
 grant execute on function public.list_my_conversations() to authenticated;
