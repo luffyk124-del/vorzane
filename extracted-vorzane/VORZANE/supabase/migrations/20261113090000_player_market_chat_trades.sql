@@ -120,6 +120,9 @@ begin
   if jsonb_typeof(v_inventory) <> 'array' then raise exception 'Inventory data is invalid'; end if;
   select value into v_item from jsonb_array_elements(v_inventory) where value ->> 'id' = p_item_id limit 1;
   if v_item is null then raise exception 'Item is not in your inventory'; end if;
+  if coalesce(v_item ->> 'slot','') not in ('درع','خوذة','قفازات','حذاء','قلادة','خاتم أول','خاتم ثانٍ','armor','shield','helmet','gloves','boots','necklace','ring') then
+    raise exception 'Only non-weapon gear can be listed';
+  end if;
   if exists (select 1 from jsonb_each(coalesce(v_state -> 'equipped','{}'::jsonb)) e where e.value ->> 'id' = p_item_id) then
     raise exception 'Unequip this item before listing it';
   end if;
@@ -201,3 +204,24 @@ grant execute on function public.mark_player_messages_read(uuid) to authenticate
 grant execute on function public.create_market_listing(text,bigint) to authenticated;
 grant execute on function public.cancel_market_listing(uuid) to authenticated;
 grant execute on function public.buy_market_listing(uuid) to authenticated;
+
+create or replace function public.list_market_listings(p_limit integer default 30, p_before timestamptz default null)
+returns table(listing_id uuid, seller_id uuid, seller_name text, item_data jsonb, price bigint, created_at timestamptz)
+language plpgsql stable security definer set search_path = public, pg_temp as $$
+declare v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null then raise exception 'Authentication required'; end if;
+  return query
+    select l.id, l.seller_id, p.display_name, l.item_data, l.price, l.created_at
+    from public.player_market_listings l
+    join public.player_profiles p on p.user_id = l.seller_id
+    where l.status = 'active'
+      and l.seller_id <> v_user_id
+      and (p_before is null or l.created_at < p_before)
+      and coalesce(l.item_data ->> 'slot','') in ('درع','خوذة','قفازات','حذاء','قلادة','خاتم أول','خاتم ثانٍ','armor','shield','helmet','gloves','boots','necklace','ring')
+    order by l.created_at desc
+    limit greatest(1, least(coalesce(p_limit,30),50));
+end;
+$$;
+revoke all on function public.list_market_listings(integer,timestamptz) from public, anon;
+grant execute on function public.list_market_listings(integer,timestamptz) to authenticated;
