@@ -31,12 +31,16 @@ begin
   if v_user_id is null then raise exception 'Authentication required'; end if;
   if p_recipient_id is null or p_recipient_id = v_user_id then raise exception 'Invalid recipient'; end if;
   if char_length(v_body) not between 1 and 500 then raise exception 'Message must be 1-500 characters'; end if;
-  if not exists (
-    select 1 from public.friend_requests f
-    where f.status = 'accepted'
-      and least(f.requester_id, f.recipient_id) = least(v_user_id, p_recipient_id)
-      and greatest(f.requester_id, f.recipient_id) = greatest(v_user_id, p_recipient_id)
-  ) then raise exception 'Messaging is available between friends only'; end if;
+  if not exists (select 1 from auth.users u where u.id = p_recipient_id) then
+    raise exception 'Player not found';
+  end if;
+  if exists (
+    select 1 from public.player_blocks b
+    where (b.blocker_id = v_user_id and b.blocked_id = p_recipient_id)
+       or (b.blocker_id = p_recipient_id and b.blocked_id = v_user_id)
+  ) then
+    raise exception 'Messaging is unavailable for this player';
+  end if;
   if (select count(*) from public.player_messages m
       where m.sender_id = v_user_id and m.created_at > now() - interval '1 minute') >= 10
   then raise exception 'Message rate limit reached'; end if;
@@ -53,12 +57,9 @@ declare v_user_id uuid := auth.uid();
 begin
   if v_user_id is null then raise exception 'Authentication required'; end if;
   if p_other_user_id is null or p_other_user_id = v_user_id then raise exception 'Invalid conversation'; end if;
-  if not exists (
-    select 1 from public.friend_requests f
-    where f.status = 'accepted'
-      and least(f.requester_id, f.recipient_id) = least(v_user_id, p_other_user_id)
-      and greatest(f.requester_id, f.recipient_id) = greatest(v_user_id, p_other_user_id)
-  ) then raise exception 'Conversation not available'; end if;
+  if not exists (select 1 from auth.users u where u.id = p_other_user_id) then
+    raise exception 'Player not found';
+  end if;
   return query
     select m.id, m.sender_id, m.recipient_id, m.body, m.created_at, m.read_at
     from public.player_messages m
@@ -77,13 +78,8 @@ begin
   if p_other_user_id is null or p_other_user_id = v_user_id then
     raise exception 'Invalid conversation';
   end if;
-  if not exists (
-    select 1 from public.friend_requests f
-    where f.status = 'accepted'
-      and least(f.requester_id, f.recipient_id) = least(v_user_id, p_other_user_id)
-      and greatest(f.requester_id, f.recipient_id) = greatest(v_user_id, p_other_user_id)
-  ) then
-    raise exception 'Conversation not available';
+  if not exists (select 1 from auth.users u where u.id = p_other_user_id) then
+    raise exception 'Player not found';
   end if;
   update public.player_messages set read_at = now()
   where sender_id = p_other_user_id and recipient_id = v_user_id and read_at is null;
@@ -236,3 +232,84 @@ end;
 $$;
 revoke all on function public.list_market_listings(integer,timestamptz) from public, anon;
 grant execute on function public.list_market_listings(integer,timestamptz) to authenticated;
+
+
+-- Open player messaging safety controls: block and report.
+create table public.player_blocks (
+  blocker_id uuid not null references auth.users(id) on delete cascade,
+  blocked_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (blocker_id, blocked_id),
+  constraint player_blocks_not_self check (blocker_id <> blocked_id)
+);
+alter table public.player_blocks enable row level security;
+revoke all on public.player_blocks from anon, authenticated;
+grant select on public.player_blocks to authenticated;
+create policy player_blocks_owner_read on public.player_blocks
+  for select to authenticated using (blocker_id = (select auth.uid()));
+
+create table public.player_reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_id uuid not null references auth.users(id) on delete cascade,
+  reported_id uuid not null references auth.users(id) on delete cascade,
+  reason text not null check (reason in ('spam','harassment','inappropriate','other')),
+  details text not null default '',
+  created_at timestamptz not null default now(),
+  constraint player_reports_not_self check (reporter_id <> reported_id),
+  constraint player_reports_details_length check (char_length(details) <= 300),
+  unique (reporter_id, reported_id)
+);
+alter table public.player_reports enable row level security;
+revoke all on public.player_reports from anon, authenticated;
+
+create or replace function public.block_player(p_player_id uuid)
+returns void language plpgsql security definer set search_path = public, pg_temp as $$
+declare v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null then raise exception 'Authentication required'; end if;
+  if p_player_id is null or p_player_id = v_user_id then raise exception 'Invalid player'; end if;
+  if not exists (select 1 from auth.users u where u.id = p_player_id) then raise exception 'Player not found'; end if;
+  insert into public.player_blocks(blocker_id, blocked_id) values (v_user_id, p_player_id)
+  on conflict (blocker_id, blocked_id) do nothing;
+end;
+$$;
+
+create or replace function public.unblock_player(p_player_id uuid)
+returns void language plpgsql security definer set search_path = public, pg_temp as $$
+declare v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null then raise exception 'Authentication required'; end if;
+  delete from public.player_blocks where blocker_id = v_user_id and blocked_id = p_player_id;
+end;
+$$;
+
+create or replace function public.report_player(p_player_id uuid, p_reason text, p_details text default '')
+returns uuid language plpgsql security definer set search_path = public, pg_temp as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_report_id uuid;
+  v_details text := btrim(coalesce(p_details, ''));
+begin
+  if v_user_id is null then raise exception 'Authentication required'; end if;
+  if p_player_id is null or p_player_id = v_user_id then raise exception 'Invalid player'; end if;
+  if p_reason not in ('spam','harassment','inappropriate','other') then raise exception 'Invalid report reason'; end if;
+  if char_length(v_details) > 300 then raise exception 'Report details are too long'; end if;
+  if not exists (select 1 from auth.users u where u.id = p_player_id) then raise exception 'Player not found'; end if;
+  if (select count(*) from public.player_reports r where r.reporter_id = v_user_id and r.created_at > now() - interval '1 hour') >= 5 then
+    raise exception 'Report rate limit reached';
+  end if;
+  insert into public.player_reports(reporter_id, reported_id, reason, details)
+  values (v_user_id, p_player_id, p_reason, v_details)
+  on conflict (reporter_id, reported_id) do update
+    set reason = excluded.reason, details = excluded.details, created_at = now()
+  returning id into v_report_id;
+  return v_report_id;
+end;
+$$;
+
+revoke all on function public.block_player(uuid) from public, anon;
+revoke all on function public.unblock_player(uuid) from public, anon;
+revoke all on function public.report_player(uuid,text,text) from public, anon;
+grant execute on function public.block_player(uuid) to authenticated;
+grant execute on function public.unblock_player(uuid) to authenticated;
+grant execute on function public.report_player(uuid,text,text) to authenticated;
