@@ -4,7 +4,7 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_user_id uuid := auth.uid();
   v_server_role text := nullif(current_setting('request.jwt.claim.role', true), '');
@@ -46,7 +46,7 @@ begin
 
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists player_saves_reset_epoch_guard on public.player_saves;
 create trigger player_saves_reset_epoch_guard
