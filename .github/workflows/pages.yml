@@ -87,13 +87,17 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/migrations/20261108012451_create_player_social.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/migrations/20261108180000_create_player_notifications.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/migrations/20261110100000_public_player_profiles.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/migrations/20261113073500_player_market_chat_trades.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/tests/player_market_chat.integration.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/tests/player_social.integration.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/tests/player_saves_rls.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/migrations/20261109090000_create_player_save_recovery.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/tests/player_save_recovery.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/migrations/20261112141314_create_player_command_receipts.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/migrations/20261113150000_guard_player_save_reset_epoch.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "GRANT SELECT ON public.player_saves TO service_role"
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/tests/player_command_receipts.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 < extracted-vorzane/VORZANE/supabase/tests/player_save_reset_epoch.integration.sql
 
   build:
     runs-on: ubuntu-latest

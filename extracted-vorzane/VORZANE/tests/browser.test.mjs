@@ -242,6 +242,10 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
         set_my_profile_searchable: null,
         list_my_friends: [],
         list_incoming_friend_requests: [],
+        list_player_messages: [],
+        mark_player_messages_read: 0,
+        send_player_message: "e2e-message-0001",
+        list_my_conversations: [],
         search_players: [{ user_id: "e2e-player-0002", display_name: "صديق تجريبي", avatar_id: "brand", friend_state: "none" }],
         get_public_player_profile: {
           user_id: "e2e-player-0002",
@@ -276,14 +280,18 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
   return { store, writes, reads, tableReads, unexpectedRequests };
 }
 
-async function signInWithMock(page) {
+async function signInWithMock(page, readyText = "ساحة الحراس") {
   const pageErrors = [];
   const consoleErrors = [];
   const failedResponses = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
   page.on("response", (response) => { if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`); });
-  await page.goto(`${appUrl}/login`);
+  try {
+    await page.goto(`${appUrl}/login`, { waitUntil: "commit", timeout: 30_000 });
+  } catch (error) {
+    throw new Error(`Could not load the static login route. serverExitCode=${serverProcess?.exitCode ?? "running"} serverOutput=${serverOutput.slice(-5000)}; cause=${error instanceof Error ? error.message : String(error)}`);
+  }
   const emailField = page.getByPlaceholder("name@example.com");
   try {
     await emailField.waitFor({ state: "visible", timeout: 12_000 });
@@ -295,26 +303,26 @@ async function signInWithMock(page) {
   await emailField.fill("player@example.test");
   await page.getByPlaceholder("8 أحرف على الأقل").fill("local-test-password");
   await page.getByRole("button", { name: "متابعة بالبريد" }).click();
-  await page.getByText("ساحة الحراس", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText(readyText, { exact: true }).waitFor({ timeout: 15_000 });
 }
 
 async function waitForServer() {
   const startedAt = Date.now();
   while (Date.now() - startedAt < 120_000) {
-    if (serverProcess.exitCode !== null) throw new Error(`Expo exited early. ${serverOutput}`);
+    if (serverProcess.exitCode !== null) throw new Error(`Static preview server exited early. ${serverOutput}`);
     try {
       const response = await fetch(`${appUrl}/login`);
       if (response.ok) return;
-    } catch { /* Wait for Metro to finish starting. */ }
+    } catch { /* Wait for the preview server to start. */ }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  throw new Error(`Timed out starting Expo Web. ${serverOutput}`);
+  throw new Error(`Timed out starting the static web preview. ${serverOutput}`);
 }
 
 before(async () => {
-  serverProcess = spawn("pnpm", ["run", "web", "--", "--port", "8081", "--host", "localhost"], {
+  serverProcess = spawn(process.execPath, ["scripts/preview.mjs"], {
     cwd: projectRoot,
-    env: { ...process.env, EXPO_PUBLIC_BASE_PATH: "", EXPO_PUBLIC_GAME_API_URL: "" },
+    env: { ...process.env, EXPO_PUBLIC_BASE_PATH: "", EXPO_PUBLIC_GAME_API_URL: "", PORT: "8081", HOST: "127.0.0.1" },
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -554,6 +562,36 @@ test("new hero creator renders character controls only once", async () => {
   await browserContext.close();
 });
 
+test("server reset epoch discards stale offline progress instead of offering recovery", async () => {
+  const store = { state: { ...newPlayerFixture(), serverResetEpoch: "reset-epoch-test-001" }, writes: [] };
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  await installSupabaseMock(page, { store });
+
+  await page.goto(`${appUrl}/login`);
+  await page.evaluate(({ saveKey, dirtyKey, staleState }) => {
+    localStorage.setItem(saveKey, JSON.stringify(staleState));
+    localStorage.setItem(dirtyKey, "stale-offline-token");
+  }, {
+    saveKey: `vorzane_save_v2_user_${playerId}`,
+    dirtyKey: `vorzane_offline_dirty_${playerId}`,
+    staleState: saveFixture(),
+  });
+
+  await signInWithMock(page, "اختر من يسير في الظل");
+  await page.getByText("اختر من يسير في الظل", { exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByText("توجد نسختان لهذا اللاعب", { exact: true }).count(), 0,
+    "a stale pre-reset cache must not be offered as a recoverable save");
+  const cached = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"),
+    `vorzane_save_v2_user_${playerId}`);
+  assert.equal(cached.serverResetEpoch, "reset-epoch-test-001",
+    "the server-reset state should replace the old local cache");
+  assert.equal(cached.hero, null, "the old character must not be restored");
+  assert.equal(await page.evaluate((key) => localStorage.getItem(key), `vorzane_offline_dirty_${playerId}`), null,
+    "the stale offline-pending marker must be cleared");
+  await browserContext.close();
+});
+
 test("offline progress conflict resolves and restores in a clean second context", async () => {
   const store = { state: saveFixture(), writes: [] };
   let failSaves = true;
@@ -616,6 +654,18 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   await page.getByText("تم إرسال طلب الصداقة.", { exact: true }).waitFor({ timeout: 10_000 });
   await page.getByText("تم الإرسال", { exact: true }).waitFor({ timeout: 10_000 });
   assert.equal(await page.getByRole("button", { name: "إضافة" }).count(), 0, "sent request must not remain actionable as a new request");
+
+  // A searched player can be messaged directly even before becoming a friend.
+  await page.getByRole("button", { name: "مراسلة" }).click();
+  await page.getByPlaceholder("اكتب رسالتك...").waitFor({ timeout: 10_000 });
+  await page.getByPlaceholder("اكتب رسالتك...").fill("مرحبًا، هذه رسالة اختبار.");
+  await page.getByRole("button", { name: "إرسال الرسالة" }).click();
+  const composer = page.getByPlaceholder("اكتب رسالتك...");
+  await page.waitForFunction(() => {
+    const field = document.querySelector('textarea[placeholder="اكتب رسالتك..."]');
+    return field instanceof HTMLTextAreaElement && field.value === "";
+  }, undefined, { timeout: 10_000 });
+  assert.equal(await composer.inputValue(), "", "sent message should clear the composer");
 
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   assert.equal(hasHorizontalOverflow, false, "friends screen must not overflow horizontally on a 360px viewport");

@@ -138,3 +138,68 @@ export async function markAllNotificationsRead(): Promise<void> {
   const { error } = await supabase.rpc("mark_all_notifications_read");
   if (error) throw new Error(error.message);
 }
+
+export type PlayerMessage = {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+};
+
+export async function sendPlayerMessage(recipientId: string, body: string): Promise<string> {
+  const { data, error } = await supabase.rpc("send_player_message", {
+    p_recipient_id: recipientId,
+    p_body: body,
+  });
+  return requireData(data as string | null, error);
+}
+
+export async function listPlayerMessages(otherUserId: string, before?: string): Promise<PlayerMessage[]> {
+  const { data, error } = await supabase.rpc("list_player_messages", {
+    p_other_user_id: otherUserId,
+    p_before: before ?? null,
+  });
+  return requireData((data ?? []) as PlayerMessage[], error);
+}
+
+export async function markPlayerMessagesRead(otherUserId: string): Promise<number> {
+  const { data, error } = await supabase.rpc("mark_player_messages_read", {
+    p_other_user_id: otherUserId,
+  });
+  return requireData(data as number | null, error);
+}
+
+export async function blockPlayer(playerId: string): Promise<void> {
+  const { error } = await supabase.rpc("block_player", { p_player_id: playerId });
+  if (error) throw new Error(error.message);
+}
+
+export async function unblockPlayer(playerId: string): Promise<void> {
+  const { error } = await supabase.rpc("unblock_player", { p_player_id: playerId });
+  if (error) throw new Error(error.message);
+}
+
+export async function reportPlayer(playerId: string, reason: "spam" | "harassment" | "inappropriate" | "other", details = ""): Promise<string> {
+  const { data, error } = await supabase.rpc("report_player", {
+    p_player_id: playerId,
+    p_reason: reason,
+    p_details: details,
+  });
+  return requireData(data as string | null, error);
+}
+
+export type PlayerConversation = {
+  other_user_id: string;
+  display_name: string;
+  avatar_id: string;
+  last_message: string;
+  last_message_at: string;
+  unread_count: number;
+};
+
+export async function listMyConversations(): Promise<PlayerConversation[]> {
+  const { data, error } = await supabase.rpc("list_my_conversations");
+  return requireData((data ?? []) as PlayerConversation[], error);
+}
