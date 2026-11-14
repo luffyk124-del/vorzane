@@ -287,7 +287,11 @@ async function signInWithMock(page, readyText = "ساحة الحراس") {
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
   page.on("response", (response) => { if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`); });
-  await page.goto(`${appUrl}/login`, { waitUntil: "commit", timeout: 60_000 });
+  try {
+    await page.goto(`${appUrl}/login`, { waitUntil: "commit", timeout: 30_000 });
+  } catch (error) {
+    throw new Error(`Could not load the static login route. serverExitCode=${serverProcess?.exitCode ?? "running"} serverOutput=${serverOutput.slice(-5000)}; cause=${error instanceof Error ? error.message : String(error)}`);
+  }
   const emailField = page.getByPlaceholder("name@example.com");
   try {
     await emailField.waitFor({ state: "visible", timeout: 12_000 });
@@ -305,20 +309,20 @@ async function signInWithMock(page, readyText = "ساحة الحراس") {
 async function waitForServer() {
   const startedAt = Date.now();
   while (Date.now() - startedAt < 120_000) {
-    if (serverProcess.exitCode !== null) throw new Error(`Expo exited early. ${serverOutput}`);
+    if (serverProcess.exitCode !== null) throw new Error(`Static preview server exited early. ${serverOutput}`);
     try {
       const response = await fetch(`${appUrl}/login`);
       if (response.ok) return;
     } catch { /* Wait for Metro to finish starting. */ }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  throw new Error(`Timed out starting Expo Web. ${serverOutput}`);
+  throw new Error(`Timed out starting the static web preview. ${serverOutput}`);
 }
 
 before(async () => {
-  serverProcess = spawn("pnpm", ["run", "web", "--", "--port", "8081", "--host", "localhost"], {
+  serverProcess = spawn(process.execPath, ["scripts/preview.mjs"], {
     cwd: projectRoot,
-    env: { ...process.env, EXPO_PUBLIC_BASE_PATH: "", EXPO_PUBLIC_GAME_API_URL: "" },
+    env: { ...process.env, EXPO_PUBLIC_BASE_PATH: "", EXPO_PUBLIC_GAME_API_URL: "", PORT: "8081", HOST: "127.0.0.1" },
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],
   });
