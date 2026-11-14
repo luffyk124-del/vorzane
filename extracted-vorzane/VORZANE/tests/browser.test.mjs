@@ -313,7 +313,7 @@ async function waitForServer() {
     try {
       const response = await fetch(`${appUrl}/login`);
       if (response.ok) return;
-    } catch { /* Wait for Metro to finish starting. */ }
+    } catch { /* Wait for the preview server to start. */ }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   throw new Error(`Timed out starting the static web preview. ${serverOutput}`);
@@ -660,8 +660,12 @@ test("friends and player search remain usable on a narrow mobile viewport", asyn
   await page.getByPlaceholder("اكتب رسالتك...").waitFor({ timeout: 10_000 });
   await page.getByPlaceholder("اكتب رسالتك...").fill("مرحبًا، هذه رسالة اختبار.");
   await page.getByRole("button", { name: "إرسال الرسالة" }).click();
-  await page.getByPlaceholder("اكتب رسالتك...").waitFor({ timeout: 10_000 });
-  assert.equal(await page.getByPlaceholder("اكتب رسالتك...").inputValue(), "", "sent message should clear the composer");
+  const composer = page.getByPlaceholder("اكتب رسالتك...");
+  await page.waitForFunction(() => {
+    const field = document.querySelector('textarea[placeholder="اكتب رسالتك..."]');
+    return field instanceof HTMLTextAreaElement && field.value === "";
+  }, undefined, { timeout: 10_000 });
+  assert.equal(await composer.inputValue(), "", "sent message should clear the composer");
 
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   assert.equal(hasHorizontalOverflow, false, "friends screen must not overflow horizontally on a 360px viewport");
