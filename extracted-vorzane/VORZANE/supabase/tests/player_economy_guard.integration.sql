@@ -30,7 +30,8 @@ select set_config('request.jwt.claim.role','authenticated',true);
 
 -- A client may update ordinary profile progress, but forged economy fields are replaced.
 update public.player_saves
-set game_state = game_state || '{
+set updated_at = '2099-01-01T00:00:00Z',
+    game_state = game_state || '{
   "hero":{"name":"Updated Hero"},
   "gold":999999999,
   "gems":999999999,
@@ -69,6 +70,10 @@ begin
   if v_state -> 'roaming' ->> 'eventsCompleted' <> '8'
      or v_state -> 'hero' ->> 'name' <> 'Updated Hero' then
     raise exception 'Ordinary progress and character updates must remain writable';
+  end if;
+  if (select updated_at from public.player_saves
+      where user_id = '00000000-0000-4000-8000-000000000301') >= '2099-01-01T00:00:00Z'::timestamptz then
+    raise exception 'Authenticated clients must not control save timestamps';
   end if;
 end $test$;
 

@@ -85,6 +85,10 @@ begin
       );
       new.game_state := jsonb_set(new.game_state, '{roaming}', v_new_roaming, true);
     end if;
+
+    -- updated_at is also server-owned; clients cannot pin it in the future or
+    -- manipulate optimistic command versions.
+    new.updated_at := clock_timestamp();
   end if;
 
   return new;
