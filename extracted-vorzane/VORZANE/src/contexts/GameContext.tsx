@@ -5,6 +5,7 @@ import { advanceExpeditions, dismissOfflineReport } from "../game/engine";
 import { createFreshState, LEGACY_CLAIM_KEY, LEGACY_SAVE_KEY, normalizeGameState, USER_SAVE_PREFIX, type GameState } from "../game/model";
 import { supabase } from "../lib/supabase";
 import { invokeEconomyCommand, type EconomyCommand } from "../lib/economyCommand";
+import { hasNonEconomyProgressChanged, hasServerOwnedEconomyChanged, reconcileServerOwnedEconomy } from "../lib/serverOwnedEconomy";
 import { clearOfflineSavePending, getOfflineSavePendingToken, hasOfflineSavePending, markOfflineSavePending, type StorageLike } from "../lib/offlineSaveMarker";
 import { useAuth } from "./AuthContext";
 
@@ -127,12 +128,35 @@ export function GameProvider({ children }: PropsWithChildren) {
         user_id: userId,
         game_state: safeSnapshot,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id" }).select("updated_at").single();
+      }, { onConflict: "user_id" }).select("game_state, updated_at").single();
       if (error) throw error;
-      if (activeUserRef.current === userId) saveVersionRef.current = saved.updated_at;
+      const serverState = normalizeGameState(saved.game_state);
+      if (!serverState) throw new Error("تعذر التحقق من الحفظ المعتمد من الخادم.");
+
+      let economyWasRejected = false;
+      if (activeUserRef.current === userId) {
+        saveVersionRef.current = saved.updated_at;
+        const current = stateRef.current;
+        const reconciled = reconcileServerOwnedEconomy(current, serverState);
+        economyWasRejected = hasServerOwnedEconomyChanged(current, reconciled);
+        if (economyWasRejected) {
+          const newerProgressExists = hasNonEconomyProgressChanged(current, safeSnapshot);
+          stateRef.current = reconciled;
+          // Skip a redundant save when only rejected economy values changed.
+          // If newer ordinary progress exists, let the effect persist that progress.
+          skipNextEffectRef.current = !newerProgressExists;
+          setState(reconciled);
+        }
+        await storeUserCache(userId, economyWasRejected ? reconciled : current);
+      } else {
+        await storeUserCache(userId, reconcileServerOwnedEconomy(safeSnapshot, serverState));
+      }
+
       await clearOfflineSavePending(userId, offlineMarkerStorage(), markerToken);
       setCloudError("");
-      setSaveStatus("تم حفظ تقدمك بأمان");
+      setSaveStatus(economyWasRejected
+        ? "حُفظ التقدم، لكن تغييرات الذهب والمخزون لم يعتمدها الخادم."
+        : "تم حفظ تقدمك بأمان");
       return true;
     }).catch(async (caught: unknown) => {
       await markOfflineSavePending(userId, offlineMarkerStorage());
@@ -410,16 +434,23 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (migration.kind === "offline") {
       if (status !== "conflict" || (choice !== "local" && choice !== "cloud")) return false;
       const candidate = choice === "local" ? migration.localState : migration.cloudState;
+      const previousState = stateRef.current;
+      stateRef.current = candidate;
+      setState(candidate);
       setSaveStatus(choice === "local" ? "جارٍ حفظ تقدم هذا الجهاز..." : "جارٍ استعادة تقدم حسابك...");
       const saved = await persistSnapshot(candidate, userId, true);
       if (!saved) {
+        stateRef.current = previousState;
+        setState(previousState);
+        await storeUserCache(userId, previousState);
         setSaveStatus("لم تكتمل المزامنة؛ لم تُحذف أي نسخة. حاول مجددًا.");
         return false;
       }
+      const committedState = stateRef.current;
       syncReadyRef.current = userId;
       skipNextEffectRef.current = true;
-      stateRef.current = candidate;
-      setState(candidate);
+      stateRef.current = committedState;
+      setState(committedState);
       setMigration(null);
       setStatus("ready");
       setSaveStatus(choice === "local" ? "حُفظ تقدم هذا الجهاز في حسابك" : "استُعيدت النسخة السحابية");
@@ -428,18 +459,25 @@ export function GameProvider({ children }: PropsWithChildren) {
 
     if (status !== "migration" || (choice !== "import" && choice !== "fresh")) return false;
     const candidate = choice === "import" ? migration.state : createFreshState();
+    const previousState = stateRef.current;
+    stateRef.current = candidate;
+    setState(candidate);
     setSaveStatus("جارٍ حفظ الاختيار في حسابك...");
     const saved = await persistSnapshot(candidate, userId, true);
     if (!saved) {
+      stateRef.current = previousState;
+      setState(previousState);
+      await storeUserCache(userId, previousState);
       setSaveStatus("لم يكتمل النقل؛ لم تُحذف النسخة المحلية. حاول مجددًا.");
       return false;
     }
     if (choice === "import") localSet(LEGACY_CLAIM_KEY, userId);
     else localSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
+    const committedState = stateRef.current;
     syncReadyRef.current = userId;
     skipNextEffectRef.current = true;
-    stateRef.current = candidate;
-    setState(candidate);
+    stateRef.current = committedState;
+    setState(committedState);
     setMigration(null);
     setStatus("ready");
     setSaveStatus(choice === "import" ? "نُقل تقدمك إلى هذا الحساب" : "بدأ حفظ جديد لهذا الحساب");

@@ -211,11 +211,11 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       const saved = request.postDataJSON();
       writes.push(saved);
       store.state = saved.game_state;
-      // persistSnapshot requests the committed updated_at version after upsert.
+      // The real trigger returns the normalized row, including server-owned economy fields.
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ updated_at: new Date().toISOString() }),
+        body: JSON.stringify({ game_state: store.state, updated_at: new Date().toISOString() }),
       });
       return;
     }
