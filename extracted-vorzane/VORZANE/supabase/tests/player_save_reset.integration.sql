@@ -3,6 +3,7 @@ do $test$
 declare
   account_count integer;
   save_count integer;
+  has_rows boolean := false;
 begin
   select count(*) into account_count from auth.users;
   select count(*) into save_count from public.player_saves;
@@ -61,15 +62,15 @@ begin
   end if;
 
   if to_regclass('public.player_save_recovery') is not null then
-    execute 'select exists (select 1 from public.player_save_recovery)' into account_count;
-    if account_count <> 0 then
+    execute 'select exists (select 1 from public.player_save_recovery)' into has_rows;
+    if has_rows then
       raise exception 'Stale recovery snapshots must be cleared';
     end if;
   end if;
 
   if to_regclass('vorzane_internal.player_save_recovery_quotas') is not null then
-    execute 'select exists (select 1 from vorzane_internal.player_save_recovery_quotas)' into account_count;
-    if account_count <> 0 then
+    execute 'select exists (select 1 from vorzane_internal.player_save_recovery_quotas)' into has_rows;
+    if has_rows then
       raise exception 'Recovery quota counters must be cleared';
     end if;
   end if;
