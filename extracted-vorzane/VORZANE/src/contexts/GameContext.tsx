@@ -124,12 +124,40 @@ export function GameProvider({ children }: PropsWithChildren) {
     saveQueueRef.current = saveQueueRef.current.catch(() => false).then(async () => {
       if (activeUserRef.current !== userId) return false;
       const markerToken = await getOfflineSavePendingToken(userId, offlineMarkerStorage());
-      const { data: saved, error } = await supabase.from("player_saves").upsert({
-        user_id: userId,
+      const saveValues = {
         game_state: safeSnapshot,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id" }).select("game_state, updated_at").single();
-      if (error) throw error;
+      };
+      // Use UPDATE for existing saves. Upsert runs BEFORE INSERT triggers on conflict,
+      // which would rotate the server reset epoch before the UPDATE guard can inspect it.
+      const updateResult = await supabase.from("player_saves")
+        .update(saveValues)
+        .eq("user_id", userId)
+        .select("game_state, updated_at")
+        .maybeSingle();
+      if (updateResult.error) throw updateResult.error;
+      let saved = updateResult.data;
+      if (!saved) {
+        const insertResult = await supabase.from("player_saves")
+          .insert({ user_id: userId, ...saveValues })
+          .select("game_state, updated_at")
+          .single();
+        if (insertResult.error?.code === "23505") {
+          // Another device may have initialized the row between UPDATE and INSERT.
+          const retryResult = await supabase.from("player_saves")
+            .update(saveValues)
+            .eq("user_id", userId)
+            .select("game_state, updated_at")
+            .maybeSingle();
+          if (retryResult.error) throw retryResult.error;
+          if (!retryResult.data) throw new Error("تعذر العثور على حفظ اللاعب بعد تعارض الإنشاء.");
+          saved = retryResult.data;
+        } else {
+          if (insertResult.error) throw insertResult.error;
+          saved = insertResult.data;
+        }
+      }
+      if (!saved) throw new Error("تعذر التحقق من الحفظ بعد المزامنة.");
       const serverState = normalizeGameState(saved.game_state);
       if (!serverState) throw new Error("تعذر التحقق من الحفظ المعتمد من الخادم.");
 

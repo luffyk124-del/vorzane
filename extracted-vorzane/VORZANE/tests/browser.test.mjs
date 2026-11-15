@@ -203,7 +203,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       });
       return;
     }
-    if (request.method() === "POST" && url.pathname.endsWith("/rest/v1/player_saves")) {
+    if ((request.method() === "PATCH" || request.method() === "POST") && url.pathname.endsWith("/rest/v1/player_saves")) {
       if (failSave()) {
         await route.abort("failed");
         return;
