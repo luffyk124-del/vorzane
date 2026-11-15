@@ -85,7 +85,7 @@ function mockSession() {
   };
 }
 
-async function installSupabaseMock(page, { failAuth = false, failSave = () => false, failGameState = false, social = false, store = { state: saveFixture(), writes: [] } } = {}) {
+async function installSupabaseMock(page, { failAuth = false, failUser = false, failSave = () => false, failGameState = false, social = false, store = { state: saveFixture(), writes: [] } } = {}) {
   const writes = store.writes;
   const reads = store.reads ?? (store.reads = []);
   const tableReads = store.tableReads ?? (store.tableReads = []);
@@ -116,6 +116,10 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
       return;
     }
     if (request.method() === "GET" && url.pathname.endsWith("/auth/v1/user")) {
+      if (failUser) {
+        await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ message: "User not found" }) });
+        return;
+      }
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(session.user) });
       return;
     }
@@ -137,7 +141,7 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
         await route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "Initialization accepts an empty payload only" }) });
         return;
       }
-      if (!store.state) store.state = newPlayerFixture();
+      if (!store.state) store.state = { ...newPlayerFixture(), serverResetEpoch: "server-generated-test-epoch" };
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -276,14 +280,14 @@ async function installSupabaseMock(page, { failAuth = false, failSave = () => fa
   return { store, writes, reads, tableReads, unexpectedRequests };
 }
 
-async function signInWithMock(page) {
+async function signInWithMock(page, expectedScreen = "ساحة الحراس") {
   const pageErrors = [];
   const consoleErrors = [];
   const failedResponses = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
   page.on("response", (response) => { if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`); });
-  await page.goto(`${appUrl}/login`);
+  await page.goto(`${appUrl}/login`, { waitUntil: "commit" });
   const emailField = page.getByPlaceholder("name@example.com");
   try {
     await emailField.waitFor({ state: "visible", timeout: 12_000 });
@@ -295,7 +299,7 @@ async function signInWithMock(page) {
   await emailField.fill("player@example.test");
   await page.getByPlaceholder("8 أحرف على الأقل").fill("local-test-password");
   await page.getByRole("button", { name: "متابعة بالبريد" }).click();
-  await page.getByText("ساحة الحراس", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText(expectedScreen, { exact: true }).waitFor({ timeout: 15_000 });
 }
 
 async function waitForServer() {
@@ -356,6 +360,19 @@ after(async () => {
       });
     }
   }
+});
+
+test("deleted accounts are signed out locally when a cached session is revalidated", async () => {
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  await installSupabaseMock(page, { failUser: true });
+
+  await signInWithMock(page);
+  await page.reload();
+  await page.getByPlaceholder("name@example.com").waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByRole("button", { name: "متابعة بالبريد" }).count(), 1,
+    "a cached session whose account was deleted must be cleared so the player can create a new account");
+  await browserContext.close();
 });
 
 test("mocked account save and stat allocation work on desktop and mobile", async (context) => {
@@ -529,6 +546,10 @@ test("new hero creator renders character controls only once", async () => {
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
 
   await page.goto(`${appUrl}/login`);
+  await page.evaluate((staleState) => {
+    localStorage.setItem("vorzane_save_v2", JSON.stringify(staleState));
+    localStorage.removeItem("vorzane_legacy_save_claimed_by");
+  }, saveFixture());
   await page.getByPlaceholder("name@example.com").fill("new-player@example.test");
   await page.getByPlaceholder("8 أحرف على الأقل").fill("local-test-password");
   await page.getByRole("button", { name: "متابعة بالبريد" }).click();
@@ -545,12 +566,53 @@ test("new hero creator renders character controls only once", async () => {
   await page.getByPlaceholder("اسمٌ يليق بالأساطير").fill("بطلة الاختبار");
   await page.getByRole("button", { name: "ابدأ الرحلة" }).click();
   await page.getByText("ساحة الحراس", { exact: true }).waitFor({ timeout: 10_000 });
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem("vorzane_legacy_save_claimed_by")),
+    "__reset_invalidated__",
+    "the new account's server-issued epoch must retire a legacy save from before the full account reset",
+  );
   assert.equal(await page.getByText("اختر شخصيتك", { exact: true }).count(), 0, "character selection must disappear after creation");
   assert.equal(await page.getByText("اختر فئتك", { exact: true }).count(), 0, "class selection must disappear after creation");
   assert.ok(await page.getByLabel("صورة البطلة").count() >= 1, "the selected heroine portrait remains available in the hero UI");
   assert.deepEqual(unexpectedRequests, []);
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(consoleErrors, []);
+  await browserContext.close();
+});
+
+test("server reset epoch discards stale offline progress instead of offering recovery", async () => {
+  const store = { state: { ...newPlayerFixture(), serverResetEpoch: "reset-epoch-test-001" }, writes: [] };
+  const browserContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browserContext.newPage();
+  await installSupabaseMock(page, { store });
+
+  await page.goto(`${appUrl}/login`);
+  await page.evaluate(({ saveKey, dirtyKey, staleState, legacySaveKey, legacyClaimKey, playerId }) => {
+    localStorage.setItem(saveKey, JSON.stringify(staleState));
+    localStorage.setItem(dirtyKey, "stale-offline-token");
+    localStorage.setItem(legacySaveKey, JSON.stringify(staleState));
+    localStorage.setItem(legacyClaimKey, playerId);
+  }, {
+    saveKey: `vorzane_save_v2_user_${playerId}`,
+    dirtyKey: `vorzane_offline_dirty_${playerId}`,
+    staleState: saveFixture(),
+    legacySaveKey: "vorzane_save_v2",
+    legacyClaimKey: "vorzane_legacy_save_claimed_by",
+    playerId,
+  });
+
+  await signInWithMock(page, "اختر من يسير في الظل");
+  assert.equal(await page.getByText("توجد نسختان لهذا اللاعب", { exact: true }).count(), 0,
+    "a stale pre-reset cache must not be offered as a recoverable save");
+  const cached = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"),
+    `vorzane_save_v2_user_${playerId}`);
+  assert.equal(cached.serverResetEpoch, "reset-epoch-test-001",
+    "the server-reset state should replace the old local cache");
+  assert.equal(cached.hero, null, "the old character must not be restored");
+  assert.equal(await page.evaluate((key) => localStorage.getItem(key), `vorzane_offline_dirty_${playerId}`), null,
+    "the stale offline-pending marker must be cleared");
+  assert.equal(await page.evaluate((key) => localStorage.getItem(key), "vorzane_legacy_save_claimed_by"), "__reset_invalidated__",
+    "the legacy save must be retired so another account cannot import pre-reset progress");
   await browserContext.close();
 });
 

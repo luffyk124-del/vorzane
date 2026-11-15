@@ -31,10 +31,34 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data, error: sessionError }) => {
+    supabase.auth.getSession().then(async ({ data, error: sessionError }) => {
       if (!mounted) return;
       if (sessionError) setError(friendlyAuthError(sessionError));
-      setSession(data.session);
+
+      let nextSession = data.session;
+      if (nextSession) {
+        try {
+          // Deleting a Supabase Auth user does not immediately expire its access
+          // JWT. Verify the cached session with Auth so a wiped account is
+          // cleared locally and the player can register a new account.
+          const { data: verified, error: verifyError } = await supabase.auth.getUser();
+          const invalidSession = !verified.user
+            || (verifyError !== null && [401, 403, 404].includes(verifyError.status ?? 0));
+          if (invalidSession) {
+            await supabase.auth.signOut({ scope: "local" });
+            nextSession = null;
+          } else if (verifyError) {
+            // Keep a valid cached session during transient network/server errors.
+            setError(friendlyAuthError(verifyError));
+          }
+        } catch (caught) {
+          // A temporary network failure must not destroy a legitimate local session.
+          setError(friendlyAuthError(caught));
+        }
+      }
+
+      if (!mounted) return;
+      setSession(nextSession);
       setLoading(false);
     }).catch((caught) => {
       if (mounted) {
