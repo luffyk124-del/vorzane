@@ -1,4 +1,6 @@
+// @ts-expect-error Node's test runner provides these modules at runtime; app typecheck excludes their type declarations.
 import assert from "node:assert/strict";
+// @ts-expect-error Node's test runner provides these modules at runtime; app typecheck excludes their type declarations.
 import test from "node:test";
 import { createFreshState } from "../game/model";
 import {
