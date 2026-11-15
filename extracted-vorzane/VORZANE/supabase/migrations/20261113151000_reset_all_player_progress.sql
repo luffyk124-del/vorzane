@@ -1,146 +1,108 @@
--- Full VORZANE player/account reset. Preserve the Supabase project, schemas,
--- auth configuration, database objects, and storage buckets; remove user data.
--- Backups contain application data and account IDs only, never password hashes
--- or bearer/refresh tokens. They are private and temporary.
+-- Reset gameplay progress for every existing account without deleting accounts or social data.
+-- A shared server-issued epoch invalidates stale offline snapshots on every device.
 
-create schema if not exists private;
-revoke all on schema private from public, anon, authenticated;
-
--- Stop safely if Storage or SCIM has data that needs provider-aware handling.
-do $guard$
+do $reset$
 declare
-  has_rows boolean := false;
+  reset_epoch uuid := gen_random_uuid();
+  reset_time bigint := floor(extract(epoch from clock_timestamp()) * 1000)::bigint;
+  fresh_state jsonb;
 begin
-  if to_regclass('storage.objects') is not null then
-    execute 'select exists (select 1 from storage.objects)' into has_rows;
-    if has_rows then
-      raise exception 'Storage objects exist. Remove user-owned files through the Storage API before running the full reset.';
-    end if;
-  end if;
+  fresh_state := jsonb_build_object(
+    'serverResetEpoch', reset_epoch::text,
+    'hero', null,
+    'characterStyle', jsonb_build_object('gender','male','appearance',0,'hairstyle','short','hairColor','obsidian','face','classic','outfit','adventurer','body','balanced'),
+    'missionPeriods', jsonb_build_object(
+      'daily', jsonb_build_object('key',to_char(current_date,'YYYY-MM-DD'),'baseline',jsonb_build_object('wins',0,'expeditions',0,'level',1),'claimed','{}'::jsonb),
+      'weekly', jsonb_build_object('key',to_char(date_trunc('week', current_date),'YYYY-MM-DD'),'baseline',jsonb_build_object('wins',0,'expeditions',0,'level',1),'claimed','{}'::jsonb),
+      'season', jsonb_build_object('key',to_char(current_date,'YYYY-MM'),'baseline',jsonb_build_object('wins',0,'expeditions',0,'level',1),'claimed','{}'::jsonb)
+    ),
+    'roaming', jsonb_build_object('health',100,'maxHealth',100,'fragments',0,'fragmentsCollected',0,'fragmentProgress',0,'eventsCompleted',0,'healthUpdatedAt',reset_time,'storyFlags','[]'::jsonb,'fairyNextAt',0,'fairyReunited',false,'echoStarted',false,'echoStage',0,'echoFailures',0,'echoNextAt',0,'echoRoute',null,'eventsSeen','[]'::jsonb,'activeChain',null,'chainStage',0,'chainRoute',null,'chainNextAtEvent',0,'lastEventAt',0,'merchantRefreshAt',0,'gemRefillDate',to_char(current_date,'YYYY-MM-DD'),'gemRefillsUsed',0),
+    'dimas', jsonb_build_object('highestFloor',0,'claimedMilestones','[]'::jsonb,'lastCompletedAt',0),
+    'longQuestStartedAt',reset_time,
+    'claimedLongQuestIds','[]'::jsonb,
+    'profileAvatarId','brand',
+    'gold',500,
+    'gems',50,
+    'inventory','[]'::jsonb,
+    'equipped','{}'::jsonb,
+    'pets','[]'::jsonb,
+    'activePet',null,
+    'tower',0,
+    'story',0,
+    'dungeonFloor',1,
+    'battleWinsByMode',jsonb_build_object('cave',0,'dungeon',0,'tower',0,'hard',0,'roaming',0),
+    'battles',0,
+    'wins',0,
+    'expeditionsCompleted',0,
+    'quests',jsonb_build_object('first',false,'battles',false,'level',false),
+    'achievements',jsonb_build_object('first',false,'level',false,'wins',false),
+    'claimedQuestRewards','{}'::jsonb,
+    'activeExpedition',null,
+    'expeditionQueue','[]'::jsonb,
+    'offlineSummary','[]'::jsonb,
+    'lastSeenAt',reset_time,
+    'settings',jsonb_build_object('sfx',true,'volume',20,'musicEnabled',true,'musicVolume',24)
+  );
 
-  has_rows := false;
-  if to_regclass('auth.scim_users') is not null then
-    execute 'select exists (select 1 from auth.scim_users)' into has_rows;
-    if has_rows then
-      raise exception 'SCIM-linked users exist. Review them before deleting auth.users.';
-    end if;
-  end if;
-end
-$guard$;
+  -- Reset existing saves in place, preserving account IDs and all social/profile rows.
+  update public.player_saves
+  set game_state = fresh_state;
 
--- Preserve non-credential account IDs and all application-owned records.
-create table private.auth_users_pre_reset_20261113 as
-select id from auth.users;
-revoke all on table private.auth_users_pre_reset_20261113 from public, anon, authenticated;
+  -- Ensure every existing Auth account has a fresh save, including accounts
+  -- that did not yet have a player_saves row.
+  insert into public.player_saves (user_id, game_state)
+  select id, fresh_state
+  from auth.users
+  on conflict (user_id) do nothing;
 
-create table private.player_saves_pre_reset_20261113 as
-select * from public.player_saves;
-revoke all on table private.player_saves_pre_reset_20261113 from public, anon, authenticated;
+  -- Old command receipts and recovery snapshots must not replay pre-reset progress.
+  delete from public.player_command_receipts;
 
-create table private.player_profiles_pre_reset_20261113 as
-select * from public.player_profiles;
-revoke all on table private.player_profiles_pre_reset_20261113 from public, anon, authenticated;
-
-create table private.friend_requests_pre_reset_20261113 as
-select * from public.friend_requests;
-revoke all on table private.friend_requests_pre_reset_20261113 from public, anon, authenticated;
-
-create table private.player_notifications_pre_reset_20261113 as
-select * from public.player_notifications;
-revoke all on table private.player_notifications_pre_reset_20261113 from public, anon, authenticated;
-
-create table private.player_command_receipts_pre_reset_20261113 as
-select * from public.player_command_receipts;
-revoke all on table private.player_command_receipts_pre_reset_20261113 from public, anon, authenticated;
-
--- Recovery quarantine tables exist in CI and may be added to production later.
-do $backup_optional$
-begin
   if to_regclass('public.player_save_recovery') is not null then
-    execute 'create table private.player_save_recovery_pre_reset_20261113 as select * from public.player_save_recovery';
-    execute 'revoke all on table private.player_save_recovery_pre_reset_20261113 from public, anon, authenticated';
     execute 'delete from public.player_save_recovery';
   end if;
 
   if to_regclass('vorzane_internal.player_save_recovery_quotas') is not null then
-    execute 'create table private.player_save_recovery_quotas_pre_reset_20261113 as select * from vorzane_internal.player_save_recovery_quotas';
-    execute 'revoke all on table private.player_save_recovery_quotas_pre_reset_20261113 from public, anon, authenticated';
     execute 'delete from vorzane_internal.player_save_recovery_quotas';
   end if;
 end
-$backup_optional$;
-
--- Clear application records and auth audit/transient state. Deleting auth.users
--- cascades to identities, sessions, refresh tokens, MFA and account-owned rows.
-delete from public.player_notifications;
-delete from public.friend_requests;
-delete from public.player_command_receipts;
-delete from public.player_profiles;
-delete from public.player_saves;
-
-do $clear_auth_aux$
-begin
-  if to_regclass('auth.audit_log_entries') is not null then
-    execute 'delete from auth.audit_log_entries';
-  end if;
-  if to_regclass('auth.flow_state') is not null then
-    execute 'delete from auth.flow_state';
-  end if;
-  if to_regclass('auth.oauth_client_states') is not null then
-    execute 'delete from auth.oauth_client_states';
-  end if;
-  if to_regclass('auth.saml_relay_states') is not null then
-    execute 'delete from auth.saml_relay_states';
-  end if;
-  if to_regclass('auth.mfa_challenges') is not null then
-    execute 'delete from auth.mfa_challenges';
-  end if;
-end
-$clear_auth_aux$;
-
-delete from auth.users;
+$reset$;
 
 do $verify$
-declare
-  has_rows boolean := false;
 begin
-  if exists (select 1 from auth.users)
-     or exists (select 1 from public.player_saves)
-     or exists (select 1 from public.player_profiles)
-     or exists (select 1 from public.friend_requests)
-     or exists (select 1 from public.player_notifications)
-     or exists (select 1 from public.player_command_receipts) then
-    raise exception 'Full reset verification failed: user or player data remains.';
+  if exists (
+    select 1 from auth.users u
+    left join public.player_saves s on s.user_id = u.id
+    where s.user_id is null
+  ) then
+    raise exception 'Progress reset verification failed: an existing account has no player save.';
   end if;
 
-  -- These managed Auth tables vary by Supabase version and are absent from the
-  -- lightweight PostgreSQL CI fixture, so verify them only when present.
-  if to_regclass('auth.sessions') is not null then
-    execute 'select exists (select 1 from auth.sessions)' into has_rows;
-    if has_rows then raise exception 'Full reset verification failed: sessions remain.'; end if;
-  end if;
-  if to_regclass('auth.identities') is not null then
-    execute 'select exists (select 1 from auth.identities)' into has_rows;
-    if has_rows then raise exception 'Full reset verification failed: identities remain.'; end if;
-  end if;
-  if to_regclass('auth.refresh_tokens') is not null then
-    execute 'select exists (select 1 from auth.refresh_tokens)' into has_rows;
-    if has_rows then raise exception 'Full reset verification failed: refresh tokens remain.'; end if;
+  if exists (
+    select 1 from public.player_saves
+    where game_state ->> 'gold' <> '500'
+       or game_state ->> 'gems' <> '50'
+       or game_state -> 'hero' <> 'null'::jsonb
+       or game_state -> 'inventory' <> '[]'::jsonb
+       or game_state -> 'pets' <> '[]'::jsonb
+       or game_state -> 'equipped' <> '{}'::jsonb
+       or coalesce(game_state ->> 'serverResetEpoch','') = ''
+  ) then
+    raise exception 'Progress reset verification failed: a save does not contain the fresh baseline.';
   end if;
 
-  if to_regclass('auth.users') is null
-     or to_regclass('public.player_saves') is null
-     or to_regclass('public.player_profiles') is null
-     or to_regclass('public.friend_requests') is null
-     or to_regclass('public.player_notifications') is null then
-    raise exception 'Full reset verification failed: required project schema is missing.';
+  if exists (select 1 from public.player_command_receipts) then
+    raise exception 'Progress reset verification failed: stale command receipts remain.';
   end if;
 
-  if has_table_privilege('anon','private.auth_users_pre_reset_20261113','SELECT')
-     or has_table_privilege('authenticated','private.auth_users_pre_reset_20261113','SELECT')
-     or has_table_privilege('anon','private.player_saves_pre_reset_20261113','SELECT')
-     or has_table_privilege('authenticated','private.player_saves_pre_reset_20261113','SELECT') then
-    raise exception 'Full reset backup must not be readable by client roles.';
+  if to_regclass('public.player_save_recovery') is not null
+     and exists (select 1 from public.player_save_recovery) then
+    raise exception 'Progress reset verification failed: stale recovery snapshots remain.';
+  end if;
+
+  if to_regclass('vorzane_internal.player_save_recovery_quotas') is not null
+     and exists (select 1 from vorzane_internal.player_save_recovery_quotas) then
+    raise exception 'Progress reset verification failed: recovery quotas remain.';
   end if;
 end
 $verify$;
