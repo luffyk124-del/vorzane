@@ -10,19 +10,23 @@ set search_path = public, pg_temp
 as $$
 declare
   v_user_id uuid := auth.uid();
-  v_role text := nullif(current_setting('request.jwt.claim.role', true), '');
+  v_claim_role text := nullif(current_setting('request.jwt.claim.role', true), '');
+  v_database_role text := current_user;
   v_old_roaming jsonb;
   v_new_roaming jsonb;
 begin
-  if v_role = 'service_role' then
+  -- PostgREST sets both the active SQL role and JWT claim. Do not rely only on
+  -- the claim setting: if it is absent, current_user must still enforce RLS rules.
+  if v_claim_role = 'service_role'
+     or (v_claim_role is null and v_database_role in ('service_role', 'postgres', 'supabase_admin')) then
     return new;
   end if;
 
-  if v_role = 'anon' then
+  if v_claim_role = 'anon' or v_database_role = 'anon' then
     raise exception using errcode = '42501', message = 'Authentication required';
   end if;
 
-  if v_role = 'authenticated' then
+  if v_claim_role = 'authenticated' or v_database_role = 'authenticated' then
     if v_user_id is null or v_user_id is distinct from new.user_id then
       raise exception using errcode = '42501', message = 'Player save owner mismatch';
     end if;
@@ -89,11 +93,13 @@ begin
     -- updated_at is also server-owned; clients cannot pin it in the future or
     -- manipulate optimistic command versions.
     new.updated_at := clock_timestamp();
+  else
+    raise exception using errcode = '42501', message = 'Untrusted player save role';
   end if;
 
   return new;
 end;
-$$;
+$;
 
 drop trigger if exists player_saves_economy_guard on public.player_saves;
 create trigger player_saves_economy_guard
