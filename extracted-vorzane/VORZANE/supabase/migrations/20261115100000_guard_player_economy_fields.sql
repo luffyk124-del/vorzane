@@ -99,7 +99,7 @@ begin
 
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists player_saves_economy_guard on public.player_saves;
 create trigger player_saves_economy_guard
