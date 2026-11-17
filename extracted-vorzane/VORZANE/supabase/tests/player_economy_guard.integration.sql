@@ -77,6 +77,28 @@ begin
   end if;
 end $test$;
 
+-- The active SQL role must remain authoritative even if the JWT role setting is absent.
+select set_config('request.jwt.claim.role','',true);
+update public.player_saves
+set game_state = game_state || '{"gold":888888888,"gems":888888888,"inventory":[{"id":"missing-claim-forgery"}]}'::jsonb
+where user_id = '00000000-0000-4000-8000-000000000301';
+
+do $test$
+declare v_state jsonb;
+begin
+  select game_state into v_state
+  from public.player_saves
+  where user_id = '00000000-0000-4000-8000-000000000301';
+
+  if v_state ->> 'gold' <> '500'
+     or v_state ->> 'gems' <> '50'
+     or v_state -> 'inventory' -> 0 ->> 'id' <> 'server-item' then
+    raise exception 'Authenticated SQL role must enforce economy protection without a JWT role setting';
+  end if;
+end $test$;
+
+select set_config('request.jwt.claim.role','authenticated',true);
+
 -- New accounts can still create a character, but cannot choose their starting economy.
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000302',true);
 insert into public.player_saves(user_id, game_state)
