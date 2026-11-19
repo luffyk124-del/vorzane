@@ -138,7 +138,7 @@ Deno.test("missing save is initialized from canonical server state and verified 
   const body = await readJson(response);
   assert(response.status === 200, "new save should be initialized");
   assert(body.created === true, "new save must be reported as created");
-  assert((body.state as { gold: number }).gold === 0, "server must use canonical fresh state");
+  assert((body.state as { gold: number }).gold === createFreshState().gold, "server must use canonical fresh state");
   assert(Number(calls.inserts) === 1, "exactly one insert should be attempted");
   assert(Number(calls.reads) === 2, "save must be verified after insertion");
   assert((calls.insertConfig as Record<string, unknown>).ignoreDuplicates === true, "concurrent initialization must not overwrite an existing row");
