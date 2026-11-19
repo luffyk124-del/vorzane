@@ -11,6 +11,7 @@ async function readJson(response: Response): Promise<Record<string, unknown>> {
 
 function fixture(options: {
   state?: GameState;
+  latestState?: GameState;
   user?: { id: string } | null;
   authError?: unknown;
   readError?: unknown;
@@ -20,12 +21,15 @@ function fixture(options: {
 } = {}) {
   const state = options.state ?? createFreshState();
   const calls: Record<string, unknown> = {};
+  let saveReads = 0;
   const builder = {
     select(columns: string) { calls.columns = columns; return this; },
     eq(column: string, value: string) { ((calls.filters ??= []) as unknown[]).push([column, value]); return this; },
     async maybeSingle() {
       if (calls.table === "player_command_receipts") return { data: options.receipt ?? null, error: null };
-      return { data: options.readError ? null : { game_state: state, updated_at: "2026-11-08T20:00:00.000Z" }, error: options.readError ?? null };
+      saveReads += 1;
+      const currentState = saveReads > 1 && options.latestState ? options.latestState : state;
+      return { data: options.readError ? null : { game_state: currentState, updated_at: saveReads > 1 ? "2026-11-08T20:02:00.000Z" : "2026-11-08T20:00:00.000Z" }, error: options.readError ?? null };
     },
   };
   const fakeClient = {
@@ -43,7 +47,7 @@ function fixture(options: {
     SUPABASE_ANON_KEY: "test-anon-key",
     SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
   }[name]));
-  return { handler, calls, state };
+  return { handler, calls, state, get saveReads() { return saveReads; } };
 }
 
 function commandRequest(command: unknown, overrides: Record<string, unknown> = {}) {
@@ -132,7 +136,27 @@ Deno.test("replayed commands return current save without committing again", asyn
   assert(calls.rpc === undefined, "replay must not execute the command again");
 });
 
-Deno.test("concurrent replay reloads the latest save instead of returning an older receipt snapshot", async () => {
+Deno.test("early receipt replay reloads a save committed after the initial read", async () => {
+  const staleState = createFreshState();
+  staleState.gold = 500;
+  const latestState = createFreshState();
+  latestState.gold = 900;
+  const { handler, calls, saveReads } = fixture({
+    state: staleState,
+    latestState,
+    receipt: { result: { state: { gold: 700 } } },
+  });
+  const response = await handler(commandRequest({ type: "resetSave" }, { expectedUpdatedAt: "2026-11-08T19:59:00.000Z" }));
+  const body = await readJson(response);
+  assert(response.status === 200, "early receipt replay must succeed");
+  assert(body.replayed === true, "expected replay response");
+  assert((body.state as GameState).gold === 900, "early receipt replay must return the latest save, not the stale initial read or receipt snapshot");
+  assert(body.updatedAt === "2026-11-08T20:02:00.000Z", "early receipt replay must return the latest save version");
+  assert(saveReads === 2, "early receipt replay must reload the player save");
+  assert((calls.tables as string[]).filter((table) => table === "player_saves").length === 2, "expected initial and latest save reads");
+});
+
+test("concurrent replay reloads the latest save instead of returning an older receipt snapshot", async () => {
   const state = createFreshState();
   state.gold = 900;
   const { handler, calls } = fixture({
