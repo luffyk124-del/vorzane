@@ -47,7 +47,7 @@ function fixture(options: {
     SUPABASE_ANON_KEY: "test-anon-key",
     SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
   }[name]));
-  return { handler, calls, state, get saveReads() { return saveReads; } };
+  return { handler, calls, state, getSaveReads: () => saveReads };
 }
 
 function commandRequest(command: unknown, overrides: Record<string, unknown> = {}) {
@@ -141,7 +141,7 @@ Deno.test("early receipt replay reloads a save committed after the initial read"
   staleState.gold = 500;
   const latestState = createFreshState();
   latestState.gold = 900;
-  const { handler, calls, saveReads } = fixture({
+  const { handler, calls, getSaveReads } = fixture({
     state: staleState,
     latestState,
     receipt: { result: { state: { gold: 700 } } },
@@ -152,7 +152,7 @@ Deno.test("early receipt replay reloads a save committed after the initial read"
   assert(body.replayed === true, "expected replay response");
   assert((body.state as GameState).gold === 900, "early receipt replay must return the latest save, not the stale initial read or receipt snapshot");
   assert(body.updatedAt === "2026-11-08T20:02:00.000Z", "early receipt replay must return the latest save version");
-  assert(saveReads === 2, "early receipt replay must reload the player save");
+  assert(getSaveReads() === 2, "early receipt replay must reload the player save");
   assert((calls.tables as string[]).filter((table) => table === "player_saves").length === 2, "expected initial and latest save reads");
 });
 
