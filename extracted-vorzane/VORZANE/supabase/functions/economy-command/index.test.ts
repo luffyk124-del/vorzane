@@ -136,7 +136,7 @@ Deno.test("replayed commands return current save without committing again", asyn
   assert(calls.rpc === undefined, "replay must not execute the command again");
 });
 
-Deno.test("early receipt replay reloads a save committed after the initial read", async () => {
+Deno.Deno.test("early receipt replay reloads a save committed after the initial read", async () => {
   const staleState = createFreshState();
   staleState.gold = 500;
   const latestState = createFreshState();
