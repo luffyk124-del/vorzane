@@ -20,6 +20,8 @@ export default function RootLayout() {
           <Stack.Screen name="login" />
           <Stack.Screen name="migration" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="player" />
+          <Stack.Screen name="chat" />
         </Stack>
       </GameProvider>
     </AuthProvider>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useAuth } from "../src/contexts/AuthContext";
 import { AppButton, AppScreen, Card, Icon, PageTitle, Pill, SectionTitle, Txt } from "../src/components/ui";
 import { CharacterPortrait } from "../src/components/CharacterPortrait";
 import { ProfileAvatar } from "../src/components/ProfileAvatar";
@@ -13,6 +14,7 @@ const STAT_LABELS: Record<string, string> = { str: "القوة", def: "الدف�
 export default function PublicPlayerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<PublicPlayerProfile | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -67,6 +69,7 @@ export default function PublicPlayerScreen() {
         </View>) : <Txt muted style={styles.empty}>لا يوجد عتاد مجهّز حاليًا.</Txt>}
       </Card>
       {profile.active_pet ? <Card style={styles.petCard}><Icon name="paw" color={palette.gold} size={20} /><Txt style={styles.petText}>الرفيق النشط: {profile.active_pet}</Txt></Card> : null}
+      {user?.id !== profile.user_id ? <AppButton label="مراسلة اللاعب" icon="chatbubble-ellipses-outline" onPress={() => router.push({ pathname: "/chat", params: { id: profile.user_id } } as never)} /> : null}
       <AppButton label="العودة" icon="arrow-back" variant="secondary" onPress={() => router.back()} />
     </ScrollView>
   </AppScreen>;

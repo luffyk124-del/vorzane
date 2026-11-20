@@ -85,14 +85,22 @@ export function createEconomyCommandHandler(
       .select("result").eq("user_id", userData.user.id).eq("command_id", body.commandId).maybeSingle();
     if (receiptError) return json({ error: "Could not check command receipt" }, 500);
     if (receipt && isRecord(receipt.result)) {
-      return json({ state, soldPrice: null, updatedAt: save.updated_at, replayed: true });
+      // The receipt may have been committed after the initial save read.
+      // Reload so a replay never returns a stale pre-commit snapshot.
+      const { data: latestSave, error: latestSaveError } = await client.from("player_saves")
+        .select("game_state, updated_at").eq("user_id", userData.user.id).maybeSingle();
+      if (latestSaveError) return json({ error: "Could not reload save after replay" }, 500);
+      if (!latestSave || !isRecord(latestSave.game_state) || !("hero" in latestSave.game_state)) {
+        return json({ error: "Player state is invalid after replay" }, 409);
+      }
+      return json({ state: latestSave.game_state, updatedAt: latestSave.updated_at, replayed: true });
     }
     if (body.expectedUpdatedAt !== save.updated_at) {
       return json({ error: "Save changed; reload and retry", updatedAt: save.updated_at }, 409);
     }
 
     const next = body.command.type === "resetSave"
-      ? createFreshState()
+      ? { ...createFreshState(), serverResetEpoch: crypto.randomUUID() }
       : { ...state, settings: { ...state.settings, ...body.command.settings } };
     const result = { commandId: body.commandId, commandType: body.command.type, state: next };
     const { data: commit, error: commitError } = await adminClient.rpc("commit_player_command", {

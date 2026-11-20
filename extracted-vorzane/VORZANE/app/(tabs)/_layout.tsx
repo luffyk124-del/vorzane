@@ -17,9 +17,11 @@ export default function TabLayout() {
     <Stack.Screen name="expeditions" />
     <Stack.Screen name="dimas" />
     <Stack.Screen name="gear" />
+    <Stack.Screen name="player-market" />
     <Stack.Screen name="quests" />
     <Stack.Screen name="profile" />
     <Stack.Screen name="friends" />
+    <Stack.Screen name="messages" />
     <Stack.Screen name="notifications" />
     <Stack.Screen name="settings" />
   </Stack>;

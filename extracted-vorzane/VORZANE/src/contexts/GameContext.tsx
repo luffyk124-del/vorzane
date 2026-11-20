@@ -5,6 +5,7 @@ import { advanceExpeditions, dismissOfflineReport } from "../game/engine";
 import { createFreshState, LEGACY_CLAIM_KEY, LEGACY_SAVE_KEY, normalizeGameState, USER_SAVE_PREFIX, type GameState } from "../game/model";
 import { supabase } from "../lib/supabase";
 import { invokeEconomyCommand, type EconomyCommand } from "../lib/economyCommand";
+import { hasNonEconomyProgressChanged, hasServerOwnedEconomyChanged, reconcileServerOwnedEconomy } from "../lib/serverOwnedEconomy";
 import { clearOfflineSavePending, getOfflineSavePendingToken, hasOfflineSavePending, markOfflineSavePending, type StorageLike } from "../lib/offlineSaveMarker";
 import { useAuth } from "./AuthContext";
 
@@ -123,16 +124,67 @@ export function GameProvider({ children }: PropsWithChildren) {
     saveQueueRef.current = saveQueueRef.current.catch(() => false).then(async () => {
       if (activeUserRef.current !== userId) return false;
       const markerToken = await getOfflineSavePendingToken(userId, offlineMarkerStorage());
-      const { data: saved, error } = await supabase.from("player_saves").upsert({
-        user_id: userId,
+      const saveValues = {
         game_state: safeSnapshot,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id" }).select("updated_at").single();
-      if (error) throw error;
-      if (activeUserRef.current === userId) saveVersionRef.current = saved.updated_at;
+      };
+      // Use UPDATE for existing saves. Upsert runs BEFORE INSERT triggers on conflict,
+      // which would rotate the server reset epoch before the UPDATE guard can inspect it.
+      const updateResult = await supabase.from("player_saves")
+        .update(saveValues)
+        .eq("user_id", userId)
+        .select("game_state, updated_at")
+        .maybeSingle();
+      if (updateResult.error) throw updateResult.error;
+      let saved = updateResult.data;
+      if (!saved) {
+        const insertResult = await supabase.from("player_saves")
+          .insert({ user_id: userId, ...saveValues })
+          .select("game_state, updated_at")
+          .single();
+        if (insertResult.error?.code === "23505") {
+          // Another device may have initialized the row between UPDATE and INSERT.
+          const retryResult = await supabase.from("player_saves")
+            .update(saveValues)
+            .eq("user_id", userId)
+            .select("game_state, updated_at")
+            .maybeSingle();
+          if (retryResult.error) throw retryResult.error;
+          if (!retryResult.data) throw new Error("تعذر العثور على حفظ اللاعب بعد تعارض الإنشاء.");
+          saved = retryResult.data;
+        } else {
+          if (insertResult.error) throw insertResult.error;
+          saved = insertResult.data;
+        }
+      }
+      if (!saved) throw new Error("تعذر التحقق من الحفظ بعد المزامنة.");
+      const serverState = normalizeGameState(saved.game_state);
+      if (!serverState) throw new Error("تعذر التحقق من الحفظ المعتمد من الخادم.");
+
+      let economyWasRejected = false;
+      if (activeUserRef.current === userId) {
+        saveVersionRef.current = saved.updated_at;
+        const current = stateRef.current;
+        const reconciled = reconcileServerOwnedEconomy(current, serverState);
+        economyWasRejected = hasServerOwnedEconomyChanged(current, reconciled);
+        if (economyWasRejected) {
+          const newerProgressExists = hasNonEconomyProgressChanged(current, safeSnapshot);
+          stateRef.current = reconciled;
+          // Skip a redundant save when only rejected economy values changed.
+          // If newer ordinary progress exists, let the effect persist that progress.
+          skipNextEffectRef.current = !newerProgressExists;
+          setState(reconciled);
+        }
+        await storeUserCache(userId, economyWasRejected ? reconciled : current);
+      } else {
+        await storeUserCache(userId, reconcileServerOwnedEconomy(safeSnapshot, serverState));
+      }
+
       await clearOfflineSavePending(userId, offlineMarkerStorage(), markerToken);
       setCloudError("");
-      setSaveStatus("تم حفظ تقدمك بأمان");
+      setSaveStatus(economyWasRejected
+        ? "حُفظ التقدم، لكن تغييرات الذهب والمخزون لم يعتمدها الخادم."
+        : "تم حفظ تقدمك بأمان");
       return true;
     }).catch(async (caught: unknown) => {
       await markOfflineSavePending(userId, offlineMarkerStorage());
@@ -155,12 +207,23 @@ export function GameProvider({ children }: PropsWithChildren) {
     try {
       const cached = await readUserCache(userId);
       if (generation !== generationRef.current) return;
-      const hasOfflineChanges = cached !== null && await hasOfflineSavePending(userId, offlineMarkerStorage());
       const { data, error } = await readCloudSave(userId);
       if (generation !== generationRef.current) return;
       if (error) throw error;
       const remote = data ? normalizeGameState(data.game_state) : null;
       saveVersionRef.current = data?.updated_at ?? null;
+
+      // A server-issued epoch means the cloud save was intentionally reset.
+      // Never offer a pre-reset offline cache as a recovery option.
+      const cloudResetEpoch = remote?.serverResetEpoch ?? null;
+      const resetInvalidatedCache = !!cloudResetEpoch && cached?.serverResetEpoch !== cloudResetEpoch;
+      if (resetInvalidatedCache) {
+        try { await AsyncStorage.removeItem(userKey(userId)); } catch { /* Best effort; cloud reset remains authoritative. */ }
+        await clearOfflineSavePending(userId, offlineMarkerStorage());
+        if (localGet(LEGACY_CLAIM_KEY) === userId) localRemove(LEGACY_CLAIM_KEY);
+      }
+      const hasOfflineChanges = !resetInvalidatedCache && cached !== null
+        && await hasOfflineSavePending(userId, offlineMarkerStorage());
       if (data && !remote) throw new Error("تعذر قراءة حفظ حسابك؛ لم نغيّر أي شيء.");
 
       if (remote) {
@@ -399,16 +462,23 @@ export function GameProvider({ children }: PropsWithChildren) {
     if (migration.kind === "offline") {
       if (status !== "conflict" || (choice !== "local" && choice !== "cloud")) return false;
       const candidate = choice === "local" ? migration.localState : migration.cloudState;
+      const previousState = stateRef.current;
+      stateRef.current = candidate;
+      setState(candidate);
       setSaveStatus(choice === "local" ? "جارٍ حفظ تقدم هذا الجهاز..." : "جارٍ استعادة تقدم حسابك...");
       const saved = await persistSnapshot(candidate, userId, true);
       if (!saved) {
+        stateRef.current = previousState;
+        setState(previousState);
+        await storeUserCache(userId, previousState);
         setSaveStatus("لم تكتمل المزامنة؛ لم تُحذف أي نسخة. حاول مجددًا.");
         return false;
       }
+      const committedState = stateRef.current;
       syncReadyRef.current = userId;
       skipNextEffectRef.current = true;
-      stateRef.current = candidate;
-      setState(candidate);
+      stateRef.current = committedState;
+      setState(committedState);
       setMigration(null);
       setStatus("ready");
       setSaveStatus(choice === "local" ? "حُفظ تقدم هذا الجهاز في حسابك" : "استُعيدت النسخة السحابية");
@@ -417,18 +487,25 @@ export function GameProvider({ children }: PropsWithChildren) {
 
     if (status !== "migration" || (choice !== "import" && choice !== "fresh")) return false;
     const candidate = choice === "import" ? migration.state : createFreshState();
+    const previousState = stateRef.current;
+    stateRef.current = candidate;
+    setState(candidate);
     setSaveStatus("جارٍ حفظ الاختيار في حسابك...");
     const saved = await persistSnapshot(candidate, userId, true);
     if (!saved) {
+      stateRef.current = previousState;
+      setState(previousState);
+      await storeUserCache(userId, previousState);
       setSaveStatus("لم يكتمل النقل؛ لم تُحذف النسخة المحلية. حاول مجددًا.");
       return false;
     }
     if (choice === "import") localSet(LEGACY_CLAIM_KEY, userId);
     else localSet(`${LEGACY_DECLINE_PREFIX}${userId}`, "1");
+    const committedState = stateRef.current;
     syncReadyRef.current = userId;
     skipNextEffectRef.current = true;
-    stateRef.current = candidate;
-    setState(candidate);
+    stateRef.current = committedState;
+    setState(committedState);
     setMigration(null);
     setStatus("ready");
     setSaveStatus(choice === "import" ? "نُقل تقدمك إلى هذا الحساب" : "بدأ حفظ جديد لهذا الحساب");

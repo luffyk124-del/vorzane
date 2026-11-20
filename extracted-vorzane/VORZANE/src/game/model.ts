@@ -83,6 +83,8 @@ export type RoamingState = {
 export type DimasState = { highestFloor: number; claimedMilestones: number[]; lastCompletedAt: number };
 
 export type GameState = {
+  /** Server-issued reset marker prevents stale offline caches from restoring wiped progress. */
+  serverResetEpoch?: string;
   hero: Hero | null;
   characterStyle: CharacterStyle;
   missionPeriods: MissionPeriods;
