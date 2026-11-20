@@ -136,7 +136,7 @@ Deno.test("replayed commands return current save without committing again", asyn
   assert(calls.rpc === undefined, "replay must not execute the command again");
 });
 
-Deno.Deno.test("early receipt replay reloads a save committed after the initial read", async () => {
+Deno.test("early receipt replay reloads a save committed after the initial read", async () => {
   const staleState = createFreshState();
   staleState.gold = 500;
   const latestState = createFreshState();
@@ -156,7 +156,7 @@ Deno.Deno.test("early receipt replay reloads a save committed after the initial 
   assert((calls.tables as string[]).filter((table) => table === "player_saves").length === 2, "expected initial and latest save reads");
 });
 
-test("concurrent replay reloads the latest save instead of returning an older receipt snapshot", async () => {
+Deno.test("concurrent replay reloads the latest save instead of returning an older receipt snapshot", async () => {
   const state = createFreshState();
   state.gold = 900;
   const { handler, calls } = fixture({
